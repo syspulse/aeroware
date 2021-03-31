@@ -30,6 +30,7 @@ object Gamet {
   }
 
   def ws[_: P] = P( " ".rep(1) )
+  def pws[_: P] = P( " ".rep(0) )
 
   def timeMonth[_: P] = P( CharIn("0-9").rep(exactly=2)).!.map(_.toInt)
   def timeMM[_: P] = P( CharIn("0-9").rep(exactly=2)).!.map(_.toInt)
@@ -47,7 +48,7 @@ object Gamet {
   def headerParser[_: P] = P( headerTT ~ headerAA ~ headerII ~ ws ~ headerCCCC ~ ws ~ time ~ (ws ~ headerAACC).? ~ End).map(p => Header(p._1,p._2,p._3,p._4,p._5,p._6))
 
 
-  case class Line1(fir:ICAO,gametId:String,tsStart:ZonedDateTime,tsEnd:ZonedDateTime,meteo:ICAO)
+  case class Line1(firOrg:ICAO,gametId:String,tsStart:ZonedDateTime,tsEnd:ZonedDateTime,meteo:ICAO)
   def line1CCCC1[_: P] = P( CharIn("A-Z").rep(exactly=4)).!.map(_.toString) 
   def line1GAMET[_: P] = P( ("GAMET" ~ (ws ~ ("AMD" | "COR")).?).! ~ ws ~ "VALID").map(_.toString)
   def line1YYGGgg1[_: P] = P( time )
@@ -57,12 +58,46 @@ object Gamet {
   def line1Parser[_: P] = P( line1CCCC1 ~ ws ~ line1GAMET ~ ws ~ line1YYGGgg1 ~ "/" ~ line1YYGGgg2 ~ ws ~ line1CCCC2 ~ "-" ~ End).map(p => Line1(p._1,p._2,p._3,p._4,p._5))
 
 
-  case class Line2(fir:Option[ICAO],firName:String,fl:Option[Altitude])
+  case class FIR(area:String,subArea:Option[String])
+  
+  // delimiter: def deimiterParser[_: P] = P((!"FIR" ~ AnyChar).rep.! ~ ("FIR /" | "FIR") ~ AnyChar.rep.!)
+  
+  case class Line2(firOrg:Option[ICAO],fir:FIR,fl:Option[Altitude])
+
   def line2CCCC1[_: P] = P( CharIn("A-Z").rep(exactly=4)).!.map(_.toString)
-  def line2FIR[_: P] = P( CharIn("A-Z").rep.! ~ ws ~ "FIR").map(_.toString)
   def line2BRWFL[_: P] = P( "BLW" ~ ws ~ Altitude.altParser )
 
-  def line2Parser[_: P] = P( (line2CCCC1 ~ ws).? ~ line2FIR ~ (ws ~ line2BRWFL).? ~ End).map(p => Line2(p._1,p._2,p._3))
+  def firBeforeFirParser[_:P] = P( (!"FIR" ~ AnyChar).rep.! )
+  def firSplitterParser[_: P] = P( firBeforeFirParser ~ ("FIR /" | "FIR") ~ AnyChar.rep.!)
+
+  def firParser1[_: P] = P( (line2CCCC1 ~ ws).? ~ CharIn("A-Z0-9").rep.!)
+  def firParser2[_: P] = P((!"BLW" ~ CharIn("A-Za-z 0-9")).rep.! ~ ("BLW" ~ ws ~ Altitude.altParser).? )
+  
+  //def line2Parser[_: P] = P( (line2CCCC1 ~ ws).? ~ firParser ~ (ws ~ line2BRWFL).? ~ End).map(p => Line2(p._1,p._2,p._3))
+  
+  def decodeLine2(data:String): Try[Line2] = {
+    log.debug(s"data: '${data}'")
+    val firParts = parse(data.trim, firSplitterParser(_))
+    (
+      if(firParts.isSuccess) {
+        val part1 = firParts.get.value._1
+        val part2 = firParts.get.value._2
+
+        val fir1 = parse(part1, firParser1(_))
+        if(fir1.isSuccess) {
+          val fir2 = parse(part2, firParser2(_))
+          if(fir2.isSuccess) {
+            val firOrg = fir1.get.value._1
+            var area = fir2.get.value._1.trim
+            val fir = FIR(fir1.get.value._2, if(area.isEmpty) None else Some(area))
+            var blw = fir2.get.value._2
+            return Success(Line2(firOrg,fir,blw))
+          } else fir2
+        } else fir1
+      } else firParts
+    )
+    .fold( (s,i,extra)=>Failure(new Exception(s"${s}: pos=${i}: ${extra.input}")), (h,i) => Success(Line2(None,FIR("",None),None)))
+  }
 
   abstract class GametData {
     def describe:String
@@ -146,12 +181,6 @@ object Gamet {
     log.debug(s"data: '${data}'")
     val line1 = parse(data.trim, line1Parser(_))
     line1.fold( (s,i,extra)=>Failure(new Exception(s"${s}: pos=${i}: ${extra.input}")), (h,i) => Success(h))
-  }
-
-  def decodeLine2(data:String): Try[Line2] = {
-    log.debug(s"data: '${data}'")
-    val line2 = parse(data.trim, line2Parser(_))
-    line2.fold( (s,i,extra)=>Failure(new Exception(s"${s}: pos=${i}: ${extra.input}")), (h,i) => Success(h))
   }
 
   def decode(data:String): Try[GAMET] = {

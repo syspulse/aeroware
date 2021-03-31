@@ -120,10 +120,67 @@ CHECK GAFOR (VIS AND CLD BASE), AIRMET AND SIGMET-INFORMATION="""
     }
   }
 
+  // "Line2" should {
+  //   val gamet1 = "EDMM MUNCHEN FIR BLW FL150"
+  //   s"parse '${gamet1}'" in {
+  //     val p = parse(gamet1, Gamet.line2Parser(_))
+  //     p should === (Parsed.Success(Gamet.Line2(Some("EDMM"),FIR("MUNCHEN",None),Some(FL(150))), gamet1.size))
+  //   }
+
+  //   val gamet2 = "UKBV KYIV FIR"
+  //   s"parse '${gamet2}'" in {
+  //     val p = parse(gamet2, Gamet.line2Parser(_))
+  //     p should === (Parsed.Success(Gamet.Line2(Some("UKBV"),FIR("KYIV",None),None), gamet2.size))
+  //   }
+
+  //   val gamet3 = "PRAHA FIR BLW FL100"
+  //   s"parse '${gamet3}'" in {
+  //     val p = parse(gamet3, Gamet.line2Parser(_))
+  //     p should === (Parsed.Success(Gamet.Line2(None,FIR("PRAHA",None),Some(FL(100))), gamet3.size))
+  //   }
+
+  //   val gamet4 = "LOVV WIEN FIR / DANUBE AREA BLW FL200"
+  //   s"parse '${gamet4}'" in {
+  //     val p = parse(gamet4, Gamet.line2Parser(_))
+  //     p should === (Parsed.Success(Gamet.Line2(Some("LOVV"),FIR("WIEN",Some("DANUBE AREA")),Some(FL(200))), gamet4.size))
+  //   }
+
+  //   val gamet5 = "LOVV WIEN FIR / ALPS SOUTH SIDE BLW FL200"
+  //   s"parse '${gamet5}'" in {
+  //     val p = parse(gamet5, Gamet.line2Parser(_))
+  //     p should === (Parsed.Success(Gamet.Line2(Some("LOVV"),FIR("WIEN",Some("ALPS SOUTH SIDE")),Some(FL(200))), gamet5.size))
+  //   }
+  // }
+
   "Line2" should {
-    "parse 'EDMM MUNCHEN FIR BLW FL150'" in {
-      val p = parse("EDMM MUNCHEN FIR BLW FL150", Gamet.line2Parser(_))
-      p should === (Parsed.Success(Gamet.Line2(Some("EDMM"),"MUNCHEN",Some(FL(150))), 26))
+    val gamet1 = "EDMM MUNCHEN FIR BLW FL150"
+    s"parse '${gamet1}'" in {
+      val p = decodeLine2(gamet1)
+      p should === (Success(Gamet.Line2(Some("EDMM"),FIR("MUNCHEN",None),Some(FL(150)))))
+    }
+
+    val gamet2 = "UKBV KYIV FIR"
+    s"parse '${gamet2}'" in {
+      val p = decodeLine2(gamet2)
+      p should === (Success(Gamet.Line2(Some("UKBV"),FIR("KYIV",None),None)))
+    }
+
+    val gamet3 = "PRAHA FIR BLW FL100"
+    s"parse '${gamet3}'" in {
+      val p = decodeLine2(gamet3)
+      p should === (Success(Gamet.Line2(None,FIR("PRAHA",None),Some(FL(100)))))
+    }
+
+    val gamet4 = "LOVV WIEN FIR / DANUBE AREA BLW FL200"
+    s"parse '${gamet4}'" in {
+      val p = decodeLine2(gamet4)
+      p should === (Success(Gamet.Line2(Some("LOVV"),FIR("WIEN",Some("DANUBE AREA")),Some(FL(200)))))
+    }
+
+    val gamet5 = "LOVV WIEN FIR / ALPS SOUTH SIDE BLW FL200"
+    s"parse '${gamet5}'" in {
+      val p = decodeLine2(gamet5)
+      p should === (Success(Gamet.Line2(Some("LOVV"),FIR("WIEN",Some("ALPS SOUTH SIDE")),Some(FL(200)))))
     }
   }
 
@@ -140,7 +197,7 @@ CHECK GAFOR (VIS AND CLD BASE), AIRMET AND SIGMET-INFORMATION="""
       
       g.get.header should === (Gamet.Header("FA", "DL", 41, "EDZM", ZonedDateTime.parse("2021-03-01T09:00:00Z[UTC]"), None))
       g.get.line1 should === (Gamet.Line1("EDMM","GAMET",ZonedDateTime.parse("2021-03-01T09:00Z[UTC]"),ZonedDateTime.parse("2021-03-01T15:00Z[UTC]"),"EDZM"))
-      g.get.line2 should === (Gamet.Line2(Some("EDMM"),"MUNCHEN",Some(FL(150))))
+      g.get.line2 should === (Gamet.Line2(Some("EDMM"),FIR("MUNCHEN",None),Some(FL(150))))
       g.get.data.size should === (20)
     }
   }
