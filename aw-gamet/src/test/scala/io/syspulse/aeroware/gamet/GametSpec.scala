@@ -202,20 +202,20 @@ CHECK GAFOR (VIS AND CLD BASE), AIRMET AND SIGMET-INFORMATION="""
     }
   }
 
-  // "Test data/*.gamet Files" should {
+  "Test data/*.gamet Files" should {
 
-  //   "be parsed successfully" in {
-  //     os.list(GAMET_EXAMPLES_DIR).filter(_.ext == "gamet").foreach{ gametFileName => 
+    "be parsed successfully" in {
+      os.list(GAMET_EXAMPLES_DIR).filter(_.ext == "gamet").foreach{ gametFileName => 
         
-  //       val gametFile = Source.fromFile(gametFileName.toString).getLines().mkString("\n")
-  //       val g = Gamet.decode(gametFile)
+        val gametFile = Source.fromFile(gametFileName.toString).getLines().mkString("\n")
+        val g = Gamet.decode(gametFile)
 
-  //       info(s"${gametFileName.toString}: ${g}")
+        info(s"${gametFileName.toString}: ${g}")
 
-  //       g.isSuccess should === (true)
-  //     }
+        g.isSuccess should === (true)
+      }
       
-  //   }
-  // }
+    }
+  }
 
 }
