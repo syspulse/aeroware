@@ -22,8 +22,7 @@ case class Alt(alt:Long,altTil:Long = -1L) extends Altitude
 case class FL(fl:Int, flTil:Int = -1) extends Altitude
 
 object Altitude {
-  val log = Logger(s"${this}")
-
+  
   def ws[_: P] = P( " ".rep(1) )
 
   def altFLParser[_: P] = P("FL" ~ CharIn("0-9").rep().!).map(p => FL(p.toInt))

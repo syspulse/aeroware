@@ -99,8 +99,8 @@ val sharedConfigAssembly = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(core, gamet)
-  .dependsOn(core, gamet)
+  .aggregate(core, gamet, adsb)
+  .dependsOn(core, gamet, adsb)
   .disablePlugins(sbtassembly.AssemblyPlugin) // this is needed to prevent generating useless assembly and merge error
   .settings(
     
@@ -114,7 +114,7 @@ lazy val core = (project in file("aw-core"))
       sharedConfig,
       name := "aw-core",
       libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(),
-    )
+)
 
 lazy val gamet = (project in file("aw-gamet"))
   .dependsOn(core)
@@ -130,5 +130,34 @@ lazy val gamet = (project in file("aw-gamet"))
     // mainClass in run := Some(appBootClassGamet),
     // mainClass in assembly := Some(appBootClassGamet),
     // assemblyJarName in assembly := jarPrefix + appNameGamet + "-" + "assembly" + "-"+  appVersion + ".jar",
-  )
+)
+
+lazy val adsb = (project in file("aw-adsb/adsb-ingest"))
+  .dependsOn(core)
+  .enablePlugins(JavaAppPackaging)
+  .enablePlugins(DockerPlugin)
+  .enablePlugins(AshScriptPlugin)
+  .settings (
+
+    sharedConfig,
+    sharedConfigAssembly,
+    sharedConfigDocker,
+    dockerBuildxSettings,
+
+    mappings in Universal += file("conf/application.conf") -> "conf/application.conf",
+    mappings in Universal += file("conf/logback.xml") -> "conf/logback.xml",
+    bashScriptExtraDefines += s"""addJava "-Dconfig.file=${appDockerRoot}/conf/application.conf"""",
+    bashScriptExtraDefines += s"""addJava "-Dlogback.configurationFile=${appDockerRoot}/conf/logback.xml"""",
+
+    name := appNameAdsb,
+    libraryDependencies ++= libAkka ++ Seq(
+      libUjsonLib,
+      libUpickle
+    ),
+    
+    mainClass in run := Some(appBootClassAdsb),
+    mainClass in assembly := Some(appBootClassAdsb),
+    assemblyJarName in assembly := jarPrefix + appNameAdsb + "-" + "assembly" + "-"+  appVersion + ".jar",
+
+)
 
