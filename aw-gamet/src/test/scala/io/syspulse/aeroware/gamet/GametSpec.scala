@@ -7,6 +7,8 @@ import java.time.format._
 import java.time.temporal._
 
 import io.jvm.uuid._
+
+import io.syspulse.skel.util.Util
 import io.syspulse.aeroware.gamet._
 import io.syspulse.aeroware.gamet.Gamet._
 
@@ -104,19 +106,19 @@ CHECK GAFOR (VIS AND CLD BASE), AIRMET AND SIGMET-INFORMATION="""
   "Header" should {
     "decode 'FADL41 EDZM 010900' successfully" in {
       val g = Gamet.decodeHeader("FADL41 EDZM 010900")
-      g should === (Success(Gamet.Header("FA", "DL", 41, "EDZM", ZonedDateTime.parse("2021-03-01T09:00:00Z[UTC]"), None)))
+      g should === (Success(Gamet.Header("FA", "DL", 41, "EDZM", ZonedDateTime.parse(s"${Util.tsToStringYearMonth()}-01T09:00:00Z[UTC]"), None)))
     }
 
     "decode 'FADL41 EDZM 010900 AAA' successfully" in {
       val g = Gamet.decodeHeader("FADL41 EDZM 010900 AAA")
-      g should === (Success(Gamet.Header("FA", "DL", 41, "EDZM", ZonedDateTime.parse("2021-03-01T09:00:00Z[UTC]"), Some("AAA"))))
+      g should === (Success(Gamet.Header("FA", "DL", 41, "EDZM", ZonedDateTime.parse(s"${Util.tsToStringYearMonth()}-01T09:00:00Z[UTC]"), Some("AAA"))))
     }    
   }
 
   "Line1" should {
     "parse 'EDMM GAMET VALID 010900/011500 EDZM-'" in {
       val p = parse("EDMM GAMET VALID 010900/011500 EDZM-", Gamet.line1Parser(_))
-      p should === (Parsed.Success(Gamet.Line1("EDMM","GAMET",ZonedDateTime.parse("2021-03-01T09:00Z[UTC]"),ZonedDateTime.parse("2021-03-01T15:00Z[UTC]"),"EDZM"), 36))
+      p should === (Parsed.Success(Gamet.Line1("EDMM","GAMET",ZonedDateTime.parse(s"${Util.tsToStringYearMonth()}-01T09:00Z[UTC]"),ZonedDateTime.parse(s"${Util.tsToStringYearMonth()}-01T15:00Z[UTC]"),"EDZM"), 36))
     }
   }
 
@@ -195,8 +197,8 @@ CHECK GAFOR (VIS AND CLD BASE), AIRMET AND SIGMET-INFORMATION="""
       val g = Gamet.decode(GAMET_EXAMPLE_1)
       g.isSuccess should === (true)
       
-      g.get.header should === (Gamet.Header("FA", "DL", 41, "EDZM", ZonedDateTime.parse("2021-03-01T09:00:00Z[UTC]"), None))
-      g.get.line1 should === (Gamet.Line1("EDMM","GAMET",ZonedDateTime.parse("2021-03-01T09:00Z[UTC]"),ZonedDateTime.parse("2021-03-01T15:00Z[UTC]"),"EDZM"))
+      g.get.header should === (Gamet.Header("FA", "DL", 41, "EDZM", ZonedDateTime.parse(s"${Util.tsToStringYearMonth()}-01T09:00:00Z[UTC]"), None))
+      g.get.line1 should === (Gamet.Line1("EDMM","GAMET",ZonedDateTime.parse(s"${Util.tsToStringYearMonth()}-01T09:00Z[UTC]"),ZonedDateTime.parse(s"${Util.tsToStringYearMonth()}-01T15:00Z[UTC]"),"EDZM"))
       g.get.line2 should === (Gamet.Line2(Some("EDMM"),FIR("MUNCHEN",None),Some(FL(150))))
       g.get.data.size should === (20)
     }

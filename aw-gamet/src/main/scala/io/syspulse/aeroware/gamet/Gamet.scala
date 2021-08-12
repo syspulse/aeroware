@@ -209,7 +209,7 @@ object Gamet {
           None
         }
       } else {
-        log.warn(s"Unkown data: ${data}")
+        log.warn(s"Unknown data: ${data}")
         Some(UNKNOWN(data))
       }
 

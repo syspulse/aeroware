@@ -10,10 +10,13 @@ object Dependencies {
     lazy val kafkaAvroSerVersion = "5.4.1"
     lazy val quillVersion = "3.6.0"
     
+    lazy val skelVersion = "0.0.2"
     lazy val appVersion = "0.0.1"
     lazy val jarPrefix = "server-"
     
     lazy val appDockerRoot = "/app"
+
+    val libSkelCore =       "io.syspulse"                 %% "skel-core"            % skelVersion
 
     val libScalaLogging =   "com.typesafe.scala-logging"  %% "scala-logging"        % "3.9.2"
     val libLogback =        "ch.qos.logback"              %  "logback-classic"      % "1.2.3"
@@ -35,7 +38,8 @@ object Dependencies {
     val libCommon = Seq(libScalaLogging, libLogback, libTypesafeConfig )
     val libTest = Seq(libScalaTest, libOsLib)
 
+    val libSkel = Seq(libSkelCore)
     val libAeroware = Seq(libScopt,libUUID)
 
-  }
+}
   

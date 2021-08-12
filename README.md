@@ -2,8 +2,8 @@
 
 Aviation Research
 
-__aw-core__   - Core Entities
-__aw-gamet__  - GAMET parser
+1. __aw-core__   - Core Entities
+2. __aw-gamet__  - GAMET parser
 
 ----
 

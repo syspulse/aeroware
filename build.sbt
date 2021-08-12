@@ -1,3 +1,4 @@
+import scala.sys.process.Process
 import Dependencies._
 import com.typesafe.sbt.packager.docker._
 
@@ -15,19 +16,42 @@ enablePlugins(DockerPlugin)
 enablePlugins(AshScriptPlugin)
 //enablePlugins(JavaAppPackaging, AshScriptPlugin)
 
+// Huge Credits -> https://softwaremill.com/how-to-build-multi-platform-docker-image-with-sbt-and-docker-buildx
+lazy val ensureDockerBuildx = taskKey[Unit]("Ensure that docker buildx configuration exists")
+lazy val dockerBuildWithBuildx = taskKey[Unit]("Build docker images using buildx")
+lazy val dockerBuildxSettings = Seq(
+  ensureDockerBuildx := {
+    if (Process("docker buildx inspect multi-arch-builder").! == 1) {
+      Process("docker buildx create --use --name multi-arch-builder", baseDirectory.value).!
+    }
+  },
+  dockerBuildWithBuildx := {
+    streams.value.log("Building and pushing image with Buildx")
+    dockerAliases.value.foreach(
+      alias => Process("docker buildx build --platform=linux/arm64,linux/amd64 --push -t " +
+        alias + " .", baseDirectory.value / "target" / "docker"/ "stage").!
+    )
+  },
+  publish in Docker := Def.sequential(
+    publishLocal in Docker,
+    ensureDockerBuildx,
+    dockerBuildWithBuildx
+  ).value
+)
 
 val sharedConfigDocker = Seq(
   maintainer := "Dev0 <dev0@syspulse.io>",
-  dockerBaseImage := "openjdk:8-jre-alpine",
+  // openjdk:8-jre-alpine - NOT WORKING ON RP4+ (arm64). Crashes JVM in kubernetes
+  dockerBaseImage := "openjdk:18-slim", //"openjdk:8u212-jre-alpine3.9", //"openjdk:8-jre-alpine",
   dockerUpdateLatest := true,
   dockerUsername := Some("syspulse"),
-  dockerExposedVolumes := Seq(s"${appDockerRoot}/logs",s"${appDockerRoot}/conf","/data"),
+  dockerExposedVolumes := Seq(s"${appDockerRoot}/logs",s"${appDockerRoot}/conf",s"${appDockerRoot}/data","/data"),
   //dockerRepository := "docker.io",
   dockerExposedPorts := Seq(8080),
 
   defaultLinuxInstallLocation in Docker := appDockerRoot,
 
-  daemonUserUid in Docker := None, //Some("1000"),
+  daemonUserUid in Docker := None, //Some("1000"), 
   daemonUser in Docker := "daemon"
 )
 
@@ -52,16 +76,6 @@ val sharedConfig = Seq(
       "confluent repo"     at "https://packages.confluent.io/maven/",
     ),
   )
-
-// assemblyMergeStrategy in assembly := {
-  // case "application.conf" => MergeStrategy.concat
-  // case "reference.conf" => MergeStrategy.concat
-  // case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-  // case PathList("META-INF/MANIFEST.MF", xs @ _*) => MergeStrategy.discard
-  // case PathList("snakeyaml-1.27-android.jar", xs @ _*) => MergeStrategy.discard
-  // case PathList("commons-logging-1.2.jar", xs @ _*) => MergeStrategy.discard
-  // case x => MergeStrategy.first
-// }
 
 
 val sharedConfigAssembly = Seq(
@@ -99,7 +113,7 @@ lazy val core = (project in file("aw-core"))
   .settings (
       sharedConfig,
       name := "aw-core",
-      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ Seq(),
+      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(),
     )
 
 lazy val gamet = (project in file("aw-gamet"))
@@ -109,7 +123,7 @@ lazy val gamet = (project in file("aw-gamet"))
     sharedConfigAssembly,
 
     name := "aw-gamet",
-    libraryDependencies ++= libCommon ++ libTest ++ Seq(
+    libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
       libFastparseLib 
     ),
     
