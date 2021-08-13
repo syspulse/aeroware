@@ -26,6 +26,7 @@ import scodec.Codec
 import com.typesafe.scalalogging.Logger
 
 import io.syspulse.aeroware.asdb.core._
+import io.syspulse.aeroware.util._
 
 case class RawAirbornePosition(SS: BitVector,NICsb: BitVector,ALT: BitVector,T: BitVector,F: BitVector,
   LAT_CPR: BitVector,LON_CPR: BitVector) {
@@ -65,9 +66,8 @@ abstract class Decoder {
   
   def decodeAircraftAddr(b:BitVector):AircraftAddress = {
     val icaoId = b.toHex.toLowerCase
-    val icaoType = "Fokker 70"
-    val icaoCallsign = "PH-KZD"
-
+    val aircraft = AircraftICAORegistry.find(icaoId)
+    val (icaoType,icaoCallsign) = if(aircraft.isDefined) (aircraft.get.icaoType,aircraft.get.regid) else ("","")
     AircraftAddress(icaoId,icaoType,icaoCallsign)    
   }
 
@@ -76,8 +76,13 @@ abstract class Decoder {
     if(message.size == 0 || message.size < 14 || message.size > 28 ) 
       return Failure(new Exception(s"invalid size: ${message.size}"))
 
-    val df = Decoder.codecRawDF.decode(BitVector.fromHex(message).get).toOption.get.value.toByte(false)
-    log.info(s"msg=${message}: DF=${df}")
+    val df = try {
+      Decoder.codecRawDF.decode(BitVector.fromHex(message).get).toOption.get.value.toByte(false)
+    } catch {
+      case e:Exception => return Failure(new Exception(s"invalid format: failed to parse DF: ${data}"))
+    }
+
+    log.trace(s"msg=${message}: DF=${df}")
 
     val adsb = df match {
       case 17 =>
@@ -105,10 +110,10 @@ abstract class Decoder {
           case _                           => ADSB_Unknown(df,capability,aircraftAddr,raw = message)
         }
       case 18 => // non-interrogatable equipment
-        log.warn(s"msg=${message}: DF=${df}: Unsupported DF")
+        //log.warn(s"msg=${message}: DF=${df}: Unsupported DF")
         ADSB_Unknown(df,0,AircraftAddress("0","",""),raw = message)
       case _ => // unknown
-        log.warn(s"msg=${message}: DF=${df}: Unsupported DF")
+        //log.warn(s"msg=${message}: DF=${df}: Unsupported DF")
         ADSB_Unknown(df,0,AircraftAddress("0","",""),raw = message)
     }
     Success(adsb)
@@ -139,5 +144,9 @@ object Decoder {
     .as[RawAirbornePosition]
 
   val decoder = new SDecoder
-  def decode(message:String) = decoder.decode(message)
+  def decode(data:String) = decoder.decode(data)
+
+  def decodeDump1090(data:String) = {
+    decode(data.split("[\\*;]").filter(_.trim.size>0).head)
+  }
 }

@@ -39,6 +39,7 @@ case class Config (
   connectTimeout: Long = 3000L,
   idleTimeout: Long = 60000L,
   dataDir:String = "/data",
+  catchAircraft:String = "AN.*",
   args:Seq[String] = Seq()
 )
 
@@ -60,6 +61,7 @@ object App {
         opt[String]('f', "file").action((x, c) => c.copy(filePattern = x)).text("Output file pattern (def=yyyy-MM-dd'T'HH:mm:ssZ)"),
         opt[Long]('c', "connect").action((x, c) => c.copy(connectTimeout = x)).text("connect timeout"),
         opt[Long]('i', "idle").action((x, c) => c.copy(idleTimeout = x)).text("idle timeout"),
+        opt[String]('a', "aircraft").action((x, c) => c.copy(catchAircraft = x)).text("Aircraft pattern catcher"),
         arg[String]("<args>...").unbounded().optional()
           .action((x, c) => c.copy(args = c.args :+ x))
           .text("optional unbounded args"),
@@ -129,10 +131,10 @@ object App {
           }
         }
 
-        def decode(data:String):String = {
-          Decoder.decode(data) match {
-            case Success(a) => a.toString
-            case Failure(e) => e.toString
+        def decode(data:String):Option[ADSB] = {
+          Decoder.decodeDump1090(data) match {
+            case Success(a) => Some(a)
+            case Failure(e) => None
           }
         }
 
@@ -142,12 +144,29 @@ object App {
         }
 
         val framer = Flow[ByteString].via(Framing.delimiter(ByteString("\n"), 10000, allowTruncation = true))
-        val transformer = Flow[ByteString].map(v => { val ts = System.currentTimeMillis; ADSB_Event(ts, v.utf8String, decode(v.utf8String)) })
+        val converter = Flow[ByteString].map(v => { decode(v.utf8String) }).filter(_.isDefined).map(_.get)
+        val filter = Flow[ADSB].filter(v => v match {
+          case a:ADSB_Unknown => false
+          case _  => true
+        })
+        val catcher = Flow[ADSB].map(v => {
+          if(v.aircraftAddr.icaoType.matches(config.catchAircraft)) println(s"Catch: ${v}")
+          v
+        })
+        val transformer = Flow[ADSB].map(v => { 
+          val ts = System.currentTimeMillis
+          val `type` = v.getClass.getSimpleName
+          val icaoId = v.aircraftAddr.icaoId
+          val aircraft = v.aircraftAddr.icaoType
+          val callsign = v.aircraftAddr.icaoCallsign
+          
+          ADSB_Event(ts, v.raw,`type`,icaoId,aircraft,callsign) 
+        })
         val printer = Flow[ADSB_Event].map(v => { log.debug(s"${v}"); v }).log(s"output -> File(${getFileName()})")
         val jsoner = Flow[ADSB_Event].map(a => s"${upickle.default.write(a)}\n")
 
         val flow = RestartFlow.withBackoff(retrySettings) { () =>
-          framer.via(transformer).via(printer).via(jsoner).map(ByteString(_)) 
+          framer.via(converter).via(filter).via(catcher).via(transformer).via(printer).via(jsoner).map(ByteString(_)) 
         }
 
         sourceRestarable.via(flow).toMat(sinkRestartable)(Keep.both).run()

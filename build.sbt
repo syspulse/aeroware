@@ -133,6 +133,7 @@ lazy val gamet = (project in file("aw-gamet"))
 )
 
 lazy val adsb_core = (project in file("aw-adsb/adsb-core"))
+  .dependsOn(core)
   .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,
