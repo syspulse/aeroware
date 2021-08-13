@@ -2,6 +2,7 @@ package io.syspulse.aeroware.adsb.ingest
 
 import java.nio.file.{Path,Paths, Files}
 
+import scala.util.{Try,Failure,Success}
 import akka.stream._
 import akka.stream.scaladsl._
 import akka.stream.alpakka.file.scaladsl.LogRotatorSink
@@ -25,6 +26,8 @@ import scopt.OParser
 import upickle._
 
 import io.syspulse.aeroware.adsb._
+import io.syspulse.aeroware.asdb.core._
+
 import akka.NotUsed
 
 case class Config (
@@ -54,7 +57,7 @@ object App {
         opt[String]('d', "data").action((x, c) => c.copy(dataDir = x)).text("Data directory"),
         opt[Long]('l', "limit").action((x, c) => c.copy(fileLimit = x)).text("Limit ADSB events per file"),
         opt[Long]('s', "size").action((x, c) => c.copy(fileSize = x)).text("Limit ADSB file size"),
-        opt[String]('f', "file").action((x, c) => c.copy(filePattern = x)).text("Output file pattern (def=yyyy-MM-dd'T'HH:mm:ssZ)",
+        opt[String]('f', "file").action((x, c) => c.copy(filePattern = x)).text("Output file pattern (def=yyyy-MM-dd'T'HH:mm:ssZ)"),
         opt[Long]('c', "connect").action((x, c) => c.copy(connectTimeout = x)).text("connect timeout"),
         opt[Long]('i', "idle").action((x, c) => c.copy(idleTimeout = x)).text("idle timeout"),
         arg[String]("<args>...").unbounded().optional()
@@ -69,7 +72,7 @@ object App {
         println(s"${config}")
     
         implicit val system = ActorSystem("ADSB-Ingest")
-        implicit val adsbRW = upickle.default.macroRW[ADSB]
+        implicit val adsbRW = upickle.default.macroRW[ADSB_Event]
 
          val retrySettings = RestartSettings(
           minBackoff = 1.seconds,
@@ -126,6 +129,12 @@ object App {
           }
         }
 
+        def decode(data:String):String = {
+          Decoder.decode(data) match {
+            case Success(a) => a.toString
+            case Failure(e) => e.toString
+          }
+        }
 
         val sinkRestartable = RestartSink.withBackoff(retrySettings) { () =>
           //FileIO.toPath(Paths.get(outputPath))
@@ -133,9 +142,9 @@ object App {
         }
 
         val framer = Flow[ByteString].via(Framing.delimiter(ByteString("\n"), 10000, allowTruncation = true))
-        val transformer = Flow[ByteString].map(v => { val ts = System.currentTimeMillis; ADSB(ts, ver, v.utf8String) })
-        val printer = Flow[ADSB].map(v => { log.debug(s"${v}"); v }).log(s"output -> File(${getFileName()})")
-        val jsoner = Flow[ADSB].map(a => s"${upickle.default.write(a)}\n")
+        val transformer = Flow[ByteString].map(v => { val ts = System.currentTimeMillis; ADSB_Event(ts, v.utf8String, decode(v.utf8String)) })
+        val printer = Flow[ADSB_Event].map(v => { log.debug(s"${v}"); v }).log(s"output -> File(${getFileName()})")
+        val jsoner = Flow[ADSB_Event].map(a => s"${upickle.default.write(a)}\n")
 
         val flow = RestartFlow.withBackoff(retrySettings) { () =>
           framer.via(transformer).via(printer).via(jsoner).map(ByteString(_)) 
