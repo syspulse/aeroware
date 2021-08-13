@@ -99,8 +99,8 @@ val sharedConfigAssembly = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(core, gamet, adsb)
-  .dependsOn(core, gamet, adsb)
+  .aggregate(core, gamet, adsb_core,adsb_ingest)
+  .dependsOn(core, gamet, adsb_core, adsb_ingest)
   .disablePlugins(sbtassembly.AssemblyPlugin) // this is needed to prevent generating useless assembly and merge error
   .settings(
     
@@ -132,8 +132,18 @@ lazy val gamet = (project in file("aw-gamet"))
     // assemblyJarName in assembly := jarPrefix + appNameGamet + "-" + "assembly" + "-"+  appVersion + ".jar",
 )
 
-lazy val adsb = (project in file("aw-adsb/adsb-ingest"))
-  .dependsOn(core)
+lazy val adsb_core = (project in file("aw-adsb/adsb-core"))
+  .disablePlugins(sbtassembly.AssemblyPlugin)
+  .settings (
+      sharedConfig,
+      name := "adsb-core",
+      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(
+        libScodec
+      ),
+)
+
+lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
+  .dependsOn(core,adsb_core)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .enablePlugins(AshScriptPlugin)

@@ -31,7 +31,7 @@ case class Config (
   host: String = "localhost",
   port: Int = 30002,
   fileLimit: Long = 1000000L,
-  fileSize: Long = 1024L * 1024L * 100L,
+  fileSize: Long = 1024L * 1024L * 10L,
   filePattern: String = "yyyy-MM-dd'T'HH:mm:ssZ",
   connectTimeout: Long = 3000L,
   idleTimeout: Long = 60000L,

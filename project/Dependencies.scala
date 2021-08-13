@@ -49,6 +49,8 @@ object Dependencies {
 
     val libCsv =            "com.github.tototoshi"        %% "scala-csv"            % "1.3.7"
 
+    val libScodec =         "org.scodec"                  %% "scodec-core"          % "1.11.7"
+
     val libSkelCore =       "io.syspulse"                 %% "skel-core"            % skelVersion
     
     // Projects
