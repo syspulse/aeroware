@@ -151,6 +151,7 @@ lazy val adsb = (project in file("aw-adsb/adsb-ingest"))
 
     name := appNameAdsb,
     libraryDependencies ++= libAkka ++ Seq(
+      libAlpakkaFile,
       libUjsonLib,
       libUpickle
     ),
