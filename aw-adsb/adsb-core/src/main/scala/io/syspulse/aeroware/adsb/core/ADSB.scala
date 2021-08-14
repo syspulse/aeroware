@@ -1,6 +1,6 @@
-package io.syspulse.aeroware.asdb.core
+package io.syspulse.aeroware.adsb.core
 
-import io.syspulse.aeroware.asdb.core.Decoder
+import io.syspulse.aeroware.adsb.core.Decoder
 
 package object adsb {
   type Raw = String

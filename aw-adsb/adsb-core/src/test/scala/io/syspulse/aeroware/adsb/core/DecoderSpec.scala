@@ -1,4 +1,4 @@
-package io.syspulse.aeroware.asdb.core
+package io.syspulse.aeroware.adsb.core
 
 import scala.util._
 
@@ -8,20 +8,15 @@ import java.time._
 import io.jvm.uuid._
 import io.syspulse.skel.util.Util
 
-class DecoderSpec extends WordSpec with Matchers {
+class DecoderSpec extends WordSpec with Matchers with Testables {
 
   val msgErr1 = "1"
   val msgErr2 = "1ffffffffffffffffffffffffffff"
   val msgErr3 = "*5d504e4be78915;"
 
   val msg1 = "8D4840D6202CC371C32CE0576098"
-  val file1 = "test-1.adsb"
 
-
-  def load(file:String) = {
-    val txt = scala.io.Source.fromResource(file).getLines()
-    txt.toSeq.filter(_.trim.size>0).map( s => s.split("[\\*;]").filter(_.trim.size>0)).flatten
-  }
+  val msg2 = "80a184b2582724b0545b728aefc3"
 
   "Decoder" should {
     s"decode ${msg1} DF=17" in {
@@ -83,6 +78,13 @@ class DecoderSpec extends WordSpec with Matchers {
       val a1 = Decoder.decodeDump1090(msgErr3)
       info(s"${a1}")
       a1.isSuccess should === (true)
+    }
+
+    s"decode LocalACAS to ADSB_Unknown: ${msg2}" in {
+      val a1 = Decoder.decode(msg2)
+      info(s"${a1}")
+      a1.isFailure should === (false)
+      a1.get.getClass.getSimpleName should === ("ADSB_Unknown")
     }
   }  
 }

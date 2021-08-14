@@ -1,4 +1,4 @@
-package io.syspulse.aeroware.asdb.core
+package io.syspulse.aeroware.adsb.core
 
 import scala.util.{Try,Success,Failure}
 
@@ -25,7 +25,8 @@ import scodec.Codec
 
 import com.typesafe.scalalogging.Logger
 
-import io.syspulse.aeroware.asdb.core._
+import io.syspulse.aeroware.adsb.core._
+import io.syspulse.aeroware.adsb.util._
 import io.syspulse.aeroware.util._
 
 case class RawAirbornePosition(SS: BitVector,NICsb: BitVector,ALT: BitVector,T: BitVector,F: BitVector,
@@ -85,7 +86,7 @@ abstract class Decoder {
     log.trace(s"msg=${message}: DF=${df}")
 
     val adsb = df match {
-      case 17 =>
+      case 17 | 18 | 19 =>
         val raw = Decoder.codecRawADSB.decode(BitVector.fromHex(message).get).toOption.get.value
 
         val df = raw.DF.toByte(false)
@@ -109,9 +110,9 @@ abstract class Decoder {
           case 31                          => ADSB_AircraftOperationStatus(df,capability,aircraftAddr,raw = message)
           case _                           => ADSB_Unknown(df,capability,aircraftAddr,raw = message)
         }
-      case 18 => // non-interrogatable equipment
-        //log.warn(s"msg=${message}: DF=${df}: Unsupported DF")
-        ADSB_Unknown(df,0,AircraftAddress("0","",""),raw = message)
+      // case 18 => // non-interrogatable equipment
+      //   //log.warn(s"msg=${message}: DF=${df}: Unsupported DF")
+      //   ADSB_Unknown(df,0,AircraftAddress("0","",""),raw = message)
       case _ => // unknown
         //log.warn(s"msg=${message}: DF=${df}: Unsupported DF")
         ADSB_Unknown(df,0,AircraftAddress("0","",""),raw = message)
@@ -146,7 +147,5 @@ object Decoder {
   val decoder = new SDecoder
   def decode(data:String) = decoder.decode(data)
 
-  def decodeDump1090(data:String) = {
-    decode(data.split("[\\*;]").filter(_.trim.size>0).head)
-  }
+  def decodeDump1090(data:String) = decode(Dump1090.decode(data))
 }
