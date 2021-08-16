@@ -20,7 +20,7 @@ abstract class ADSB {
 
 case class ADSB_Unknown(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw) extends ADSB
 
-case class ADSB_AircraftIdentification(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw) extends ADSB
+case class ADSB_AircraftIdentification(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, tc:Byte, ec:Byte, callSign:String, raw:Raw) extends ADSB
 
 case class ADSB_SurfacePosition(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw) extends ADSB
 case class ADSB_AirbornePositionBaro(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw) extends ADSB
@@ -33,3 +33,6 @@ case class ADSB_AircraftStatus(df:Byte,capability:Byte, aircraftAddr:AircraftAdd
 case class ADSB_TargetState(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw) extends ADSB
 case class ADSB_AircraftOperationStatus(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw) extends ADSB
 
+object AircraftAddress {
+  def apply(icaoId:String,icaoType:String,icaoCallsign:String):AircraftAddress = new AircraftAddress(icaoId.toLowerCase,icaoType,icaoCallsign)
+}

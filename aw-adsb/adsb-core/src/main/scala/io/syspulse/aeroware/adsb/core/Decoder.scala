@@ -38,6 +38,12 @@ case class RawAirbornePosition(SS: BitVector,NICsb: BitVector,ALT: BitVector,T: 
   }
 }
 
+case class RawAircraftIdentification(EC: BitVector,C1:BitVector,C2:BitVector,C3:BitVector,C4:BitVector,C5:BitVector,C6:BitVector,C7:BitVector,C8:BitVector) {
+  override def toString = {
+    s"RawAircraftIdentification(EC=${EC.toByte()},C1=${C1.toBin},C2=${C2.toBin},C3=${C3.toBin},C4=${C4.toBin},C5=${C5.toBin},C6=${C6.toBin},C7=${C7.toBin},C8=${C8.toBin})"
+  }
+}
+
 case class RawADSB(DF: BitVector, CA: BitVector, ICAO: BitVector, TC: BitVector, DATA: BitVector, PI: BitVector) {
   override def toString = {
     val tc = TC.toByte(true)
@@ -69,7 +75,7 @@ abstract class Decoder {
     val icaoId = b.toHex.toLowerCase
     val aircraft = AircraftICAORegistry.find(icaoId)
     val (icaoType,icaoCallsign) = if(aircraft.isDefined) (aircraft.get.icaoType,aircraft.get.regid) else ("","")
-    AircraftAddress(icaoId,icaoType,icaoCallsign)    
+        AircraftAddress(icaoId,icaoType,icaoCallsign)    
   }
 
   def decode(data: String): Try[ADSB] = {
@@ -93,8 +99,15 @@ abstract class Decoder {
         val capability = raw.CA.toByte(false)
         val aircraftAddr = decodeAircraftAddr(raw.ICAO)
 
-        raw.TC.toByte(false) match {
-          case v if 1 until 5 contains v => ADSB_AircraftIdentification(df,capability,aircraftAddr,raw = message)
+        val tc = raw.TC.toByte(false)
+        tc match {
+          case v if 1 until 5 contains v => {
+            val aid = Decoder.codecRawAircraftIdentification.decode(raw.DATA).toOption.get.value
+            ADSB_AircraftIdentification(df,capability,aircraftAddr,
+              tc, aid.EC.toByte(false),
+              callSign = Decoder.decodeDataAsChars(Seq(aid.C1,aid.C2,aid.C3,aid.C4,aid.C5,aid.C6,aid.C7,aid.C8)),
+              raw = message)
+          }
           case v if 5 until 9 contains v => ADSB_SurfacePosition(df,capability,aircraftAddr,raw = message)
           case v if 9 until 19 contains v =>
             (
@@ -139,8 +152,29 @@ abstract class Decoder {
 class SDecoder extends Decoder
 
 object Decoder {
+
+  def decodeCharacter(bits:BitVector):Char = {
+    bits.toByte(false) match {
+      case v if 1 until 26+1 contains v => // A-Z 
+        (65 + (v-1)).toChar
+      case v if 48 until 57+1 contains v => // 0-9
+        (48 + v-48).toChar
+      case 32 => ' '
+      case _ => '#'
+    }
+  }
+
+  
+  def decodeDataAsChars(bits:Seq[BitVector]):String = {
+    bits.foldLeft("")(_ + decodeCharacter(_)).trim
+  }
+
   val codecRawDF = (bits(5))
+  
+  //                                     DF         CA        ICAO        TC         DATA      PARITY/InterrogatorID
   val codecRawADSB: Codec[RawADSB] = (bits(5) :: bits(3) :: bits(24) :: bits(5) :: bits(51) :: bits(24)).as[RawADSB]
+  
+  val codecRawAircraftIdentification: Codec[RawAircraftIdentification] = (bits(3) :: bits(6) :: bits(6) :: bits(6) :: bits(6) :: bits(6) :: bits(6) :: bits(6) :: bits(6)).as[RawAircraftIdentification]
   val codecRawAirbornePositions: Codec[RawAirbornePosition] = (bits(2) :: bits(1) :: bits(12) :: bits(1) :: bits(1) :: bits(17) :: bits(17))
     .as[RawAirbornePosition]
 
