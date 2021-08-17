@@ -26,7 +26,7 @@ import scopt.OParser
 import upickle._
 
 import io.syspulse.aeroware.adsb._
-import io.syspulse.aeroware.asdb.core._
+import io.syspulse.aeroware.adsb.core._
 
 import akka.NotUsed
 
@@ -39,7 +39,7 @@ case class Config (
   connectTimeout: Long = 3000L,
   idleTimeout: Long = 60000L,
   dataDir:String = "/data",
-  catchAircraft:String = "AN.*",
+  catchAircraft:String = ".*", // [Aa][nN].* - Antonov catch
   args:Seq[String] = Seq()
 )
 
@@ -58,7 +58,7 @@ object App {
         opt[String]('d', "data").action((x, c) => c.copy(dataDir = x)).text("Data directory"),
         opt[Long]('l', "limit").action((x, c) => c.copy(fileLimit = x)).text("Limit ADSB events per file"),
         opt[Long]('s', "size").action((x, c) => c.copy(fileSize = x)).text("Limit ADSB file size"),
-        opt[String]('f', "file").action((x, c) => c.copy(filePattern = x)).text("Output file pattern (def=yyyy-MM-dd'T'HH:mm:ssZ)"),
+        opt[String]('f', "file").action((x, c) => c.copy(filePattern = x)).text("Output file pattern (def=yyyy-MM-dd'T'HH:mm:ssZ. user 'NONE' for no Sinking)"),
         opt[Long]('c', "connect").action((x, c) => c.copy(connectTimeout = x)).text("connect timeout"),
         opt[Long]('i', "idle").action((x, c) => c.copy(idleTimeout = x)).text("idle timeout"),
         opt[String]('a', "aircraft").action((x, c) => c.copy(catchAircraft = x)).text("Aircraft pattern catcher"),
@@ -138,10 +138,12 @@ object App {
           }
         }
 
-        val sinkRestartable = RestartSink.withBackoff(retrySettings) { () =>
-          //FileIO.toPath(Paths.get(outputPath))
-          LogRotatorSink(triggerCreator)
-        }
+        val sinkRestartable = if(config.filePattern!="NONE") { 
+          RestartSink.withBackoff(retrySettings) { () =>
+            //FileIO.toPath(Paths.get(outputPath))
+            LogRotatorSink(triggerCreator)
+          }
+        } else Sink.ignore
 
         val framer = Flow[ByteString].via(Framing.delimiter(ByteString("\n"), 10000, allowTruncation = true))
         val converter = Flow[ByteString].map(v => { decode(v.utf8String) }).filter(_.isDefined).map(_.get)
