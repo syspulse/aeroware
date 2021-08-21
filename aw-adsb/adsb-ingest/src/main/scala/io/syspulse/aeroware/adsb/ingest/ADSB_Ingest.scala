@@ -40,7 +40,7 @@ class ADSB_Ingest extends IngestClient {
   
   val metric_Total: Counter = Counter.build().name("aw_adsb_total").help("Total ADSB events").register()
   val metric_Err: Counter = Counter.build().name("aw_adsb_err").help("Total ADSB Errors events").register()
-  val metric_Catch: Counter = Counter.build().name("aw_adsb_catch").help("Total Caught ADSB events").register()
+  val metric_track: Counter = Counter.build().name("aw_adsb_track").help("Total Caught ADSB events").register()
   val metric_ADSB_Message: Map[String,Counter] = Seq(
     ADSB_Unknown.getClass().getSimpleName(),
     ADSB_AircraftIdentification.getClass().getSimpleName(),
@@ -83,14 +83,10 @@ class ADSB_Ingest extends IngestClient {
             .log("dump1090")
         }
 
-        val f = DateTimeFormatter.ofPattern(config.filePattern)
         val lastTimestamp = System.currentTimeMillis()
 
-        def getFileName() = {
-          val suffix = ZonedDateTime.ofInstant(Instant.now, ZoneId.systemDefault).format(f)
-          val outputFile = s"adsb-${suffix}.json"
-          outputFile
-        }
+        def getFileName() = Util.toFileWithTime(config.filePattern)
+          
         val ver = 1
 
         val fileRotateTrigger: () => ByteString => Option[Path] = () => {
@@ -107,7 +103,7 @@ class ADSB_Ingest extends IngestClient {
               None
             } else {
               currentFilename = Some(getFileName())
-              val outputPath = s"${config.dataDir}/${getFileName()}"
+              val outputPath = s"${Util.getDirWithSlash(config.dataDir)}${getFileName()}"
               log.info(s"Writing -> File(${outputPath})...")
               count = 0L
               size = 0L
@@ -147,10 +143,16 @@ class ADSB_Ingest extends IngestClient {
           }
         })
 
-        val catcher = Flow[ADSB].map(v => {
-          if(v.aircraftAddr.icaoType.matches(config.catchAircraft)) {
-            metric_Catch.inc()
-            println(s"Catch: ${Util.tsToString(v.ts)}: ${v}")
+        // Very unoptimized tracker
+        val tracker = Flow[ADSB].map(v => {
+          if(config.trackAircraft == "" ||
+             v.aircraftAddr.icaoType.matches(config.trackAircraft) ||
+             v.aircraftAddr.icaoCallsign.matches(config.trackAircraft) ||
+             (v.isInstanceOf[ADSB_AircraftIdentification] && v.asInstanceOf[ADSB_AircraftIdentification].callSign.matches(config.trackAircraft) ||
+             v.aircraftAddr.icaoId.matches(config.trackAircraft))
+          ) {
+            metric_track.inc()
+            println(s"${Util.tsToString(v.ts)}: ${v}")
           }
           v
         })
@@ -165,14 +167,27 @@ class ADSB_Ingest extends IngestClient {
           ADSB_Event(ts, v.raw,`type`,icaoId,aircraft,callsign) 
         })
         
-        val printer = Flow[ADSB_Event].map(v => { log.debug(s"${v}"); v }).log(s"output -> File(${getFileName()})")
-        val jsoner = Flow[ADSB_Event].map(a => s"${upickle.default.write(a)}\n")
-
-        val flow = RestartFlow.withBackoff(retrySettings) { () =>
-          framer.via(converter).via(filter).via(catcher).via(transformer).via(printer).via(jsoner).map(ByteString(_)) 
+        val printer = Flow[ADSB_Event].map(v => { log.debug(s"${v}"); v })
+        
+        val format = {
+          config.dataFormat.trim.toLowerCase match {
+            case "json" => Flow[ADSB_Event].map(a => s"${upickle.default.write(a)}\n")
+            case "csv" | "" => Flow[ADSB_Event].map(a => s"${Util.toCSV(a)}\n")
+          }
         }
 
-        sourceRestarable.via(flow).toMat(sinkRestartable)(Keep.both).run()
+        val flow = RestartFlow.withBackoff(retrySettings) { () =>
+          framer
+          .via(converter)
+          .via(filter)
+          .via(tracker)
+          .via(transformer)
+          .via(printer)
+          .via(format)
+          .map(ByteString(_)) 
+        }
+
+        sourceRestarable.via(flow).log(s"output -> File(${getFileName()})").toMat(sinkRestartable)(Keep.both).run()
 
         //Await.result(futureFlow._3, Duration.Inf)
   

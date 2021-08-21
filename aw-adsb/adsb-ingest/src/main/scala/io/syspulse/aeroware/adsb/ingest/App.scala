@@ -18,11 +18,12 @@ case class Config (
   dumpPort: Int = 30002,
   fileLimit: Long = 1000000L,
   fileSize: Long = 1024L * 1024L * 10L,
-  filePattern: String = "yyyy-MM-dd'T'HH:mm:ssZ",
+  filePattern: String = "ADSB-{yyyy-MM-dd'T'HH:mm:ssZ}.log",
   connectTimeout: Long = 3000L,
   idleTimeout: Long = 60000L,
   dataDir:String = "/data",
-  catchAircraft:String = ".*", // [Aa][nN].* - Antonov catch
+  dataFormat:String = "json",
+  trackAircraft:String = "", // [Aa][nN].* - Antonov track
   args:Seq[String] = Seq()
 )
 
@@ -42,13 +43,15 @@ object App extends skel.Server {
         opt[String]('o', "dump1090-host").action((x, c) => c.copy(dumpHost = x)).text("dump1090 Host"),  
         opt[Int]('r', "dump1090-port").action((x, c) => c.copy(dumpPort = x)).text("dump1090 port"),
         
-        opt[String]('d', "data").action((x, c) => c.copy(dataDir = x)).text("Data directory"),
+        opt[String]('d', "data-dir").action((x, c) => c.copy(dataDir = x)).text("Data directory (def: /data)"),
+        opt[String]('j', "data-format").action((x, c) => c.copy(dataFormat = x)).text("Data format (json|csv) (def: json)"),
+
         opt[Long]('l', "limit").action((x, c) => c.copy(fileLimit = x)).text("Limit ADSB events per file"),
         opt[Long]('s', "size").action((x, c) => c.copy(fileSize = x)).text("Limit ADSB file size"),
-        opt[String]('f', "file").action((x, c) => c.copy(filePattern = x)).text("Output file pattern (def=yyyy-MM-dd'T'HH:mm:ssZ. user 'NONE' for no Sinking)"),
+        opt[String]('f', "file").action((x, c) => c.copy(filePattern = x)).text("Output file pattern (def=ADSB-{yyyy-MM-dd'T'HH:mm:ssZ}.log  use 'NONE' for no Sinking)"),
         opt[Long]('c', "connect").action((x, c) => c.copy(connectTimeout = x)).text("connect timeout"),
         opt[Long]('i', "idle").action((x, c) => c.copy(idleTimeout = x)).text("idle timeout"),
-        opt[String]('a', "aircraft").action((x, c) => c.copy(catchAircraft = x)).text("Aircraft pattern catcher"),
+        opt[String]('a', "aircraft").action((x, c) => c.copy(trackAircraft = x)).text("Aircraft(s) tracker (icaoType,callSign,icaoId). RexExp (e.g. '[Aa][nN].*' - Track All AN"),
         arg[String]("<args>...").unbounded().optional()
           .action((x, c) => c.copy(args = c.args :+ x))
           .text("optional args"),

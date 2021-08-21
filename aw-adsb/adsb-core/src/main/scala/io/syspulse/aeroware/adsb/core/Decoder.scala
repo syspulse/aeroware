@@ -106,10 +106,10 @@ abstract class Decoder {
         tc match {
           case v if 1 until 5 contains v => {
             val aid = Decoder.codecRawAircraftIdentification.decode(raw.DATA).toOption.get.value
-            ADSB_AircraftIdentification(ts,df,capability,aircraftAddr,
+            ADSB_AircraftIdentification(df,capability,aircraftAddr,
               tc, aid.EC.toByte(false),
               callSign = Decoder.decodeDataAsChars(Seq(aid.C1,aid.C2,aid.C3,aid.C4,aid.C5,aid.C6,aid.C7,aid.C8)),
-              raw = message)
+              raw = message, ts)
           }
           case v if 5 until 9 contains v => ADSB_SurfacePosition(df,capability,aircraftAddr,raw = message)
           case v if 9 until 19 contains v =>
@@ -117,21 +117,21 @@ abstract class Decoder {
               "Airborne position (w/ Baro Altitude)",
               Decoder.codecRawAirbornePositions.decode(raw.DATA).toOption.get.value
             )
-            ADSB_AirbornePositionBaro(ts,df,capability,aircraftAddr,raw = message)
-          case 19                          => ADSB_AirborneVelocity(df,capability,aircraftAddr,raw = message)
-          case v if 20 until 23 contains v => ADSB_AirbornePositionGNSS(df,capability,aircraftAddr,raw = message)
-          case v if 23 until 28 contains v => ADSB_Reserved(df,capability,aircraftAddr,raw = message)
-          case 28                          => ADSB_AircraftStatus(df,capability,aircraftAddr,raw = message)
-          case 29                          => ADSB_TargetState(df,capability,aircraftAddr,raw = message)
-          case 31                          => ADSB_AircraftOperationStatus(df,capability,aircraftAddr,raw = message)
-          case _                           => ADSB_Unknown(df,capability,aircraftAddr,raw = message)
+            ADSB_AirbornePositionBaro(df,capability,aircraftAddr,raw = message,ts)
+          case 19                          => ADSB_AirborneVelocity(df,capability,aircraftAddr,raw = message, ts)
+          case v if 20 until 23 contains v => ADSB_AirbornePositionGNSS(df,capability,aircraftAddr,raw = message, ts)
+          case v if 23 until 28 contains v => ADSB_Reserved(df,capability,aircraftAddr,raw = message, ts)
+          case 28                          => ADSB_AircraftStatus(df,capability,aircraftAddr,raw = message, ts)
+          case 29                          => ADSB_TargetState(df,capability,aircraftAddr,raw = message,ts)
+          case 31                          => ADSB_AircraftOperationStatus(df,capability,aircraftAddr,raw = message,ts)
+          case _                           => ADSB_Unknown(df,capability,aircraftAddr,raw = message,ts)
         }
       // case 18 => // non-interrogatable equipment
       //   //log.warn(s"msg=${message}: DF=${df}: Unsupported DF")
-      //   ADSB_Unknown(df,0,AircraftAddress("0","",""),raw = message)
+      //   ADSB_Unknown(df,0,AircraftAddress("0","",""),raw = message,ts)
       case _ => // unknown
         //log.warn(s"msg=${message}: DF=${df}: Unsupported DF")
-        ADSB_Unknown(df,0,AircraftAddress("0","",""),raw = message)
+        ADSB_Unknown(df,0,AircraftAddress("0","",""),raw = message,ts)
     }
     Success(adsb)
   }
