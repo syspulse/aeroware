@@ -90,7 +90,7 @@ abstract class Decoder {
       case e:Exception => return Failure(new Exception(s"invalid format: failed to parse DF: ${data}"))
     }
     
-    val now = System.currentTimeMillis
+    val ts = System.currentTimeMillis
 
     log.trace(s"msg=${message}: DF=${df}")
 
@@ -106,7 +106,7 @@ abstract class Decoder {
         tc match {
           case v if 1 until 5 contains v => {
             val aid = Decoder.codecRawAircraftIdentification.decode(raw.DATA).toOption.get.value
-            ADSB_AircraftIdentification(df,capability,aircraftAddr,
+            ADSB_AircraftIdentification(ts,df,capability,aircraftAddr,
               tc, aid.EC.toByte(false),
               callSign = Decoder.decodeDataAsChars(Seq(aid.C1,aid.C2,aid.C3,aid.C4,aid.C5,aid.C6,aid.C7,aid.C8)),
               raw = message)
@@ -117,7 +117,7 @@ abstract class Decoder {
               "Airborne position (w/ Baro Altitude)",
               Decoder.codecRawAirbornePositions.decode(raw.DATA).toOption.get.value
             )
-            ADSB_AirbornePositionBaro(df,capability,aircraftAddr,raw = message)
+            ADSB_AirbornePositionBaro(ts,df,capability,aircraftAddr,raw = message)
           case 19                          => ADSB_AirborneVelocity(df,capability,aircraftAddr,raw = message)
           case v if 20 until 23 contains v => ADSB_AirbornePositionGNSS(df,capability,aircraftAddr,raw = message)
           case v if 23 until 28 contains v => ADSB_Reserved(df,capability,aircraftAddr,raw = message)

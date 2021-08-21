@@ -161,7 +161,7 @@ lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
     bashScriptExtraDefines += s"""addJava "-Dlogback.configurationFile=${appDockerRoot}/conf/logback.xml"""",
 
     name := appNameAdsb,
-    libraryDependencies ++= libAkka ++ Seq(
+    libraryDependencies ++= libAkka ++ libSkel ++ libPrometheus ++ Seq(
       libAlpakkaFile,
       libUjsonLib,
       libUpickle

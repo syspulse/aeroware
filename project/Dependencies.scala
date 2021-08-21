@@ -47,17 +47,22 @@ object Dependencies {
     val libUpickle =        "com.lihaoyi"                 %% "upickle"              % "1.4.0"
     val libUjsonLib =       "com.lihaoyi"                 %% "ujson"                % "1.3.15" 
 
+    val libPrometheusClient =   "io.prometheus"           % "simpleclient"          % "0.10.0"
+    
     val libCsv =            "com.github.tototoshi"        %% "scala-csv"            % "1.3.7"
 
     val libScodec =         "org.scodec"                  %% "scodec-core"          % "1.11.7"
 
     val libSkelCore =       "io.syspulse"                 %% "skel-core"            % skelVersion
+    val libSkelIngest =     "io.syspulse"                 %% "skel-ingest"          % skelVersion
     
     // Projects
     val libCommon = Seq(libScalaLogging, libLogback, libTypesafeConfig )
     val libTest = Seq(libScalaTest, libOsLib)
 
-    val libSkel = Seq(libSkelCore)
+    val libPrometheus = Seq(libPrometheusClient)
+    
+    val libSkel = Seq(libSkelCore,libSkelIngest)
     val libAeroware = Seq(libScopt,libUUID)
 
     val libAkka = Seq(libAkkaActor,libAkkaActorTyped,libAkkaStream)
