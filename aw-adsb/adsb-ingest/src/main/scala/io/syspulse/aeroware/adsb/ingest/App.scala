@@ -64,8 +64,8 @@ object App {
         opt[String]('a', "aircraft").action((x, c) => c.copy(catchAircraft = x)).text("Aircraft pattern catcher"),
         arg[String]("<args>...").unbounded().optional()
           .action((x, c) => c.copy(args = c.args :+ x))
-          .text("optional unbounded args"),
-          note("some notes." + sys.props("line.separator")),
+          .text("optional args"),
+          note("" + sys.props("line.separator")),
       )
     }
 

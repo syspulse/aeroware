@@ -78,6 +78,7 @@ abstract class Decoder {
         AircraftAddress(icaoId,icaoType,icaoCallsign)    
   }
 
+
   def decode(data: String): Try[ADSB] = {
     val message = data.trim
     if(message.size == 0 || message.size < 14 || message.size > 28 ) 
@@ -88,6 +89,8 @@ abstract class Decoder {
     } catch {
       case e:Exception => return Failure(new Exception(s"invalid format: failed to parse DF: ${data}"))
     }
+    
+    val now = System.currentTimeMillis
 
     log.trace(s"msg=${message}: DF=${df}")
 
