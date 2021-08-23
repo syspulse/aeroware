@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adsb-ingest
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: adsb-ingest
+  template:
+    metadata:
+      labels:
+        app: adsb-ingest
+    spec:
+      containers:
+      - name: adsb-ingest
+        image: syspulse/adsb-ingest:latest
+        imagePullPolicy: Always
+        args: ["--dump1090-host","$(ADSB_HOST)","--dump1090-port","$(ADSB_PORT)","--aircraft",".*","-d","/data","-f","ADSB-{yyyy-MM-dd_HH}.log"]
+        volumeMounts:
+        - mountPath: /cache
+          name: cache-volume
+        - mountPath: /data
+          name: data-volume
+      volumes:
+      - name: data-volume
+        hostPath:
+          path: /mnt/nfs/data
+          type: Directory
+      - name: cache-volume
+        hostPath:
+          path: /dev/shm

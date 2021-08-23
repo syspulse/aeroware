@@ -144,7 +144,7 @@ class ADSB_Ingest extends IngestClient {
         })
 
         // Very unoptimized tracker
-        val tracker = Flow[ADSB].map(v => {
+        val tracker = Flow[ADSB].filter(v => {
           if(config.trackAircraft == "" ||
              v.aircraftAddr.icaoType.matches(config.trackAircraft) ||
              v.aircraftAddr.icaoCallsign.matches(config.trackAircraft) ||
@@ -153,8 +153,8 @@ class ADSB_Ingest extends IngestClient {
           ) {
             metric_track.inc()
             println(s"${Util.tsToString(v.ts)}: ${v}")
-          }
-          v
+            true
+          } else false
         })
 
         val transformer = Flow[ADSB].map(v => { 
