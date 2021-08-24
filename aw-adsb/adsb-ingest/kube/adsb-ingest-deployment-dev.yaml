@@ -16,7 +16,7 @@ spec:
       - name: adsb-ingest
         image: syspulse/adsb-ingest:latest
         imagePullPolicy: Always
-        args: ["--dump1090-host","rp-1.u132.net","--dump1090-port","30002","--aircraft","'[Aa][nN].*'","-d","/data","-f","Antonov-{yyyy-MM-dd_HH}.log"]
+        args: ["--dump1090-host","rp-1.u132.net","--dump1090-port","30002","--aircraft",".*","-d","/data","-f","ADSB-{yyyy-MM-dd_HH}.csv","--data-format","csv"]
         volumeMounts:
         - mountPath: /cache
           name: cache-volume
