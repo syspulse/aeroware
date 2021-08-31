@@ -2,12 +2,18 @@ package io.syspulse.aeroware.adsb.core
 
 import io.syspulse.aeroware.adsb.core.Decoder
 
+import enumeratum._
+import enumeratum.values._
+
+import io.syspulse.aeroware.core.{ Units, Altitude, Location}
+
 package object adsb {
   type Raw = String
 }
 
 import adsb._
 import ADSB._
+
 
 case class AircraftAddress(icaoId:String,icaoType:String,icaoCallsign:String)
 case class AirbornePosition(raw:RawAirbornePosition)
@@ -25,7 +31,7 @@ case class ADSB_Unknown(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, r
 case class ADSB_AircraftIdentification(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, tc:Byte, ec:Byte, callSign:String, raw:Raw, ts:Long=now) extends ADSB
 
 case class ADSB_SurfacePosition(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
-case class ADSB_AirbornePositionBaro(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
+case class ADSB_AirbornePositionBaro(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, loc:Location, raw:Raw,ts:Long=now) extends ADSB
 case class ADSB_AirborneVelocity(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
 case class ADSB_AirbornePositionGNSS(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
 

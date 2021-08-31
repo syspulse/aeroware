@@ -124,6 +124,7 @@ lazy val gamet = (project in file("aw-gamet"))
 
     name := "aw-gamet",
     libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
+      libEnumeratum,
       libFastparseLib 
     ),
     
@@ -139,7 +140,8 @@ lazy val adsb_core = (project in file("aw-adsb/adsb-core"))
       sharedConfig,
       name := "adsb-core",
       libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(
-        libScodec
+        libScodec,
+        libEnumeratum
       ),
 )
 

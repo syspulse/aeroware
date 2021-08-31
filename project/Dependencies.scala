@@ -53,6 +53,8 @@ object Dependencies {
 
     val libScodec =         "org.scodec"                  %% "scodec-core"          % "1.11.7"
 
+    val libEnumeratum =     "com.beachape"                %% "enumeratum"          % "1.6.1"
+
     val libSkelCore =       "io.syspulse"                 %% "skel-core"            % skelVersion
     val libSkelIngest =     "io.syspulse"                 %% "skel-ingest"          % skelVersion
     

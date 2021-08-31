@@ -1,6 +1,7 @@
 package io.syspulse.aeroware.adsb.core
 
 import scala.util.{Try,Success,Failure}
+import scala.math._
 
 import scodec.codecs._
 import scodec.bits._
@@ -28,14 +29,68 @@ import com.typesafe.scalalogging.Logger
 import io.syspulse.aeroware.adsb.core._
 import io.syspulse.aeroware.adsb.util._
 import io.syspulse.aeroware.util._
+import io.syspulse.aeroware.core._
+import io.syspulse.aeroware.core.Units
+
+case class RawALT(a1:BitVector,Q:BitVector,a2:BitVector) {
+  override def toString = {
+    s"RawALT(a1=${a1.toByte()},Q=${Q.toBin},a1=${a1.toByte()})"
+  }
+}
 
 case class RawAirbornePosition(SS: BitVector,NICsb: BitVector,ALT: BitVector,T: BitVector,F: BitVector,
   LAT_CPR: BitVector,LON_CPR: BitVector) {
   override def toString = {
     s"RawAirbornePosition(SS=${SS.toByte()},NICsb=${NICsb.toBin},ALT=${ALT
-      .toLong()},T=${T.toBin} F=${F.toBin},LAT_CPR=${LAT_CPR
+      .toBin},T=${T.toBin} F=${F.toBin},LAT_CPR=${LAT_CPR
       .toLong()},LON_CPR=${LON_CPR.toLong()})"
   }
+
+  val isOdd = F.toByte(false) == 1
+  val latCPR = LAT_CPR.toLong(false).toDouble / 131072.0
+  val lonCPR = LON_CPR.toLong(false).toDouble / 131072.0
+
+  private def mod(a:Double, b:Double) = ((a%b)+b)%b
+
+  private def getLongZonesAtLat(Rlat:Double):Double = {
+		if (Rlat == 0) return 59.0
+		  else 
+    if (abs(Rlat) == 87) return 2.0
+		  else 
+    if (abs(Rlat) > 87) return 1.0
+
+		floor( 2.0 * Math.PI / acos(1 - (1 - cos(Math.PI/(2.0*15.0))) / pow(cos(Math.PI/180.0 * abs(Rlat)), 2)))
+	}
+
+  def getAltitude:Altitude = {
+    val codecRawALT: Codec[RawALT] = (bits(7) :: bits(1) :: bits(4)).as[RawALT]
+    val rawAltOpt = codecRawALT.decode(ALT).toOption
+    
+    if(!rawAltOpt.isDefined) return Altitude(0,Units.METERS)
+    var rawAlt = rawAltOpt.get.value
+
+    val a = rawAlt.Q.toByte(false) match {
+      case 0 => 50175.0 // not implemented
+      case 1 => (rawAlt.a1 ++ rawAlt.a2).toLong(false).toDouble * 25.0 - 1000.0
+    }
+
+    Altitude(a ,Units.FEET)
+  }
+
+  def getLocal(ref:Location):Location = {
+		
+    val dLat = 360.0 / (if(isOdd) 59.0 else 60.0)
+		val j = floor(ref.lat / dLat) + floor(mod(ref.lat,dLat) / dLat - latCPR + 0.5)
+		val lat = dLat * (j + latCPR )
+		val dLon = 360.0 / max(1.0, getLongZonesAtLat(lat) - (if(isOdd) 1.0 else 0.0))
+		val m = floor(ref.lon / dLon) + floor(0.5 + mod(ref.lon, dLon) / dLon - lonCPR)
+		val lon = dLon * (m + lonCPR)
+
+    //println(s"latCPR=${latCPR}, lonCPR=${lonCPR}, dLat=${dLat}, j=${j}, Rlat=${lat}, dLon=${dLon}, m=${m}, lon=${lon}")
+
+		val alt = this.getAltitude
+		Location(lat, lon, alt);
+	}
 }
 
 case class RawAircraftIdentification(EC: BitVector,C1:BitVector,C2:BitVector,C3:BitVector,C4:BitVector,C5:BitVector,C6:BitVector,C7:BitVector,C8:BitVector) {
@@ -68,7 +123,7 @@ case class RawADSB(DF: BitVector, CA: BitVector, ICAO: BitVector, TC: BitVector,
   }
 }
 
-abstract class Decoder {
+abstract class ADSB_Decoder(decoderLocation:Location) {
   val log = Logger(this.getClass().getSimpleName())
   
   def decodeAircraftAddr(b:BitVector):AircraftAddress = {
@@ -112,12 +167,13 @@ abstract class Decoder {
               raw = message, ts)
           }
           case v if 5 until 9 contains v => ADSB_SurfacePosition(df,capability,aircraftAddr,raw = message)
-          case v if 9 until 19 contains v =>
-            (
-              "Airborne position (w/ Baro Altitude)",
-              Decoder.codecRawAirbornePositions.decode(raw.DATA).toOption.get.value
-            )
-            ADSB_AirbornePositionBaro(df,capability,aircraftAddr,raw = message,ts)
+          case v if 9 until 19 contains v => {
+            val a = Decoder.codecRawAirbornePositions.decode(raw.DATA).toOption.get.value
+            val loc = a.getLocal(decoderLocation)
+            ADSB_AirbornePositionBaro(df,capability,aircraftAddr,
+              loc,
+              raw = message, ts)
+          }
           case 19                          => ADSB_AirborneVelocity(df,capability,aircraftAddr,raw = message, ts)
           case v if 20 until 23 contains v => ADSB_AirbornePositionGNSS(df,capability,aircraftAddr,raw = message, ts)
           case v if 23 until 28 contains v => ADSB_Reserved(df,capability,aircraftAddr,raw = message, ts)
@@ -143,16 +199,9 @@ abstract class Decoder {
       .get
       .value
 
-  // case class ADSB(DF:BitVector,CA:BitVector,ICAO:BitVector,DATA:BitVector,PI:BitVector)
-  // val codec: Codec[ADSB] = ( bits(5) :: bits(3) :: bits(24) :: bits(56) :: bits(24)).as[ADSB]
-
-  //case class ADSB(DF:BitVector,CA:BitVector,ICAO:BitVector,TC:BitVector, DATA:BitVector,PI:BitVector)
-
-  //val r = codec.decode(ByteVector.fromHex(message).bits).toOption.get.value
-  //r.map(_.value.toString)
 }
 
-class SDecoder extends Decoder
+class Decoder(val decoderLocation:Location = Location(50.4584,30.3381,Altitude(221,Units.METERS))) extends ADSB_Decoder(decoderLocation)
 
 object Decoder {
 
@@ -175,13 +224,17 @@ object Decoder {
   val codecRawDF = (bits(5))
   
   //                                     DF         CA        ICAO        TC         DATA      PARITY/InterrogatorID
-  val codecRawADSB: Codec[RawADSB] = (bits(5) :: bits(3) :: bits(24) :: bits(5) :: bits(51) :: bits(24)).as[RawADSB]
+  val codecRawADSB: Codec[RawADSB] = (bits(5) :: bits(3) :: bits(24) :: bits(5) :: bits(51) :: bits(24))
+    .as[RawADSB]
   
-  val codecRawAircraftIdentification: Codec[RawAircraftIdentification] = (bits(3) :: bits(6) :: bits(6) :: bits(6) :: bits(6) :: bits(6) :: bits(6) :: bits(6) :: bits(6)).as[RawAircraftIdentification]
+  val codecRawAircraftIdentification: Codec[RawAircraftIdentification] = (bits(3) :: bits(6) :: bits(6) :: bits(6) :: bits(6) :: bits(6) :: bits(6) :: bits(6) :: bits(6))
+    .as[RawAircraftIdentification]
+  
+  //                                                            SS         NICsb       ALT         T          F        LAT-CPR     LON-SPR 
   val codecRawAirbornePositions: Codec[RawAirbornePosition] = (bits(2) :: bits(1) :: bits(12) :: bits(1) :: bits(1) :: bits(17) :: bits(17))
     .as[RawAirbornePosition]
 
-  val decoder = new SDecoder
+  val decoder = new Decoder
   def decode(data:String) = decoder.decode(data)
 
   def decodeDump1090(data:String) = decode(Dump1090.decode(data))
