@@ -26,7 +26,7 @@ class AirbornePositionSpec extends WordSpec with Matchers with Testables {
 
     s"decode ${msg1} as ADSB_AirbornePositionBaro type" in {
       val a1 = Decoder.decode(msg1)
-      a1.get.getClass should === (ADSB_AirbornePositionBaro(17,5,AircraftAddress("40621D","",""),loc=null,raw=null).getClass)
+      a1.get.getClass should === (ADSB_AirbornePositionBaro(17,5,AircraftAddress("40621D","",""),loc=null,isOdd=false, latCPR=0, lonCPR=0, raw=null).getClass)
     }
 
     s"decode ${msg1} ADSB_AirbornePositionBaro with altitude 38000 feet" in {

@@ -50,17 +50,6 @@ case class RawAirbornePosition(SS: BitVector,NICsb: BitVector,ALT: BitVector,T: 
   val latCPR = LAT_CPR.toLong(false).toDouble / 131072.0
   val lonCPR = LON_CPR.toLong(false).toDouble / 131072.0
 
-  private def mod(a:Double, b:Double) = ((a%b)+b)%b
-
-  private def getLongZonesAtLat(Rlat:Double):Double = {
-		if (Rlat == 0) return 59.0
-		  else 
-    if (abs(Rlat) == 87) return 2.0
-		  else 
-    if (abs(Rlat) > 87) return 1.0
-
-		floor( 2.0 * Math.PI / acos(1 - (1 - cos(Math.PI/(2.0*15.0))) / pow(cos(Math.PI/180.0 * abs(Rlat)), 2)))
-	}
 
   def getAltitude:Altitude = {
     val codecRawALT: Codec[RawALT] = (bits(7) :: bits(1) :: bits(4)).as[RawALT]
@@ -77,20 +66,9 @@ case class RawAirbornePosition(SS: BitVector,NICsb: BitVector,ALT: BitVector,T: 
     Altitude(a ,Units.FEET)
   }
 
-  def getLocal(ref:Location):Location = {
-		
-    val dLat = 360.0 / (if(isOdd) 59.0 else 60.0)
-		val j = floor(ref.lat / dLat) + floor(mod(ref.lat,dLat) / dLat - latCPR + 0.5)
-		val lat = dLat * (j + latCPR )
-		val dLon = 360.0 / max(1.0, getLongZonesAtLat(lat) - (if(isOdd) 1.0 else 0.0))
-		val m = floor(ref.lon / dLon) + floor(0.5 + mod(ref.lon, dLon) / dLon - lonCPR)
-		val lon = dLon * (m + lonCPR)
-
-    //println(s"latCPR=${latCPR}, lonCPR=${lonCPR}, dLat=${dLat}, j=${j}, Rlat=${lat}, dLon=${dLon}, m=${m}, lon=${lon}")
-
-		val alt = this.getAltitude
-		Location(lat, lon, alt);
-	}
+  def getLocalPosition(ref:Location):Location = {
+    Decoder.getLocalPosition(ref,isOdd,latCPR,lonCPR, getAltitude)
+  }
 }
 
 case class RawAircraftIdentification(EC: BitVector,C1:BitVector,C2:BitVector,C3:BitVector,C4:BitVector,C5:BitVector,C6:BitVector,C7:BitVector,C8:BitVector) {
@@ -125,6 +103,7 @@ case class RawADSB(DF: BitVector, CA: BitVector, ICAO: BitVector, TC: BitVector,
 
 abstract class ADSB_Decoder(decoderLocation:Location) {
   val log = Logger(this.getClass().getSimpleName())
+
   
   def decodeAircraftAddr(b:BitVector):AircraftAddress = {
     val icaoId = b.toHex.toLowerCase
@@ -134,7 +113,7 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
   }
 
 
-  def decode(data: String): Try[ADSB] = {
+  def decode(data: String, refLoc:Location = decoderLocation): Try[ADSB] = {
     val message = data.trim
     if(message.size == 0 || message.size < 14 || message.size > 28 ) 
       return Failure(new Exception(s"invalid size: ${message.size}"))
@@ -169,9 +148,9 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
           case v if 5 until 9 contains v => ADSB_SurfacePosition(df,capability,aircraftAddr,raw = message)
           case v if 9 until 19 contains v => {
             val a = Decoder.codecRawAirbornePositions.decode(raw.DATA).toOption.get.value
-            val loc = a.getLocal(decoderLocation)
+            val loc = a.getLocalPosition(refLoc)
             ADSB_AirbornePositionBaro(df,capability,aircraftAddr,
-              loc,
+              loc, a.isOdd, a.latCPR, a.lonCPR,
               raw = message, ts)
           }
           case 19                          => ADSB_AirborneVelocity(df,capability,aircraftAddr,raw = message, ts)
@@ -215,6 +194,32 @@ object Decoder {
       case _ => '#'
     }
   }
+
+  private def mod(a:Double, b:Double) = ((a%b)+b)%b
+
+  private def getLongZonesAtLat(rLat:Double):Double = {
+		if (rLat == 0) return 59.0
+		  else 
+    if (abs(rLat) == 87) return 2.0
+		  else 
+    if (abs(rLat) > 87) return 1.0
+
+		floor( 2.0 * Math.PI / acos(1 - (1 - cos(Math.PI/(2.0*15.0))) / pow(cos(Math.PI/180.0 * abs(rLat)), 2)))
+	}
+
+  def getLocalPosition(ref:Location, isOdd:Boolean, latCPR:Double, lonCPR:Double, alt:Altitude):Location = {
+		
+    val dLat = 360.0 / (if(isOdd) 59.0 else 60.0)
+		val j = floor(ref.lat / dLat) + floor(mod(ref.lat,dLat) / dLat - latCPR + 0.5)
+		val lat = dLat * (j + latCPR )
+		val dLon = 360.0 / max(1.0, getLongZonesAtLat(lat) - (if(isOdd) 1.0 else 0.0))
+		val m = floor(ref.lon / dLon) + floor(0.5 + mod(ref.lon, dLon) / dLon - lonCPR)
+		val lon = dLon * (m + lonCPR)
+
+    //println(s"latCPR=${latCPR}, lonCPR=${lonCPR}, dLat=${dLat}, j=${j}, Rlat=${lat}, dLon=${dLon}, m=${m}, lon=${lon}")
+
+		Location(lat, lon, alt);
+	}
 
   
   def decodeDataAsChars(bits:Seq[BitVector]):String = {

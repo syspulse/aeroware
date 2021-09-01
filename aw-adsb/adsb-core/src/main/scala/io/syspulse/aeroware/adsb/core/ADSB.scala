@@ -30,8 +30,17 @@ case class ADSB_Unknown(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, r
 
 case class ADSB_AircraftIdentification(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, tc:Byte, ec:Byte, callSign:String, raw:Raw, ts:Long=now) extends ADSB
 
-case class ADSB_SurfacePosition(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
-case class ADSB_AirbornePositionBaro(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, loc:Location, raw:Raw,ts:Long=now) extends ADSB
+case class ADSB_SurfacePosition(df:Byte,capability:Byte, aircraftAddr:AircraftAddress,raw:Raw,ts:Long=now) extends ADSB
+case class ADSB_AirbornePositionBaro(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, loc:Location, isOdd:Boolean,latCPR:Double,lonCPR:Double,raw:Raw,ts:Long=now) extends ADSB {
+  
+  def getLocalPosition(ref:ADSB_AirbornePositionBaro): ADSB_AirbornePositionBaro = {
+    ADSB_AirbornePositionBaro(
+      df, capability, aircraftAddr,
+      loc = Decoder.getLocalPosition(ref.loc, isOdd, latCPR, lonCPR, loc.alt),
+      isOdd = isOdd, latCPR = latCPR, lonCPR = lonCPR, raw = raw, ts = ts
+    )
+  }
+}
 case class ADSB_AirborneVelocity(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
 case class ADSB_AirbornePositionGNSS(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
 
