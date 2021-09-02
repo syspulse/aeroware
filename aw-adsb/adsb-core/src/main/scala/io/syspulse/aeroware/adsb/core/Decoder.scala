@@ -47,8 +47,8 @@ case class RawAirbornePosition(SS: BitVector,NICsb: BitVector,ALT: BitVector,T: 
   }
 
   val isOdd = F.toByte(false) == 1
-  val latCPR = LAT_CPR.toLong(false).toDouble / 131072.0
-  val lonCPR = LON_CPR.toLong(false).toDouble / 131072.0
+  val latCPR = LAT_CPR.toLong(false).toDouble
+  val lonCPR = LON_CPR.toLong(false).toDouble
 
 
   def getAltitude:Altitude = {
@@ -150,7 +150,7 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
             val a = Decoder.codecRawAirbornePositions.decode(raw.DATA).toOption.get.value
             val loc = a.getLocalPosition(refLoc)
             ADSB_AirbornePositionBaro(df,capability,aircraftAddr,
-              loc, a.isOdd, a.latCPR, a.lonCPR,
+              loc, a.isOdd, a.latCPR, a.lonCPR, 
               raw = message, ts)
           }
           case 19                          => ADSB_AirborneVelocity(df,capability,aircraftAddr,raw = message, ts)
@@ -183,6 +183,7 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
 class Decoder(val decoderLocation:Location = Location(50.4584,30.3381,Altitude(221,Units.METERS))) extends ADSB_Decoder(decoderLocation)
 
 object Decoder {
+  val log = Logger(this.getClass().getSimpleName())
 
   def decodeCharacter(bits:BitVector):Char = {
     bits.toByte(false) match {
@@ -197,7 +198,7 @@ object Decoder {
 
   private def mod(a:Double, b:Double) = ((a%b)+b)%b
 
-  private def getLongZonesAtLat(rLat:Double):Double = {
+  private def NL(rLat:Double):Double = {
 		if (rLat == 0) return 59.0
 		  else 
     if (abs(rLat) == 87) return 2.0
@@ -210,16 +211,65 @@ object Decoder {
   def getLocalPosition(ref:Location, isOdd:Boolean, latCPR:Double, lonCPR:Double, alt:Altitude):Location = {
 		
     val dLat = 360.0 / (if(isOdd) 59.0 else 60.0)
-		val j = floor(ref.lat / dLat) + floor(mod(ref.lat,dLat) / dLat - latCPR + 0.5)
-		val lat = dLat * (j + latCPR )
-		val dLon = 360.0 / max(1.0, getLongZonesAtLat(lat) - (if(isOdd) 1.0 else 0.0))
-		val m = floor(ref.lon / dLon) + floor(0.5 + mod(ref.lon, dLon) / dLon - lonCPR)
-		val lon = dLon * (m + lonCPR)
+		val j = floor(ref.lat / dLat) + floor(mod(ref.lat,dLat) / dLat - latCPR / 131072.0 + 0.5)
+		val lat = dLat * (j + latCPR / 131072.0)
+		val dLon = 360.0 / max(1.0, NL(lat) - (if(isOdd) 1.0 else 0.0))
+		val m = floor(ref.lon / dLon) + floor(0.5 + mod(ref.lon, dLon) / dLon - lonCPR / 131072.0)
+		val lon = dLon * (m + lonCPR / 131072.0 )
 
-    //println(s"latCPR=${latCPR}, lonCPR=${lonCPR}, dLat=${dLat}, j=${j}, Rlat=${lat}, dLon=${dLon}, m=${m}, lon=${lon}")
+    //println(s"latCPR=${latCPR}, lonCPR=${lonCPR}, dLat=${dLat}, j=${j}, rLat=${lat}, dLon=${dLon}, m=${m}, lon=${lon}")
 
 		Location(lat, lon, alt);
 	}
+
+
+  // a0 - previous event
+  // a1 - current event
+  def getGloballPosition(a0:ADSB_AirbornePositionBaro,a1:ADSB_AirbornePositionBaro): Location = {
+    if(a0.aircraftAddr != a1.aircraftAddr) {
+      log.warn(s"different aircrafts: ${a0.aircraftAddr} : ${a1.aircraftAddr}")
+      return a1.loc
+    }
+		
+		if (a0.isOdd == a1.isOdd) {
+      log.warn(s"same odds (expected different): ${a0.isOdd} : ${a1.isOdd}")
+      return a1.loc
+    }
+		
+		val (even,odd) = if(a1.isOdd) (a0,a1) else (a1,a0)
+		
+		val dLat0 = 360.0 / 60.0;
+		val dLat1 = 360.0 / 59.0;
+
+		val j = floor((59.0 * even.latCPR - 60.0 * odd.latCPR) / 131072.0 + 0.5);
+
+		var rLat0 = dLat0 * (mod(j, 60.0) + even.latCPR / 131072.0);
+		var rLat1 = dLat1 * (mod(j, 59.0) + odd.latCPR / 131072.0);
+
+		// Southern hemisphere
+		if (rLat0 >= 270.0 && rLat0 <= 360.0)	rLat0 = rLat0 - 360.0;
+		if (rLat1 >= 270.0 && rLat1 <= 360.0) rLat1 = rLat1 - 360.0;
+
+		if (NL(rLat0) != NL(rLat1)) {
+			log.warn(s"incompatible number of even longitudal zones: ${rLat0} : ${rLat1}: must be equal")
+      return a1.loc
+    }
+
+		val NL_0 = NL(rLat0) 
+		val NL_1 = max(1.0, NL_0 - (if(a1.isOdd) 1.0 else 0.0))
+		val dLon = 360.0 / NL_1;
+
+		val m = floor(( even.lonCPR * (NL_0 - 1.0) - odd.lonCPR * NL_0) / 131072.0 + 0.5);
+
+		var rLon = dLon * (mod(m, NL_1)	+ ( if(a1.isOdd) odd.lonCPR else even.lonCPR ) / 131072.0)
+
+		// ecuatorial longitude
+		if (rLon < -180.0 && rLon > -360.0) rLon = rLon + 360.0;
+		if (rLon > 180.0 && rLon < 360.0)	rLon = rLon - 360.0;
+
+		val alt = a1.loc.alt;
+		Location(if(a1.isOdd) rLat1 else rLat0, rLon, alt)
+  }
 
   
   def decodeDataAsChars(bits:Seq[BitVector]):String = {

@@ -28,4 +28,6 @@ object Location {
 	val flattening = 1.0/298.257223563; // flattening
 	val minorAxis = majorAxis*(1.0-flattening); // semi-minor axis
 	val eccentricity2 = 2.0*flattening-flattening*flattening; // eccentricity squared
+
+  val UNKNOWN = Location(0,0)
 }

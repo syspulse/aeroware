@@ -90,17 +90,18 @@ val sharedConfigAssembly = Seq(
     val cp = (fullClasspath in assembly).value
     cp filter { f =>
       f.data.getName.contains("snakeyaml-1.27-android.jar") 
-      //||
-      //f.data.getName == "spark-core_2.11-2.0.1.jar"
+      // ||
+      // f.data.getName.container("spark-core_2.11-2.0.1.jar")
     }
   },
+  
   
   test in assembly := {}
 )
 
 lazy val root = (project in file("."))
-  .aggregate(core, gamet, adsb_core,adsb_ingest)
-  .dependsOn(core, gamet, adsb_core, adsb_ingest)
+  .aggregate(core, gamet, adsb_core, adsb_ingest, adsb_tools)
+  .dependsOn(core, gamet, adsb_core, adsb_ingest, adsb_tools)
   .disablePlugins(sbtassembly.AssemblyPlugin) // this is needed to prevent generating useless assembly and merge error
   .settings(
     
@@ -173,5 +174,17 @@ lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
     mainClass in assembly := Some(appBootClassAdsb),
     assemblyJarName in assembly := jarPrefix + appNameAdsb + "-" + "assembly" + "-"+  appVersion + ".jar",
 
+)
+
+lazy val adsb_tools = (project in file("aw-adsb/adsb-tools"))
+  .dependsOn(core, adsb_core)
+  .enablePlugins(sbtassembly.AssemblyPlugin)
+  .settings (
+      sharedConfig,
+      sharedConfigAssembly,
+      name := "adsb-tools",
+      libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ Seq(
+        
+      ),
 )
 
