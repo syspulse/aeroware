@@ -5,6 +5,8 @@
 
 1. [adsb-core](adsb-core) - ADSB parser
 2. [adsb-ingest](adsb-ingest) - Ingestion from RP sensors
+3. [adsb-tools](adsb-tools) - Shell tools to work with ADS-B data
+4. [adsb-view](adsb-view) - Map viewer
 
 
 ## Kafka Artchitecture Examples
