@@ -15,5 +15,4 @@ echo "app: $APP"
 echo "site: $SITE"
 echo "main: $MAIN"
 
-cd ..
-exec ../run-app.sh $APP $MAIN --data-dir $APP_HOME/data $@
+exec ../../run-app.sh $APP $MAIN --data-dir $APP_HOME/data $@
