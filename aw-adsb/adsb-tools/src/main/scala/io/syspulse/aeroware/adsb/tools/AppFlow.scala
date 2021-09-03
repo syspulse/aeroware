@@ -1,0 +1,132 @@
+package io.syspulse.aeroware.adsb.tools
+
+import scala.util.{Try,Success,Failure}
+import java.net.URI
+
+import com.typesafe.scalalogging.Logger
+
+import scopt.OParser
+
+import io.syspulse.skel
+import io.syspulse.skel.config._
+
+import io.syspulse.aeroware.adsb.core._
+
+case class Config (
+  httpHost: String = "0.0.0.0",
+  httpPort: Int = 8080,
+  httpUri: String = "/api/v1/adsb",
+
+  dumpHost: String = "localhost",
+  dumpPort: Int = 30002,
+  fileLimit: Long = 1000000L,
+  fileSize: Long = 1024L * 1024L * 10L,
+  filePattern: String = "ADSB-{yyyy-MM-dd'T'HH:mm:ssZ}.log",
+  connectTimeout: Long = 3000L,
+  idleTimeout: Long = 60000L,
+  dataDir:String = "/data",
+  dataFormat:String = "json",
+  trackAircraft:String = "",
+  files:Seq[String] = Seq()
+)
+
+object AppFlow {
+  def main(args: Array[String]):Unit = {
+
+    println(s"args: ${args.size}: ${args.toSeq}")
+
+    val builder = OParser.builder[Config]
+    val parser1 = {
+      import builder._
+      OParser.sequence(programName("adsb-flow"),head("ADSB flow", ""),
+      
+        opt[String]('j', "data-format").action((x, c) => c.copy(dataFormat = x)).text("Data format (json|csv) (def: json)"),
+        opt[Long]('l', "limit").action((x, c) => c.copy(fileLimit = x)).text("Limit ADSB events per file"),
+        
+        opt[String]('a', "aircraft").action((x, c) => c.copy(trackAircraft = x)).text("Aircraft(s) tracker (icaoType,callSign,icaoId). RexExp (e.g. '[Aa][nN].*' - Track All AN"),
+        arg[String]("<file>...").unbounded().optional()
+          .action((x, c) => c.copy(files = c.files :+ x))
+          .text("ADSB log files (json/csv)"),
+          note("" + sys.props("line.separator")),
+      )
+    }
+
+    OParser.parse(parser1, args, Config()) match {
+      case Some(config) => {
+        val confuration = Configuration.withPriority(Seq(new ConfigurationEnv,new ConfigurationAkka))
+
+        Console.err.println(s"${config}")
+
+        var pipe = List[Pipe]()
+              
+        for(f <- config.files) {
+          Console.err.println(s"Creating pipe: ${f}")
+
+          val p = {
+            if(f.toLowerCase.startsWith("ws://")) {
+              val uri = new URI(f.toLowerCase)
+              val (wsHost,wsPort) = (uri.getHost,uri.getPort)
+              new PipeWebSocketServer(wsHost,wsPort)
+            } 
+            else
+            if(f.toLowerCase == "stdout") {
+              new PipeStdout
+            }
+            else
+            if(f.toLowerCase == "delay") {
+              new PipeDelay
+            }
+            else
+            if(f.toLowerCase.startsWith("repeat")) {
+              val count = f.split("[()]") match {
+                case Array(_,count) => count.toInt
+                case Array(_) => Int.MaxValue
+                case _ => 0
+              }
+              new PipeRepeat(count)
+            }
+            else
+            if(f.toLowerCase.startsWith("sleep")) {
+              val interval = f.split("[()]") match {
+                case Array(_,interval) => interval.toLong
+                case Array(_) => 1000L
+                case _ => 0L
+              }
+              new PipeSleep(interval)
+            }
+            else 
+            f.toLowerCase().split("\\.").last match {
+              case "csv" => new PipeInputCSV(f)
+              case "adsb" => new PipeInputADSB(f)
+              case _ => {
+                Console.err.println(s"format unknown: ${f}")
+                new PipeNone
+              }
+            }
+          }
+
+          pipe = pipe :+ p
+        }
+        
+        Console.err.println(s"Pipe: ${pipe}")
+
+        var finished = false
+        var a:Try[ADSB] = Success(null)
+        do {
+          for( p <- pipe ) {
+            a = p.flow(a) 
+          }
+
+          if(a.isFailure) {
+            if(! a.toEither.left.get.isInstanceOf[java.util.NoSuchElementException])  Console.err.println(s"${a}")
+            finished = true; 
+          }
+
+        } while(!finished)
+        System.exit(0)
+      }
+      case _ =>
+        System.exit(1)
+    }
+  }
+}
