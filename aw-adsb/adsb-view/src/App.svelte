@@ -1,14 +1,8 @@
 <script>
 	import { onMount } from 'svelte';
-	/*
-	This is an example of using Svelte features with Leaflet. Original blog post here: https://imfeld.dev/writing/leaflet_with_svelte
-	
-	The toolbar and the marker popups are both implemented by embedding Svelte components inside Leaflet elements. The marker and lines are toggled by updating the map from reactive statements.
-	
-	Any questions? Ask me at dimfeld on Twitter!
-	
-	Thanks to heroicons.dev for all the icons used here.
-	*/
+	import { writable } from 'svelte/store'
+	import { WS } from './ws.js'
+
 	
 	import L from 'leaflet';
 	import MapToolbar from './MapToolbar.svelte';
@@ -27,14 +21,18 @@
 	// ];
 	var markerLocations = []
 	
+	function decodeData(data) {
+		let attr = data.split(",");
+		return [parseFloat(attr[0]),parseFloat(attr[1]),parseFloat(attr[2])];
+	}
+
 	onMount(async () => {
         const response = await fetch('http://localhost:5000/data.csv');
         const data = await response.text();
 		
 		const markers = data.split("\n");
         markerLocations = markers.filter( s => s.trim().length!=0).map( s => {
-			let data = s.split(",")
-			return [parseFloat(data[0]),parseFloat(data[1]),parseFloat(data[2])];
+			return( decodeData(s))
 		})
 		
     })
@@ -42,7 +40,7 @@
 	const initialView = [50.694122314453125,30.47310494087838]//[50.4584,30.3381];//[39.8283, -98.5795];
 	
 	function createMap(container) {
-	  let m = L.map(container, {preferCanvas: true }).setView(initialView, 15);
+	  let m = L.map(container, {preferCanvas: true }).setView(initialView, 12);
     L.tileLayer(
 	    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
 	    {
@@ -204,11 +202,28 @@
 
 	$: if(markerLocations && map) syncMarkers(markerLocations);
 
+	$: {
+		let data = $WS;
+		if(data) {
+			let decoded = decodeData(data);
+			console.log("Decoded: '"+decoded+"'");
+
+			markerLayers.remove();
+
+			const last = markerLocations.slice(-5);
+
+			last.push(decodeData(data));
+			markerLocations = last
+			//syncMarkers(markerLocations);
+		}
+	}
+
 	function resizeMap() {
 	  if(map) { map.invalidateSize(); }
   }
 
 </script>
+
 <svelte:window on:resize={resizeMap} />
 
 <style>
@@ -222,8 +237,9 @@
 	}
 	
 	.map :global(.map-marker) {
-		width:30px;
-		transform:translateX(-50%) translateY(-25%);
+		/* width:30px;
+		transform:translateX(-50%) translateY(-25%); */
+		width:40px;
 	}
 </style>
 

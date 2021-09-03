@@ -32,6 +32,8 @@ object Dependencies {
     val libAlpakkaFile =    "com.lightbend.akka"          %% "akka-stream-alpakka-file" % alpakkaVersion
 
     val libScalaLogging =   "com.typesafe.scala-logging"  %% "scala-logging"        % "3.9.2"
+    // I need this rubbish slf4j to deal with old jboss dependecny which generates exception in loading logback.xml
+    val libSlf4jApi =       "org.slf4j"                   %  "slf4j-api"            % "1.8.0-beta4"
     val libLogback =        "ch.qos.logback"              %  "logback-classic"      % "1.2.3"
     val libScalaTest =      "org.scalatest"               %% "scalatest"            % "3.1.2" % Test
     //val libSpecs2core =     "org.specs2"                  %% "specs2-core"          % "2.4.17"
@@ -46,6 +48,7 @@ object Dependencies {
     val libFastparseLib =   "com.lihaoyi"                 %% "fastparse"            % "2.3.2"
     val libUpickle =        "com.lihaoyi"                 %% "upickle"              % "1.4.0"
     val libUjsonLib =       "com.lihaoyi"                 %% "ujson"                % "1.3.15" 
+    val libCask =           "com.lihaoyi"                 %% "cask"                 % "0.7.11" //exclude("ch.qos.logback","logback-core")
 
     val libPrometheusClient =   "io.prometheus"           % "simpleclient"          % "0.10.0"
     
@@ -59,7 +62,7 @@ object Dependencies {
     val libSkelIngest =     "io.syspulse"                 %% "skel-ingest"          % skelVersion
     
     // Projects
-    val libCommon = Seq(libScalaLogging, libLogback, libTypesafeConfig )
+    val libCommon = Seq(libScalaLogging, libSlf4jApi, libLogback, libTypesafeConfig )
     val libTest = Seq(libScalaTest, libOsLib)
 
     val libPrometheus = Seq(libPrometheusClient)

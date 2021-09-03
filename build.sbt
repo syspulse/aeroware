@@ -184,7 +184,7 @@ lazy val adsb_tools = (project in file("aw-adsb/adsb-tools"))
       sharedConfigAssembly,
       name := "adsb-tools",
       libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ Seq(
-        
+        libCask  
       ),
 )
 
