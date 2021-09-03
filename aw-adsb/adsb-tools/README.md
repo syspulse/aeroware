@@ -3,7 +3,7 @@
 adsb-tool pipes ADS-B message through specified processors
 
 ```
-run.sh [flow]
+run-flow.sh [flow]
 ```
 
 __Supported Flow Blocks (pipes)__
@@ -20,16 +20,16 @@ __Supported Flow Blocks (pipes)__
 
 Decode from dump1090 format and print to stdout
 ```
-./run.sh ./data/flight-1.adsb stdout
+./run-flow.sh ./data/flight-1.adsb stdout
 ```
 
 Decode from CSV, print, broadcast to websockets, delay between events and repeat 10 times all flow
 ```
-./run.sh ./data/flight-1.csv stdout "ws://0.0.0.0:30000" delay "repeat(10)"
+./run-flow.sh ./data/flight-1.csv stdout "ws://0.0.0.0:30000" delay "repeat(10)"
 ```
 
 Read from multiple files, broadcast to websockets, sleep for 1 sec and repeat indefinitely
 ```
-./run.sh flight-1.csv flight-2.adsb "ws://0.0.0.0:30000" "sleep(1000) repeat"
+./run-flow.sh flight-1.csv flight-2.adsb "ws://0.0.0.0:30000" "sleep(1000) repeat"
 ```
 
