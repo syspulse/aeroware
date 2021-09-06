@@ -5,7 +5,7 @@ import io.syspulse.aeroware.adsb.core.Decoder
 import enumeratum._
 import enumeratum.values._
 
-import io.syspulse.aeroware.core.{ Units, Altitude, Location}
+import io.syspulse.aeroware.core.{ Units, Altitude, Location, Speed, VRate}
 
 package object adsb {
   type Raw = String
@@ -42,7 +42,8 @@ case class ADSB_AirbornePositionBaro(df:Byte,capability:Byte, aircraftAddr:Aircr
   }
 }
 
-case class ADSB_AirborneVelocity(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, hSpeed:Double, heading:Double, vRate:Double, raw:Raw,ts:Long=now) extends ADSB
+case class ADSB_AirborneVelocity(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, hSpeed:Speed, heading:Double, vRate:VRate, raw:Raw,ts:Long=now) extends ADSB
+
 case class ADSB_AirbornePositionGNSS(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
 
 case class ADSB_Reserved(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB

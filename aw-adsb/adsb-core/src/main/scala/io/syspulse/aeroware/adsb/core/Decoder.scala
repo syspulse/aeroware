@@ -48,7 +48,7 @@ case class RawAirborneVelocityST1(ST: BitVector, IC:BitVector, RESV_A:BitVector,
     s"RawAirborneVelocityST1(ST=${ST.toByte()},IC=${IC.toBin},RESV_A=${RESV_A.toBin},NAC=${NAC.toByte()},S_ew=${S_ew.toBin},V_ew=${V_ew.toInt()},S_ns=${S_ns.toBin},V_ns=${V_ns.toInt()},VrSrc=${VrSrc.toBin},S_vr=${S_vr.toBin},Vr=${Vr.toInt()},RESV_B=${RESV_B.toBin},S_Dif=${S_Dif.toBin},Dir=${Dif.toInt()}"
   }
 
-  def getSpeedHeading:(Double,Double) = {
+  def getSpeedHeading:(Speed,Double) = {
     
     val Vwe = S_ew.toByte(false) match {
       case 1 => -1 * (V_ew.toInt(false) - 1)
@@ -66,15 +66,15 @@ case class RawAirborneVelocityST1(ST: BitVector, IC:BitVector, RESV_A:BitVector,
       if(h < 0) h + 360 else h
     }
     
-    (v,h)
+    (Speed(v,Units.KNOTS),h)
   }
 
-  def getVRate:Double = {
+  def getVRate:VRate = {
     return {
       val vRate = (Vr.toInt(false) -1) * 64
       S_vr.toByte(false) match {
-        case 0 => vRate
-        case 1 => -vRate
+        case 0 => VRate(vRate,Units.FPM)
+        case 1 => VRate(-vRate,Units.FPM)
       }
     }
   }
@@ -90,7 +90,7 @@ case class RawAirborneVelocityST3(ST: BitVector, IC:BitVector, RESV_A:BitVector,
     s"RawAirborneVelocityST3(ST=${ST.toByte()},IC=${IC.toBin},RESV_A=${RESV_A.toBin},NAC=${NAC.toByte()},S_hdg=${S_hdg.toBin},Hdg=${Hdg.toInt()},AS_t=${AS_t.toBin},AS=${AS.toInt()},VrSrc=${VrSrc.toBin},S_vr=${S_vr.toBin},Vr=${Vr.toInt()},RESV_B=${RESV_B.toBin},S_Dif=${S_Dif.toBin},Dir=${Dif.toInt()}"
   }
 
-  def getSpeedHeading:(Double,Double) = {
+  def getSpeedHeading:(Speed,Double) = {
     
     val v = AS.toInt(false)
     
@@ -99,17 +99,17 @@ case class RawAirborneVelocityST3(ST: BitVector, IC:BitVector, RESV_A:BitVector,
       case 0 => 0.0 // not available
     }
     
-    (v,h)
+    (Speed(v,Units.KNOTS),h)
   }
 
   def isHeadingAvailable:Boolean = S_hdg.toByte() == 1
 
-  def getVRate:Double = {
+  def getVRate:VRate = {
     return {
       val vRate = (Vr.toInt(false) -1) * 64
       S_vr.toByte(false) match {
-        case 0 => vRate
-        case 1 => -vRate
+        case 0 => VRate(vRate,Units.FPM)
+        case 1 => VRate(-vRate,Units.FPM)
       }
     }
   }
