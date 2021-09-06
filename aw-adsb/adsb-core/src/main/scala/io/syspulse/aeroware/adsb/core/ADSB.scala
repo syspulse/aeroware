@@ -42,7 +42,7 @@ case class ADSB_AirbornePositionBaro(df:Byte,capability:Byte, aircraftAddr:Aircr
   }
 }
 
-case class ADSB_AirborneVelocity(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
+case class ADSB_AirborneVelocity(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, hSpeed:Double, heading:Double, vRate:Double, raw:Raw,ts:Long=now) extends ADSB
 case class ADSB_AirbornePositionGNSS(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
 
 case class ADSB_Reserved(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB

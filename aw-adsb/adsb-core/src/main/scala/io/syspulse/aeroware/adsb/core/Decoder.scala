@@ -38,6 +38,48 @@ case class RawALT(a1:BitVector,Q:BitVector,a2:BitVector) {
   }
 }
 
+case class RawAirborneVelocity(ST: BitVector, IC:BitVector, RESV_A:BitVector, NAC:BitVector, 
+                              S_ew:BitVector, V_ew:BitVector, S_ns:BitVector, V_ns:BitVector,
+                              VrSrc:BitVector, S_vr:BitVector, Vr:BitVector, RESV_B:BitVector,
+                              S_Dif:BitVector, Dif:BitVector) {
+  override def toString = {
+    s"RawAirborneVelocity(ST=${ST.toByte()},IC=${IC.toBin},RESV_A=${RESV_A.toBin},NAC=${NAC.toByte()},S_ew=${S_ew.toBin},V_ew=${V_ew.toInt()},S_ns=${S_ns.toBin},V_ns=${V_ns.toInt()},VrSrc=${VrSrc.toBin},S_vr=${S_vr.toBin},Vr=${Vr.toInt()},RESV_B=${RESV_B.toBin},S_Dif=${S_Dif.toBin},Dir=${Dif.toInt()}"
+  }
+
+  def getSpeedHeading:(Double,Double) = {
+    
+    val Vwe = S_ew.toByte(false) match {
+      case 1 => -1 * (V_ew.toInt(false) - 1)
+      case 0 => V_ew.toInt(false) - 1
+    }
+
+    val Vsn = S_ns.toByte(false) match {
+      case 1 => -1 * (V_ns.toInt(false) - 1)
+      case 0 => V_ns.toInt(false) - 1
+    }
+
+    val v = sqrt( Vwe*Vwe + Vsn*Vsn)
+    val h = {
+      val h = atan2(Vwe,Vsn) * 360.0 / (2*Math.PI)
+      if(h < 0) h + 360 else h
+    }
+    
+    (v,h)
+  }
+
+  def getVRate:Double = {
+    return {
+      val vRate = (Vr.toInt(false) -1) * 64
+      S_vr.toByte(false) match {
+        case 0 => vRate
+        case 1 => -vRate
+      }
+    }
+  }
+
+  def isVRateBaro:Boolean = VrSrc.toByte() == 0
+}
+
 case class RawAirbornePosition(SS: BitVector,NICsb: BitVector,ALT: BitVector,T: BitVector,F: BitVector,
   LAT_CPR: BitVector,LON_CPR: BitVector) {
   override def toString = {
@@ -153,7 +195,15 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
               loc, a.isOdd, a.latCPR, a.lonCPR, 
               raw = message, ts)
           }
-          case 19                          => ADSB_AirborneVelocity(df,capability,aircraftAddr,raw = message, ts)
+          case 19                          => {
+            val a = Decoder.codecRawAirborneVelocity.decode(raw.DATA).toOption.get.value
+            val (hSpeed,heading) = a.getSpeedHeading
+            val vRate = a.getVRate
+            ADSB_AirborneVelocity(df,capability,aircraftAddr,
+              hSpeed = hSpeed, heading = heading,
+              vRate = vRate,
+              raw = message, ts)
+          }
           case v if 20 until 23 contains v => ADSB_AirbornePositionGNSS(df,capability,aircraftAddr,raw = message, ts)
           case v if 23 until 28 contains v => ADSB_Reserved(df,capability,aircraftAddr,raw = message, ts)
           case 28                          => ADSB_AircraftStatus(df,capability,aircraftAddr,raw = message, ts)
@@ -288,6 +338,10 @@ object Decoder {
   //                                                            SS         NICsb       ALT         T          F        LAT-CPR     LON-SPR 
   val codecRawAirbornePositions: Codec[RawAirbornePosition] = (bits(2) :: bits(1) :: bits(12) :: bits(1) :: bits(1) :: bits(17) :: bits(17))
     .as[RawAirbornePosition]
+
+  //                                                            ST         IC       RESV_A       NAC        S_ew        V_ew       S_ns       V_ns       VrSrc       S_vr       Vr       RESV_B      S_Dif      Dif  
+  val codecRawAirborneVelocity: Codec[RawAirborneVelocity] = (bits(3) :: bits(1) :: bits(1) :: bits(3) :: bits(1) :: bits(10) :: bits(1) :: bits(10) :: bits(1) :: bits(1) :: bits(9) :: bits(2) :: bits(1) :: bits(7))
+    .as[RawAirborneVelocity]
 
   val decoder = new Decoder
   def decode(data:String) = decoder.decode(data)
