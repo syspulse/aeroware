@@ -21,11 +21,13 @@ class AirborneVelocitySpec extends WordSpec with Matchers with Testables {
   
   val msg1 = "8D485020994409940838175B284F" 
   
+  val msg3 = "8DA05F219B06B6AF189400CBC33F" 
+  
   "AirborneVelocitySpec" should {
 
-    s"decode ${msg1} as ADSB_AirborneVelocity type" in {
+    s"decode ${msg1} as ADSB_AirborneVelocity type Subtype-1" in {
       val a1 = Decoder.decode(msg1)
-      a1.get.getClass should === (ADSB_AirborneVelocity(17,5,AircraftAddress("40621D","",""),0,0,0,raw=null).getClass)
+      a1.get.getClass should === (ADSB_AirborneVelocity(17,19,AircraftAddress("485020","",""),0,0,0,raw=null).getClass)
     }
 
     s"decode ${msg1} ADSB_AirborneVelocity with hSpeed 159.20 kt" in {
@@ -42,5 +44,25 @@ class AirborneVelocitySpec extends WordSpec with Matchers with Testables {
       val a1 = Decoder.decode(msg1).get.asInstanceOf[ADSB_AirborneVelocity]
       a1.vRate should === (-832.0)
     }
-  }  
+  
+    s"decode ${msg3} as ADSB_AirborneVelocity type Subtype-3" in {
+      val a1 = Decoder.decode(msg3)
+      a1.get.getClass should === (ADSB_AirborneVelocity(17,19,AircraftAddress("A05F21","",""),0,0,0,raw=null).getClass)
+    }
+
+    s"decode ${msg3} ADSB_AirborneVelocity with hSpeed 376 kt" in {
+      val a1 = Decoder.decode(msg3).get.asInstanceOf[ADSB_AirborneVelocity]
+      a1.hSpeed should === (376.0)
+    }
+
+    s"decode ${msg3} ADSB_AirborneVelocity with header 243.98 deg" in {
+      val a1 = Decoder.decode(msg3).get.asInstanceOf[ADSB_AirborneVelocity]
+      a1.heading should === (243.98)
+    }
+
+    s"decode ${msg3} ADSB_AirborneVelocity with vRate 832 fpm" in {
+      val a1 = Decoder.decode(msg3).get.asInstanceOf[ADSB_AirborneVelocity]
+      a1.vRate should === (-2304.0)
+    }
+  }
 }
