@@ -12,6 +12,7 @@ object SpeedType extends IntEnum[SpeedType] {
   case object TAS     extends SpeedType(value = 0, name = "TAS")
   case object CAS     extends SpeedType(value = 1, name = "CAS")
   case object IAS     extends SpeedType(value = 2, name = "IAS")
+  case object GS      extends SpeedType(value = 3, name = "GS")
   
   val values = findValues
 
