@@ -31,6 +31,7 @@ import io.syspulse.aeroware.adsb.util._
 import io.syspulse.aeroware.util._
 import io.syspulse.aeroware.core._
 import io.syspulse.aeroware.core.Units
+import javax.ws.rs.container.Suspended
 
 case class RawALT(a1:BitVector,Q:BitVector,a2:BitVector) {
   override def toString = {
@@ -193,7 +194,7 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
   }
 
 
-  def decode(data: String, refLoc:Location = decoderLocation): Try[ADSB] = {
+  def decode(data: String, ts:Long = ADSB.now, refLoc:Location = decoderLocation): Try[ADSB] = {
     val message = data.trim
     if(message.size == 0 || message.size < 14 || message.size > 28 ) 
       return Failure(new Exception(s"invalid size: ${message.size}"))
@@ -204,8 +205,6 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
       case e:Exception => return Failure(new Exception(s"invalid format: failed to parse DF: ${data}"))
     }
     
-    val ts = System.currentTimeMillis
-
     log.trace(s"msg=${message}: DF=${df}")
 
     val adsb = df match {
@@ -405,7 +404,7 @@ object Decoder {
     .as[RawAirborneVelocityST3]
 
   val decoder = new Decoder
-  def decode(data:String) = decoder.decode(data)
+  def decode(data:String, ts:Long = ADSB.now) = decoder.decode(data,ts)
 
   def decodeDump1090(data:String) = decode(Dump1090.decode(data))
 }
