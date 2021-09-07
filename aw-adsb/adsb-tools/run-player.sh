@@ -9,7 +9,7 @@ CONF=`echo $APP | awk -F"-" '{print $2}'`
 
 export SITE=${SITE:-$CONF}
 
-MAIN=io.syspulse.aeroware.adsb.tools.AppFlow
+MAIN=io.syspulse.aeroware.adsb.tools.AppPlayer
 
 echo "app: $APP"
 echo "site: $SITE"

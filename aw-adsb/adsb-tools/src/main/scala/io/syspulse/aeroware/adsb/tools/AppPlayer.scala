@@ -30,7 +30,7 @@ case class Config (
   files:Seq[String] = Seq()
 )
 
-object AppFlow {
+object AppPlayer {
   def main(args: Array[String]):Unit = {
 
     println(s"args: ${args.size}: ${args.toSeq}")
@@ -38,7 +38,7 @@ object AppFlow {
     val builder = OParser.builder[Config]
     val parser1 = {
       import builder._
-      OParser.sequence(programName("adsb-flow"),head("ADSB flow", ""),
+      OParser.sequence(programName("adsb-player"),head("ADSB Player", ""),
       
         opt[String]('j', "data-format").action((x, c) => c.copy(dataFormat = x)).text("Data format (json|csv) (def: json)"),
         opt[Long]('l', "limit").action((x, c) => c.copy(fileLimit = x)).text("Limit ADSB events per file"),
