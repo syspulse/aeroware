@@ -3,11 +3,8 @@ package io.syspulse.aeroware.core
 import enumeratum._
 import enumeratum.values._
 
-package object core {
-  type UID = Int
-}
 
-sealed abstract class Units(val value: core.UID, val name: String) extends IntEnumEntry {
+sealed abstract class Units(val value: Int, val name: String) extends IntEnumEntry {
   override def toString = s"${this.getClass().getSimpleName}(${value},${name})"
 }
 object Units extends IntEnum[Units] {

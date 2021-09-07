@@ -99,7 +99,7 @@ case class RawAirborneVelocityST3(ST: BitVector, IC:BitVector, RESV_A:BitVector,
       case 0 => 0.0 // not available
     }
     
-    (Speed(v,Units.KNOTS),h)
+    (Speed(v,Units.KNOTS,(if(AS_t.toByte(false) == 1) SpeedType.TAS else SpeedType.IAS)),h)
   }
 
   def isHeadingAvailable:Boolean = S_hdg.toByte() == 1
