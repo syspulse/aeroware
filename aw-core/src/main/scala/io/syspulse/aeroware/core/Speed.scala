@@ -22,7 +22,7 @@ object SpeedType extends IntEnum[SpeedType] {
 }
 
 case class Speed(v:Double,units:Units,typ:SpeedType = SpeedType.IAS,epsilon:Double=0.1) {
-  if(units != KNOTS && units != MPH && units != KPH) throw new IllegalArgumentException(s"Invalid speed units: ${units}")
+  if(units != KNOTS && units != MPH && units != KPH) throw new IllegalArgumentException(s"Invalid Speed units: ${units}")
 
   def knots = units match {
     case KNOTS => v 

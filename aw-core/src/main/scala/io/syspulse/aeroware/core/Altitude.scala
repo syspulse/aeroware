@@ -6,7 +6,7 @@ import enumeratum.values._
 import Units._
 
 case class Altitude(alt:Double,units:Units,epsilon:Double=1.0) {
-  if(units != METERS && units != FEET && units != KM) throw new IllegalArgumentException(s"Invalid altitude units: ${units}")
+  if(units != METERS && units != FEET && units != KM) throw new IllegalArgumentException(s"Invalid Altitude units: ${units}")
 
   def meters = units match {
     case METERS => alt 
