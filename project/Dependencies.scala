@@ -11,7 +11,7 @@ object Dependencies {
     lazy val kafkaAvroSerVersion = "5.4.1"
     lazy val quillVersion = "3.6.0"
     
-    lazy val skelVersion = "0.0.2"
+    lazy val skelVersion = "0.0.3"
     lazy val appVersion = "0.0.1"
     lazy val jarPrefix = "server-"
     
@@ -33,7 +33,10 @@ object Dependencies {
 
     val libScalaLogging =   "com.typesafe.scala-logging"  %% "scala-logging"        % "3.9.2"
     // I need this rubbish slf4j to deal with old jboss dependecny which generates exception in loading logback.xml
-    val libSlf4jApi =       "org.slf4j"                   %  "slf4j-api"            % "1.8.0-beta4"
+    //val libSlf4jApi =       "org.slf4j"                   %  "slf4j-api"            % "1.8.0-beta4"
+    // Supports only old XML Config file format
+    val libSlf4jApi =       "org.slf4j"                   %  "slf4j-api"            % "1.7.26"
+
     val libLogback =        "ch.qos.logback"              %  "logback-classic"      % "1.2.3"
     val libScalaTest =      "org.scalatest"               %% "scalatest"            % "3.1.2" % Test
     val libAkkaTestkit =    "com.typesafe.akka"           %% "akka-http-testkit"    % akkaHttpVersion// % Test

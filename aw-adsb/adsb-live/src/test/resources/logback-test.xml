@@ -13,7 +13,7 @@
         <appender-ref ref="STDOUT" />
     </appender>
 
-    <root level="info">
+    <root level="error">
         <appender-ref ref="ASYNC"/>
     </root>
 

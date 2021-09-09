@@ -100,8 +100,8 @@ val sharedConfigAssembly = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(core, gamet, adsb_core, adsb_ingest, adsb_tools)
-  .dependsOn(core, gamet, adsb_core, adsb_ingest, adsb_tools)
+  .aggregate(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live)
+  .dependsOn(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live)
   .disablePlugins(sbtassembly.AssemblyPlugin) // this is needed to prevent generating useless assembly and merge error
   .settings(
     
@@ -196,7 +196,6 @@ lazy val adsb_live = (project in file("aw-adsb/adsb-live"))
       sharedConfigAssembly,
       name := "adsb-live",
       libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ libTest ++ Seq(
-        
         libAkkaTestkitType % Test  
       ),
 )
