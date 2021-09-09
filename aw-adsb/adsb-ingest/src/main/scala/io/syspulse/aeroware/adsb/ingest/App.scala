@@ -6,6 +6,7 @@ import scopt.OParser
 
 import io.syspulse.skel
 import io.syspulse.skel.config._
+import io.syspulse.skel.util.Util
 
 import akka.NotUsed
 
@@ -35,7 +36,7 @@ object App extends skel.Server {
     val builder = OParser.builder[Config]
     val parser1 = {
       import builder._
-      OParser.sequence(programName("adsb-ingest"),head("ADSB", ""),
+      OParser.sequence(programName(Util.info._1), head(Util.info._1, Util.info._2),
         opt[String]('h', "host").action((x, c) => c.copy(httpHost = x)).text("Listen address"),  
         opt[Int]('p', "port").action((x, c) => c.copy(httpPort = x)).text("Listen port"),
         opt[String]('u', "uri").action((x, c) => c.copy(httpUri = x)).text("Uri (/api/v1/adsb)"),

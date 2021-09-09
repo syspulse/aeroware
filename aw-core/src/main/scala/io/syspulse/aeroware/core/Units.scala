@@ -9,12 +9,16 @@ sealed abstract class Units(val value: Int, val name: String) extends IntEnumEnt
 }
 object Units extends IntEnum[Units] {
   case object METERS     extends Units(value = 0, name = "meters")
-  case object FEET       extends Units(value = 1, name = "feet")
-  case object FPM        extends Units(value = 2, name = "fpm")
-  case object MPS        extends Units(value = 3, name = "m/s")
-  case object KNOTS      extends Units(value = 4, name = "kt")
-  case object MPH        extends Units(value = 5, name = "mph")
-  case object KPH        extends Units(value = 6, name = "km/h")
+  case object KM         extends Units(value = 1, name = "km")
+  case object FEET       extends Units(value = 2, name = "feet")
+
+  case object FPM        extends Units(value = 3, name = "fpm")
+  case object MPS        extends Units(value = 4, name = "m/s")
+
+  case object KNOTS      extends Units(value = 5, name = "kt")
+  case object MPH        extends Units(value = 6, name = "mph")
+  case object KPH        extends Units(value = 7, name = "km/h")
+  case object MACH       extends Units(value = 8, name = "Mach")
   
   val values = findValues
 

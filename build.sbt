@@ -188,3 +188,16 @@ lazy val adsb_tools = (project in file("aw-adsb/adsb-tools"))
       ),
 )
 
+lazy val adsb_live = (project in file("aw-adsb/adsb-live"))
+  .dependsOn(core, adsb_core)
+  .enablePlugins(sbtassembly.AssemblyPlugin)
+  .settings (
+      sharedConfig,
+      sharedConfigAssembly,
+      name := "adsb-live",
+      libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ libTest ++ Seq(
+        
+        libAkkaTestkitType % Test  
+      ),
+)
+

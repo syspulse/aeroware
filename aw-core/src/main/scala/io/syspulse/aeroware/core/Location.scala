@@ -5,8 +5,22 @@ import enumeratum.values._
 
 import Units._
 
-case class Location(lat:Double,lon:Double,alt:Altitude = Altitude(0.0,Units.METERS)) {
+// location precision is X.123456
+case class Location(lat:Double,lon:Double,alt:Altitude = Altitude(0.0,Units.METERS),epsilon:Double=0.000001) {
   
+  override def equals(that:Any) = { that match {
+    case x: Location =>
+      (lat - x.lat).abs < epsilon &&
+      (lon - x.lon).abs < epsilon &&
+      (alt == x.alt)
+    case _ => false
+  }}
+
+  override def hashCode = 
+    (math.floor(lat * (1.0/epsilon)) / (1.0/epsilon)).hashCode +
+    (math.floor(lon * (1.0/epsilon)) / (1.0/epsilon)).hashCode +
+    alt.hashCode
+
   def toECEF:(Double,Double,Double) = {
 		val latR = scala.math.toRadians(lat)
     val lonR = scala.math.toRadians(lon)
@@ -14,7 +28,6 @@ case class Location(lat:Double,lon:Double,alt:Altitude = Altitude(0.0,Units.METE
 		val altitude = alt.meters
 
 		val v = Location.majorAxis / Math.sqrt(1 - Location.eccentricity2*Math.sin(latR)*Math.sin(latR))
-
     (
       (v + altitude) * Math.cos(latR) * Math.cos(lonR),
       (v + altitude) * Math.cos(latR) * Math.sin(lonR),

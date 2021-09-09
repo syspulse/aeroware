@@ -36,6 +36,8 @@ object Dependencies {
     val libSlf4jApi =       "org.slf4j"                   %  "slf4j-api"            % "1.8.0-beta4"
     val libLogback =        "ch.qos.logback"              %  "logback-classic"      % "1.2.3"
     val libScalaTest =      "org.scalatest"               %% "scalatest"            % "3.1.2" % Test
+    val libAkkaTestkit =    "com.typesafe.akka"           %% "akka-http-testkit"    % akkaHttpVersion// % Test
+    val libAkkaTestkitType ="com.typesafe.akka"           %% "akka-actor-testkit-typed" % akkaVersion// % Test
     //val libSpecs2core =     "org.specs2"                  %% "specs2-core"          % "2.4.17"
     val libTypesafeConfig = "com.typesafe"                %  "config"               % "1.4.1"
  

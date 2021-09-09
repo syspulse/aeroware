@@ -14,8 +14,6 @@ package object adsb {
 import adsb._
 import ADSB._
 
-
-case class AircraftAddress(icaoId:String,icaoType:String,icaoCallsign:String)
 case class AirbornePosition(raw:RawAirbornePosition)
 
 abstract class ADSB {
@@ -51,10 +49,6 @@ case class ADSB_Reserved(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, 
 case class ADSB_AircraftStatus(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
 case class ADSB_TargetState(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
 case class ADSB_AircraftOperationStatus(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
-
-object AircraftAddress {
-  def apply(icaoId:String,icaoType:String,icaoCallsign:String):AircraftAddress = new AircraftAddress(icaoId.toLowerCase,icaoType,icaoCallsign)
-}
 
 object ADSB {
   def now = System.currentTimeMillis()
