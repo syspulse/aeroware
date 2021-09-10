@@ -8,6 +8,8 @@ import org.scalatest.{ Matchers, WordSpec }
 
 import java.time._
 import io.jvm.uuid._
+
+import io.syspulse.aeroware.adsb.Testables
 import io.syspulse.skel.util.Util
 
 class DecoderSpec extends WordSpec with Matchers with Testables {
@@ -39,12 +41,6 @@ class DecoderSpec extends WordSpec with Matchers with Testables {
       a1.get.aircraftAddr should === (AircraftAddress("4840d6","Fokker 70","PH-KZD"))
     }
   
-    s"decode ${msg1} as ADSB_AircraftIdentification type" in {
-      val a1 = Decoder.decode(msg1)
-      a1.get.getClass should === (ADSB_AircraftIdentification(17,5,AircraftAddress("4840d6","",""),0,0,"",null).getClass)
-    }
-
-
     s"decode all ${file1} without crash" in {
       load(file1).map( message => {
         val a1 = Decoder.decode(message)
@@ -58,7 +54,7 @@ class DecoderSpec extends WordSpec with Matchers with Testables {
       info(s"${a1}")
       a1.isFailure should === (true)
       info(s"${a1.toEither.left}")
-      a1.toEither.left.get.getMessage should === (s"invalid size: ${msgErr1.size}")
+      a1.toEither.left.get.getMessage should === (s"invalid size: ${msgErr1.size}: ${msgErr1}")
     }
   
     s"fail to decode ${msgErr2}" in {
@@ -66,7 +62,7 @@ class DecoderSpec extends WordSpec with Matchers with Testables {
       info(s"${a1}")
       a1.isFailure should === (true)
       info(s"${a1.toEither.left}")
-      a1.toEither.left.get.getMessage should === (s"invalid size: ${msgErr2.size}")
+      a1.toEither.left.get.getMessage should === (s"invalid size: ${msgErr2.size}: ${msgErr2}")
     }
   
     s"fail to decode dump1090 format message: ${msgErr3}" in {
@@ -118,21 +114,6 @@ class DecoderSpec extends WordSpec with Matchers with Testables {
     s"decode 30 (invalid) to '#'" in {
       val v = Decoder.decodeCharacter(BitVector.fromBin(30.toBinaryString).get)
       v should === ('#')
-    }
-
-    s"decode '001011 001100 001101 110001 110000 110010 110011 100000' to 'KLM1023'" in {
-      val v = Decoder.decodeDataAsChars(Seq(bin"001011",bin"001100",bin"001101",bin"110001",bin"110000",bin"110010",bin"110011",bin"100000"))
-      v should === ("KLM1023")
-    }
-
-    s"decode ${msgIdent1} as ADSB_AircraftIdentification(MSI6215)" in {
-      val a1 = Decoder.decode(msgIdent1)
-      a1 should === (Success(ADSB_AircraftIdentification(17,5,AircraftAddress("508095","Antonov An-140","UR-14005"),4,0,"MSI6215",msgIdent1)))
-    }
-
-    s"decode ${msgIdent2} as ADSB_AircraftIdentification(KLM1023)" in {
-      val a1 = Decoder.decode(msgIdent2)
-      a1 should === (Success(ADSB_AircraftIdentification(17,5,AircraftAddress("4840D6","Fokker 70","PH-KZD"),4,0,"KLM1023",msgIdent2)))
     }
   }  
 }

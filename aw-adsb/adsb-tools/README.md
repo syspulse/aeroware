@@ -1,0 +1,49 @@
+# adsb-tools
+
+1. adsb-player - plays ADS-B message through specified processors pipeline
+
+
+## adsb-player
+
+```
+run-player.sh [flow]
+```
+
+__Supported Flow Blocks (pipes)__
+
+* <file.csv> - read from CSV file
+* <file.adsb> - read from ADSB file (dump1090 style)
+* <ws://host:port> - Send to Websocket connected clients
+* sleep(interval) - sleep for specified msec interval (between events)
+* delay - delay events based on event timestamp (replay real time intervals)
+* repeat(count) - repeat all flow *count* of times
+* stdout - print events to stdout
+
+### Examples
+
+Decode from dump1090 format and print to stdout
+```
+./run-player.sh ./data/flight-1.adsb stdout
+```
+
+Read recorded flight, print decoded, broadcast to websocket clients with delay between events and repeat 10 times all flow
+```
+./run-player.sh ./data/flight-1.csv stdout "ws://0.0.0.0:30000" delay "repeat(10)"
+```
+
+Read from stdin any data and try to parse it
+```
+cat flight-2.adsb | ./run-player.sh '/dev/stdin' print"
+```
+
+Read from recorded flight and track telemetry every 1 second
+```
+./run-player.sh ./data/flight-1.adsb radar(1000)"
+```
+
+Read directly from dump1090, track all and broadcast to websocket clients
+```
+nc rp-1 30002 | ./run-player.sh '/dev/stdin' radar "ws://0.0.0.0:30000"
+```
+
+

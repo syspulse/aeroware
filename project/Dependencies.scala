@@ -11,7 +11,7 @@ object Dependencies {
     lazy val kafkaAvroSerVersion = "5.4.1"
     lazy val quillVersion = "3.6.0"
     
-    lazy val skelVersion = "0.0.2"
+    lazy val skelVersion = "0.0.3"
     lazy val appVersion = "0.0.1"
     lazy val jarPrefix = "server-"
     
@@ -32,8 +32,15 @@ object Dependencies {
     val libAlpakkaFile =    "com.lightbend.akka"          %% "akka-stream-alpakka-file" % alpakkaVersion
 
     val libScalaLogging =   "com.typesafe.scala-logging"  %% "scala-logging"        % "3.9.2"
+    // I need this rubbish slf4j to deal with old jboss dependecny which generates exception in loading logback.xml
+    //val libSlf4jApi =       "org.slf4j"                   %  "slf4j-api"            % "1.8.0-beta4"
+    // Supports only old XML Config file format
+    val libSlf4jApi =       "org.slf4j"                   %  "slf4j-api"            % "1.7.26"
+
     val libLogback =        "ch.qos.logback"              %  "logback-classic"      % "1.2.3"
     val libScalaTest =      "org.scalatest"               %% "scalatest"            % "3.1.2" % Test
+    val libAkkaTestkit =    "com.typesafe.akka"           %% "akka-http-testkit"    % akkaHttpVersion// % Test
+    val libAkkaTestkitType ="com.typesafe.akka"           %% "akka-actor-testkit-typed" % akkaVersion// % Test
     //val libSpecs2core =     "org.specs2"                  %% "specs2-core"          % "2.4.17"
     val libTypesafeConfig = "com.typesafe"                %  "config"               % "1.4.1"
  
@@ -46,6 +53,7 @@ object Dependencies {
     val libFastparseLib =   "com.lihaoyi"                 %% "fastparse"            % "2.3.2"
     val libUpickle =        "com.lihaoyi"                 %% "upickle"              % "1.4.0"
     val libUjsonLib =       "com.lihaoyi"                 %% "ujson"                % "1.3.15" 
+    val libCask =           "com.lihaoyi"                 %% "cask"                 % "0.7.11" //exclude("ch.qos.logback","logback-core")
 
     val libPrometheusClient =   "io.prometheus"           % "simpleclient"          % "0.10.0"
     
@@ -53,11 +61,13 @@ object Dependencies {
 
     val libScodec =         "org.scodec"                  %% "scodec-core"          % "1.11.7"
 
+    val libEnumeratum =     "com.beachape"                %% "enumeratum"          % "1.6.1"
+
     val libSkelCore =       "io.syspulse"                 %% "skel-core"            % skelVersion
     val libSkelIngest =     "io.syspulse"                 %% "skel-ingest"          % skelVersion
     
     // Projects
-    val libCommon = Seq(libScalaLogging, libLogback, libTypesafeConfig )
+    val libCommon = Seq(libScalaLogging, libSlf4jApi, libLogback, libTypesafeConfig )
     val libTest = Seq(libScalaTest, libOsLib)
 
     val libPrometheus = Seq(libPrometheusClient)

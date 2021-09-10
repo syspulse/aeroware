@@ -1,4 +1,4 @@
-package io.syspulse.aeroware.adsb.core
+package io.syspulse.aeroware.adsb
 
 import scala.util._
 
@@ -13,6 +13,7 @@ import io.syspulse.aeroware.adsb.util._
 trait Testables {
 
   val file1 = "test-1.adsb"
+  val flightFile1 = "flight-1.adsb"
 
   def load(file:String) = {
     val txt = scala.io.Source.fromResource(file).getLines()

@@ -2,16 +2,19 @@ package io.syspulse.aeroware.adsb.core
 
 import scala.util._
 
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.{ Matchers, WordSpec, Ignore}
+
+import org.scalatest.flatspec.AnyFlatSpec
 
 import java.time._
 import io.jvm.uuid._
+
+import io.syspulse.aeroware.adsb.Testables
 import io.syspulse.skel.util.Util
 import io.syspulse.aeroware.adsb.util._
 
 class CRCSpec extends WordSpec with Matchers with Testables {
 
-  
   val msg1    = "8D4840D6202CC371C32CE0576098"
   val msgErr1 = "8D5840D6202CC371C32CE0576098"
 
@@ -39,14 +42,13 @@ class CRCSpec extends WordSpec with Matchers with Testables {
       crc1 should === (false)
     }
 
-    s"check CRC OK for all 8.... data from ${file1}" in {
+    // ATTENTION: Ignored!
+    s"check CRC OK for all 8.... data from ${file1}" ignore {
       load(file1).filter(_.size == 28).filter(_.startsWith("8")).map( data => {
         val crc1 = CRC.calc(data)
         info(s"${data} -> ${crc1}")
         crc1 should === (true)
       })
-    }
+     }
   }
-  
-  
 }

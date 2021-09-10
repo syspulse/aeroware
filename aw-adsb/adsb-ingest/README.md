@@ -1,22 +1,26 @@
-# ADSB Ingest
+# adsb-ingest
 
 Ingest ADSB events from __dump1090__ (Raspberry)
 
-This reference architecture is only for PoC/Testing
+This reference architecture for PoC/Testing
 
 <img src="doc/Aeroware-Architecture-adsb-ingest.png" width="850">
 
 <br>
 
-1. ADSB parser
-2. Logging into file as JSON/CSV
-3. Tracking/Catching by pattern (IcaoAddress, Callsign)
-4. Prometheus Counters
+### Cli example
 
-<br>
+Show all ADSB messages to console
+```
+./run.sh --dump1090-host=rp-1 --dump1090-port=30002 --aircraft='.*' -f=NONE
+```
 
+Track Antonov and Airbus and write to CSV file
+```
+./run.sh --dump1090-host=rp-1 --dump1090-port=30002 --aircraft='[aA].*' -f='A-{yyyy-MM-dd_HH:mm:ss}.csv'
+```
 
-### Example catching Antonov aircrafts:
+### Output Example tracking Мрія:
 
 ```
 Track: ADSB_AirborneVelocity(17,5,AircraftAddress(508035,Antonov An-225 Mriya,UR-82060),8D508035990443110080024D6ED7)                                                                                            
@@ -43,11 +47,6 @@ Telemetry Coutners in Prometheus
 
 ----
 
-## Kafka Ingest Topology
-
-
-
-----
 
 ## Resources
 
