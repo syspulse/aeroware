@@ -33,7 +33,7 @@ case class Config (
 object AppPlayer {
   def main(args: Array[String]):Unit = {
 
-    println(s"args: ${args.size}: ${args.toSeq}")
+    Console.err.println(s"args: ${args.size}: ${args.toSeq}")
 
     val builder = OParser.builder[Config]
     val parser1 = {
@@ -64,13 +64,27 @@ object AppPlayer {
 
           val p = {
             if(f.toLowerCase.startsWith("ws://")) {
-              val uri = new URI(f.toLowerCase)
-              val (wsHost,wsPort) = (uri.getHost,uri.getPort)
+              val (uri,interval) = f.split(",") match {
+                case Array(uri,interval) => (uri,interval.trim.toLong)
+                case Array(uri) => (uri,1L)
+                case _ => { Console.err.println(s"Missing URI: ${f}"); ("",0L) }
+              }
+              val uriParts = new URI(uri.toLowerCase)
+              val (wsHost,wsPort) = (uriParts.getHost,uriParts.getPort)
               new PipeWebSocketServer(wsHost,wsPort)
             } 
             else
-            if(f.toLowerCase == "stdout") {
-              new PipeStdout
+            if(f.toLowerCase == "stdout" || f.toLowerCase == "print") {
+              new PipePrint
+            }
+            else
+            if(f.toLowerCase.startsWith("position")) {
+              val interval = f.split("[()]") match {
+                case Array(_,interval) => interval.toLong
+                case Array(_) => 1L
+                case _ => 1L
+              }
+              new PipePosition(interval)
             }
             else
             if(f.toLowerCase == "delay") {
@@ -118,7 +132,10 @@ object AppPlayer {
           }
 
           if(a.isFailure) {
-            if(! a.toEither.left.get.isInstanceOf[java.util.NoSuchElementException])  Console.err.println(s"${a}")
+            //Console.err.println(s"FAILURE ====> ${a}: ${a.toEither.left.get.getClass}")
+            if(! a.toEither.left.get.isInstanceOf[java.util.NoSuchElementException]) {
+              Console.err.println(s"{a}: ${a.get}")
+            }
             finished = true; 
           }
 

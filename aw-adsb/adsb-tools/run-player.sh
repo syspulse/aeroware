@@ -11,8 +11,8 @@ export SITE=${SITE:-$CONF}
 
 MAIN=io.syspulse.aeroware.adsb.tools.AppPlayer
 
-echo "app: $APP"
-echo "site: $SITE"
-echo "main: $MAIN"
+>&2 echo "app: $APP"
+>&2 echo "site: $SITE"
+>&2 echo "main: $MAIN"
 
 exec ../../run-app.sh $APP $MAIN $@

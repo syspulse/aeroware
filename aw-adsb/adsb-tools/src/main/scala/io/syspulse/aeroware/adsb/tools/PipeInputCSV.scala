@@ -15,16 +15,31 @@ class PipeInputCSV(inputFile:String) extends Pipe {
   def flow(a:Try[ADSB]):Try[ADSB] = {
 
     if(a.get == null) {
-      scala.io.Source.fromFile(inputFile).getLines().filter(_.trim!="").map( s => s.split(","))
-      data = raw.map( ss => (ss(0),ss(1)))
+      try {
+        scala.io.Source.fromFile(inputFile).getLines().filter(_.trim!="").map( s => s.split(","))
+        data = raw.flatMap( ss => ss match {
+          case Array(ts,adsb) => Some((ts,adsb))
+          case Array(adsb) => Some((System.currentTimeMillis().toString,adsb))
+          case _ => Console.err.println(s"could not parse line: ${ss}"); None; // skip error line
+        }) 
+      } catch {
+        case e:Exception => {
+          Console.err.println(s"failed to read: ${inputFile}: ${e}")
+          Failure(e)
+        }
+      }
     }
     
-    // ignore a
     try {
-      var a0 = decoder.decode(data.next()._2).get.asInstanceOf[ADSB_AirbornePositionBaro]
+      var a0 = decoder.decode(data.next()._2).get
       Success(a0)
     } catch {
-      case e:Exception => Failure(e)
+      case e:java.util.NoSuchElementException => Failure(e)
+      // ignore errors, just report 
+      case e:Exception => {
+        Console.err.println(s"failed to decode: ${e}")
+        Success(ADSB_Unknown(0,0,null,""))
+      }
     }
   }
 

@@ -4,6 +4,7 @@ import scala.util.{Try,Success,Failure}
 
 import com.typesafe.scalalogging.Logger
 
+import io.syspulse.aeroware.core.Location
 import io.syspulse.aeroware.adsb.core._
 
 
@@ -12,6 +13,8 @@ trait PipePositionBaro extends Pipe {
   var a0:Option[ADSB_AirbornePositionBaro] = None
 
   def process(a0:ADSB_AirbornePositionBaro,a1:ADSB_AirbornePositionBaro):Unit
+
+  def output(a:ADSB,loc:Location) = s"${a.ts},${a.aircraftAddr.icaoId},${a.aircraftAddr.icaoCallsign},${loc.lat},${loc.lon},${loc.alt.alt}"
 
   def flow(a:Try[ADSB]):Try[ADSB] = {
     if(a.isSuccess && a.get.isInstanceOf[ADSB_AirbornePositionBaro]) {

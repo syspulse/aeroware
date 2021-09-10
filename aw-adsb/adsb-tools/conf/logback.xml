@@ -17,9 +17,7 @@
 
 </configuration> -->
 
-
 <configuration>
-
     <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
         <target>System.err</target>
         <!-- encoders are assigned the type
