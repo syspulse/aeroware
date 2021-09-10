@@ -62,12 +62,12 @@ case class RawAirborneVelocityST1(ST: BitVector, IC:BitVector, RESV_A:BitVector,
     }
 
     val v = sqrt( Vwe*Vwe + Vsn*Vsn)
-    val h = {
+    val heading = {
       val h = atan2(Vwe,Vsn) * 360.0 / (2*Math.PI)
       if(h < 0) h + 360 else h
     }
     
-    (Speed(v,Units.KNOTS),h)
+    (Speed(v,Units.KNOTS),round(heading))
   }
 
   def getVRate:VRate = {

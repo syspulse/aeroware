@@ -54,7 +54,7 @@ class DecoderSpec extends WordSpec with Matchers with Testables {
       info(s"${a1}")
       a1.isFailure should === (true)
       info(s"${a1.toEither.left}")
-      a1.toEither.left.get.getMessage should === (s"invalid size: ${msgErr1.size}")
+      a1.toEither.left.get.getMessage should === (s"invalid size: ${msgErr1.size}: ${msgErr1}")
     }
   
     s"fail to decode ${msgErr2}" in {
@@ -62,7 +62,7 @@ class DecoderSpec extends WordSpec with Matchers with Testables {
       info(s"${a1}")
       a1.isFailure should === (true)
       info(s"${a1.toEither.left}")
-      a1.toEither.left.get.getMessage should === (s"invalid size: ${msgErr2.size}")
+      a1.toEither.left.get.getMessage should === (s"invalid size: ${msgErr2.size}: ${msgErr2}")
     }
   
     s"fail to decode dump1090 format message: ${msgErr3}" in {

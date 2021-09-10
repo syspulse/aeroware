@@ -50,9 +50,9 @@ class AirborneVelocitySpec extends WordSpec with Matchers with Testables {
       a1.hSpeed should === (Speed(159.2,Units.KNOTS))
     }
 
-    s"decode ${msg1} ADSB_AirborneVelocity with header 182.88 deg" in {
+    s"decode ${msg1} ADSB_AirborneVelocity with heading 182.88 deg" in {
       val a1 = Decoder.decode(msg1).get.asInstanceOf[ADSB_AirborneVelocity]
-      a1.heading should === (182.88)
+      a1.heading should === (183.0)
     }
 
     s"decode ${msg1} ADSB_AirborneVelocity with vRate 832 fpm" in {

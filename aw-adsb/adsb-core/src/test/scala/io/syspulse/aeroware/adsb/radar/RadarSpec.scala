@@ -13,7 +13,7 @@ import io.syspulse.skel.util.Util
 
 import io.syspulse.aeroware.adsb.Testables
 import io.syspulse.aeroware.core.Units
-import io.syspulse.aeroware.core.Altitude
+import io.syspulse.aeroware.core.{Altitude,VRate,Speed}
 import io.syspulse.aeroware.core.Location
 import io.syspulse.aeroware.adsb.core._
 
@@ -39,6 +39,18 @@ class RadarSpec extends WordSpec with Matchers with Testables {
 "8D5080355811B1C95A3DAC76F696",
 "8D5080355811B5392E1271018FC7",
 "8D508035600BB5331234769746E9"
+  )
+
+  val flight2 = Seq(
+  "8D5080355813053A0C147AC637E3",
+  "8D5080359904E486000C097CFCDB",
+  "8D5080359904E0860834084F71EB",
+  "8D5080355811D53984133F75CD28",
+  "8D5080359904DF85C814082D59D2",
+  "8D5080355811B1C95A3DAC76F696",
+  "8D5080355811B5392E1271018FC7",
+  "8D5080359904D985A84807C34957",
+  "8D508035600BB5331234769746E9",
   )
 
   val decoder = new Decoder()
@@ -101,31 +113,26 @@ class RadarSpec extends WordSpec with Matchers with Testables {
       radar.stop
     }
 
+    s"update flight Flight(${flight2.size}) with telemetry" in {
+      val radar = new Radar
+    
+      val a1 = AircraftAddress("508035","Antonov An-225 Mriya","UR-82060")
 
-    // s"decode Flight from ${flight1}" in {
-      
-    //   var a0 = decoder.decode(flight1.head).get.asInstanceOf[ADSB_AirbornePositionBaro]
+      for( m <- flight2 ) { 
+        radar.event(decoder.decode(m).get)
+        val aircraft = radar.find(a1)
+        aircraft.isDefined should ===(true)
+      }
+      val aircraft1 = radar.find(a1)
+      aircraft1.get.telemetry.size should ===(8)
+      val t1 = aircraft1.get.telemetry.last
+      t1 should ===(AircraftTelemetry(id = a1,Location(50.643295,30.186124,Altitude(1275.0,Units.FEET)),Speed(220.435,Units.KNOTS),VRate(-1088.0,Units.FPM),258))
 
-    //   for( m <- flight1.tail ) {
-    //     val a1 = decoder.decode(m).get.asInstanceOf[ADSB_AirbornePositionBaro]
-    //     val loc = Decoder.getGloballPosition(a0,a1)
-    //     info(loc.toString)
-    //     a0 = a1
-    //   }
-    // }
-
-    // s"decode Flight from file=${flightFile1}" in {
-    //   val flight = load(flightFile1)
-      
-    //   var a0 = decoder.decode(flight.head).get.asInstanceOf[ADSB_AirbornePositionBaro]
-
-    //   for( m <- flight.tail ) {
-    //     val a1 = decoder.decode(m).get.asInstanceOf[ADSB_AirbornePositionBaro]
-    //     val loc = Decoder.getGloballPosition(a0,a1)
-    //     //println(s"${loc.lat},${loc.lon},${loc.alt.alt}")
-    //     a0 = a1
-    //   }
-    // }
+      for( t <- aircraft1.get.telemetry) {
+        //info(s"${t}")
+      }
+      radar.stop
+    }
     
   }  
 }

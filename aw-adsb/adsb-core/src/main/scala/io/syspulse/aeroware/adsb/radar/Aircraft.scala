@@ -20,7 +20,8 @@ abstract class Trackable(id:AircraftAddress, cacheSize:Int = 100) {
   var p0:Option[ADSB_AirbornePositionBaro] = None
 
   var telemetry:List[AircraftTelemetry] = List()
-  val tFirst = AircraftTelemetry(id,Location.UNKNOWN,Altitude.UNKNOWN,Speed.UNKNOWN,VRate.UNKNOWN,0)
+  val tFirst = AircraftTelemetry(id,Location.UNKNOWN,Speed.UNKNOWN,VRate.UNKNOWN,0.0)
+  @volatile
   var tLast:Option[AircraftTelemetry] = None
 
   var statTotalEvents:Long = 0L
@@ -39,8 +40,11 @@ abstract class Trackable(id:AircraftAddress, cacheSize:Int = 100) {
           val loc = Decoder.getGloballPosition(p0.get,p)
           p0 = Some(p)
 
-          val (alt:Altitude,hSpeed:Speed,vRate:VRate,heading:Double) = { val t=tLast.getOrElse(tFirst); (t.alt,t.hSpeed,t.vRate,t.heading)}
-          telemetry = telemetry :+ AircraftTelemetry(a.aircraftAddr,loc,alt,hSpeed,vRate,heading)
+          val (hSpeed:Speed,vRate:VRate,heading:Double) = { val t=tLast.getOrElse(tFirst); (t.hSpeed,t.vRate,t.heading)}
+          val t = AircraftTelemetry(a.aircraftAddr,loc,hSpeed,vRate,heading)
+          telemetry = telemetry :+ t
+
+          tLast = Some(t)
 
         } else {
           p0 = Some(p)
@@ -51,8 +55,11 @@ abstract class Trackable(id:AircraftAddress, cacheSize:Int = 100) {
         val hSpeed = p.hSpeed
         val vRate = p.vRate
         val heading = p.heading
-        val (alt:Altitude,loc:Location) = { val t=tLast.getOrElse(tFirst); (t.alt,t.loc)}
-        telemetry = telemetry :+ AircraftTelemetry(a.aircraftAddr,loc,alt,hSpeed,vRate,heading)
+        val (loc:Location) = { val t=tLast.getOrElse(tFirst); (t.loc)}
+        val t = AircraftTelemetry(a.aircraftAddr,loc,hSpeed,vRate,heading)
+        telemetry = telemetry :+ t
+
+        tLast = Some(t)
       }
     }
 

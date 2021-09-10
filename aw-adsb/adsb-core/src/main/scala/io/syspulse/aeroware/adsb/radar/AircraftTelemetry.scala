@@ -10,5 +10,5 @@ import io.syspulse.aeroware.core.Altitude
 import io.syspulse.aeroware.core.Speed
 import io.syspulse.aeroware.core.VRate
 
-case class AircraftTelemetry(id:AircraftAddress,loc:Location,alt:Altitude,hSpeed:Speed,vRate:VRate,heading:Double)
+case class AircraftTelemetry(id:AircraftAddress,loc:Location,hSpeed:Speed,vRate:VRate,heading:Double)
 
