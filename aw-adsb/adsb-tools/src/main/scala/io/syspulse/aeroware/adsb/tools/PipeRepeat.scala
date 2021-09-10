@@ -13,7 +13,7 @@ class PipeRepeat(var count:Int) extends Pipe {
       count = count - 1
       if(count > 0)
         // reset pipeline to the beginning
-        Success(null)
+        Success(ADSB_Continue())
       else 
         a
     } else 

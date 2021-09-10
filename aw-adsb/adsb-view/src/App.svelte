@@ -25,7 +25,7 @@
 	
 	function decodeData(data) {
 		let attr = data.split(",");
-		// ts,icaoId,icaoCallsign,lon,lat,alt,hSpeed,vRate,
+		// ts,icaoId,icaoCallsign,lon,lat,alt,hSpeed,vRate,heading
 		return [
 			Number(attr[0]),
 			attr[1],
@@ -37,6 +37,7 @@
 
 			parseFloat(attr[6]),
 			parseFloat(attr[7]),
+			parseFloat(attr[8]),
 		];
 	}
 
@@ -72,7 +73,8 @@
 					'call':telemetry[2],
 					
 					'hs':telemetry[6],
-					'vr': telemetry[7]
+					'vr': telemetry[7],
+					'hd': telemetry[8],
 				});
 			
 

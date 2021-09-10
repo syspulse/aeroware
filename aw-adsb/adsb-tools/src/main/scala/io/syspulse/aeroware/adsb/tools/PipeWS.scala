@@ -8,23 +8,11 @@ import io.syspulse.skel.config._
 
 import io.syspulse.aeroware.adsb.core._
 
-@deprecated
-class PipeWebSocketServer(wsHost:String,wsPort:Int,interval:Long = 1L) extends cask.MainRoutes with PipePositionBaro {
+abstract class PipeWS(wsHost:String,wsPort:Int) extends cask.MainRoutes {
   val logger = Logger(this.getClass.getSimpleName())
 
   override def host = wsHost
   override def port = wsPort
-
-  def process(a0:ADSB_AirbornePositionBaro,a1:ADSB_AirbornePositionBaro) = {
-    val loc = Decoder.getGloballPosition(a0,a1)
-    if((a1.ts - aLast.get.ts) >= interval) {
-      
-      val data = output(a1,loc)
-      broadcast(data)
-
-      aLast = Some(a1)
-    }
-  }
 
   val clientsMap: concurrent.Map[cask.endpoints.WsChannelActor,String] = concurrent.TrieMap.empty
 

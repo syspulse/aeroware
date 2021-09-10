@@ -71,7 +71,7 @@ object AppPlayer {
               }
               val uriParts = new URI(uri.toLowerCase)
               val (wsHost,wsPort) = (uriParts.getHost,uriParts.getPort)
-              new PipeWebSocketServer(wsHost,wsPort)
+              new PipeRadarWS(wsHost,wsPort,interval)
             } 
             else
             if(f.toLowerCase == "stdout" || f.toLowerCase == "print") {
@@ -134,7 +134,7 @@ object AppPlayer {
         Console.err.println(s"Pipe: ${pipe}")
 
         var finished = false
-        var a:Try[ADSB] = Success(null)
+        var a:Try[ADSB] = Success(ADSB_Continue())
         do {
           for( p <- pipe ) {
             a = p.flow(a) 

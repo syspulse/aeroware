@@ -16,7 +16,7 @@ class PipeInputADSB(inputFile:String) extends Pipe {
 
   def flow(a:Try[ADSB]):Try[ADSB] = {
     
-    if(a.get == null) {
+    if(a.isSuccess && a.get.isInstanceOf[ADSB_Continue]) {
       try {
         // try to understand the format
         // [ts,adsb]
