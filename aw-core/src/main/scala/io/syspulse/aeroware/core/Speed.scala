@@ -56,3 +56,6 @@ case class Speed(v:Double,units:Units,typ:SpeedType = SpeedType.IAS,epsilon:Doub
     typ.hashCode
 }
 
+object Speed {
+  val UNKNOWN = Speed(0.0,Units.KPH)
+}

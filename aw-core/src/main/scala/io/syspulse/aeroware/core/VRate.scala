@@ -31,3 +31,6 @@ case class VRate(v:Double,units:Units,epsilon:Double=1.0) {
     units.hashCode
 }
 
+object VRate {
+  val UNKNOWN = VRate(0.0,Units.MPS)
+}

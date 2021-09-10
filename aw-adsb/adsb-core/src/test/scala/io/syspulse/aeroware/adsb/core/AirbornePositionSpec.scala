@@ -10,6 +10,7 @@ import java.time._
 import io.jvm.uuid._
 import io.syspulse.skel.util.Util
 
+import io.syspulse.aeroware.adsb.Testables
 import io.syspulse.aeroware.core.Units
 import io.syspulse.aeroware.core.Altitude
 import io.syspulse.aeroware.core.Location

@@ -17,7 +17,7 @@ import io.syspulse.aeroware.core.Units
 import io.syspulse.aeroware.core.Speed
 
 class AircraftTelemetrySpec extends AnyWordSpecLike with Matchers {
-  val a1 = AircraftFlying(AircraftAddress("UK-CQF-001","C-172","UR-CQF"))
+  val a1 = Aircraft(AircraftAddress("UK-CQF-001","C-172","UR-CQF"))
 
   val v1 = AircraftTelemetry(a1.id,loc=Location(52.123,3.17,Altitude(100,Units.METERS)),hSpeed=Speed(60,Units.KNOTS),vRate=VRate(5,Units.FPM))
   val v2 = AircraftTelemetry(a1.id,loc=Location(52.123,3.17,Altitude(100,Units.METERS)),hSpeed=Speed(60,Units.KNOTS),vRate=VRate(5,Units.FPM))

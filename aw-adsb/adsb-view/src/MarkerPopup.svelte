@@ -2,6 +2,8 @@
 	import { createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 	
+	export let icaoId;
+	export let icaoSign;
 	export let altitude;
 	
 	// function addValue(delta) {
@@ -26,5 +28,7 @@
 </div>
 
 <div style="width:100%;text-align:center;font-weight:600">
-	{altitude}
+	<div>{icaoId}</div>
+	<div>{icaoSign}</div>
+	<div>{altitude}</div>
 </div>

@@ -10,6 +10,7 @@ import java.time._
 import io.jvm.uuid._
 import io.syspulse.skel.util.Util
 
+import io.syspulse.aeroware.adsb.Testables
 import io.syspulse.aeroware.core.Units
 import io.syspulse.aeroware.core.Altitude
 import io.syspulse.aeroware.core.Location
@@ -29,7 +30,7 @@ class AirborneVelocitySpec extends WordSpec with Matchers with Testables {
             }}
   implicit val vRateEq = new Equality[VRate] { def areEqual(a: VRate, b: Any): Boolean =
             b match {
-              case p: VRate => a.units == p.units && a.v === p.v +- 0.01
+            case p: VRate => a.units == p.units && a.v === p.v +- 0.01
               case _ => false
             }}
   

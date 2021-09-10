@@ -16,6 +16,7 @@ import akka.actor.typed.scaladsl.Behaviors
 
 import io.syspulse.aeroware.core.{ Location, Speed, Altitude, VRate, Units }
 import io.syspulse.aeroware.adsb.core.{ AircraftAddress }
+import io.syspulse.aeroware.adsb.radar._
 
 object AirspaceActor {
   def apply(airspaceId: String): Behavior[Command] = Behaviors.setup(context => new AirspaceActor(context, airspaceId))
@@ -44,7 +45,7 @@ class AirspaceActor(context: ActorContext[AirspaceActor.Command], airspaceId: St
           case None =>
             context.log.info("Creating aircraft actor for {}", trackMsg.aircraftId)
 
-            val aircraftActor = context.spawn(AircraftActor(airspaceId, AircraftFlying(AircraftAddress(aircraftId,"",aircraftId))), s"Aircraft-${aircraftId}")
+            val aircraftActor = context.spawn(AircraftActor(airspaceId, Aircraft(AircraftAddress(aircraftId,"",aircraftId))), s"Aircraft-${aircraftId}")
             aircraftIdToActor += aircraftId -> aircraftActor
 
             context.watchWith(aircraftActor, AircraftTerminated(aircraftActor, airspaceId, aircraftId))

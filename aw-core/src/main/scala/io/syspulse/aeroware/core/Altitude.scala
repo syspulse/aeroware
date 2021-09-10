@@ -43,3 +43,6 @@ case class Altitude(alt:Double,units:Units,epsilon:Double=1.0) {
     units.hashCode
 }
 
+object Altitude {
+  val UNKNOWN = Altitude(0.0,Units.METERS)
+}

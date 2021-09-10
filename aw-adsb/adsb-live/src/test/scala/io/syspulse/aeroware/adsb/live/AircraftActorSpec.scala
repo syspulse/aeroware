@@ -27,7 +27,7 @@ class AircraftActorSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
 
     "reply with empty telemetry" in {
       val probe = createTestProbe[RespondTelemetry]()
-      val aa = spawn(AircraftActor("group", AircraftFlying(AircraftAddress("UK-CQF-001","C-172","UR-CQF"))))
+      val aa = spawn(AircraftActor("group", Aircraft(AircraftAddress("UK-CQF-001","C-172","UR-CQF"))))
 
       aa ! AircraftActor.ReadTelemetry(requestId = 42, probe.ref)
       val response = probe.receiveMessage()
@@ -39,7 +39,7 @@ class AircraftActorSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       val recordProbe = createTestProbe[TelemetryAck]()
       val readProbe = createTestProbe[RespondTelemetry]()
 
-      val a1 = AircraftFlying(AircraftAddress("UK-CQF-001","C-172","UR-CQF"))
+      val a1 = Aircraft(AircraftAddress("UK-CQF-001","C-172","UR-CQF"))
       val at1 = AircraftTelemetry(a1.id,loc=Location(1,1,Altitude(100,Units.METERS)),hSpeed=Speed(60,Units.KNOTS),vRate=VRate(5,Units.FPM))
       val at2 = AircraftTelemetry(a1.id,loc=Location(2,2,Altitude(200,Units.METERS)),hSpeed=Speed(70,Units.KNOTS),vRate=VRate(8,Units.FPM))
       val aa = spawn(AircraftActor("group", a1))

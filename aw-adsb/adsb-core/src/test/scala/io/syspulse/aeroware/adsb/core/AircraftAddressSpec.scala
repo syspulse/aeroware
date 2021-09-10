@@ -8,6 +8,8 @@ import org.scalatest.{ Matchers, WordSpec }
 
 import java.time._
 import io.jvm.uuid._
+
+import io.syspulse.aeroware.adsb.Testables
 import io.syspulse.skel.util.Util
 
 class AircraftAddressSpec extends WordSpec with Matchers with Testables {

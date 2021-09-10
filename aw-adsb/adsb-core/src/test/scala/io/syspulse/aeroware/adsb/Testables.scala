@@ -1,4 +1,4 @@
-package io.syspulse.aeroware.adsb.core
+package io.syspulse.aeroware.adsb
 
 import scala.util._
 

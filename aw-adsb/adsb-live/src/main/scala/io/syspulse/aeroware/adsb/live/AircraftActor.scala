@@ -5,6 +5,7 @@ import scala.util.{Try,Success,Failure}
 import com.typesafe.scalalogging.Logger
 
 import io.syspulse.aeroware.adsb.core._
+import io.syspulse.aeroware.adsb.radar._
 
 import akka.actor.typed.{Signal,PostStop}
 import akka.actor.typed.{ActorRef,Behavior}

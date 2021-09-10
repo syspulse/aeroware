@@ -8,6 +8,8 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 import java.time._
 import io.jvm.uuid._
+
+import io.syspulse.aeroware.adsb.Testables
 import io.syspulse.skel.util.Util
 import io.syspulse.aeroware.adsb.util._
 

@@ -197,7 +197,7 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
   def decode(data: String, ts:Long = ADSB.now, refLoc:Location = decoderLocation): Try[ADSB] = {
     val message = data.trim
     if(message.size == 0 || message.size < 14 || message.size > 28 ) 
-      return Failure(new Exception(s"invalid size: ${message.size}"))
+      return Failure(new Exception(s"invalid size: ${message.size}: ${data}"))
 
     val df = try {
       Decoder.codecRawDF.decode(BitVector.fromHex(message).get).toOption.get.value.toByte(false)
@@ -334,7 +334,7 @@ object Decoder {
     }
 		
 		if (a0.isOdd == a1.isOdd) {
-      log.warn(s"same odds (expected different): ${a0.isOdd} : ${a1.isOdd}")
+      log.warn(s"same odds (${a0.isOdd}:${a1.isOdd}): ${a0}:${a1}")
       return a1.loc
     }
 		

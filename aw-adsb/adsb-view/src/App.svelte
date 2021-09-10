@@ -19,28 +19,92 @@
 	// 	[36.8283, -100.5795],
 	// 	[38.40, -122.5795],
 	// ];
-	var markerLocations = []
+	//var markerLocations = [];
+	var aircraftsList = [];
+	var aircraftsMap = {};
 	
 	function decodeData(data) {
 		let attr = data.split(",");
-		return [parseFloat(attr[0]),parseFloat(attr[1]),parseFloat(attr[2])];
+		// ts,icaoId,icaoCallsign,lon,lat,alt,hSpeed,vRate,
+		return [
+			Number(attr[0]),
+			attr[1],
+			attr[2],
+
+			parseFloat(attr[3]),
+			parseFloat(attr[4]),
+			parseFloat(attr[5]),
+
+			parseFloat(attr[6]),
+			parseFloat(attr[7]),
+		];
+	}
+
+	function updateWithData(raw) {
+		const data = decodeDataList(raw);
+        return update(data);
+	}
+
+	function update(data) {
+		data.forEach( t => {
+			let telemetry = decodeData(t);
+			let icaoId = telemetry[1];
+			var aircraft = {};
+			if(icaoId in aircraftsMap) 
+				aircraft = aircraftsMap[icaoId] 
+			else {
+				aircraft = {
+					'icao': icaoId,
+					'call':telemetry[2],
+					'tel': []
+				};
+			};
+			
+			if(aircraft['tel'] === undefined || aircraft['tel'].length > 0) {
+				aircraft['tel'] = [];
+			}
+				aircraft['tel'].push( {
+					'lat':telemetry[3],
+					'lon':telemetry[4],
+					'alt':telemetry[5],
+
+					'ts':telemetry[0],
+					'call':telemetry[2],
+					
+					'hs':telemetry[6],
+					'vr': telemetry[7]
+				});
+			
+
+			// update
+			aircraftsMap[icaoId] = aircraft;
+		});
+
+		var aircraftsListUpdated = [];
+		for(let key in aircraftsMap)
+   			if(aircraftsMap[key] !== undefined)
+			   aircraftsListUpdated.push(aircraftsMap[key]);
+
+		//console.log(aircraftsListUpdated);
+		return aircraftsListUpdated;
+	}
+
+	function decodeDataList(raw) {
+		return raw.split("\n").filter( s => s.trim().length!=0);
 	}
 
 	onMount(async () => {
         const response = await fetch('http://localhost:5000/data.csv');
-        const data = await response.text();
+        const dataRsp = await response.text();
 		
-		const markers = data.split("\n");
-        markerLocations = markers.filter( s => s.trim().length!=0).map( s => {
-			return( decodeData(s))
-		})
-		
+		const data = decodeDataList(dataRsp);
+        aircraftsList = update(data);
     })
 
-	const initialView = [50.694122314453125,30.47310494087838]//[50.4584,30.3381];//[39.8283, -98.5795];
+	const initialView = [50.340905, 30.870973];//[50.694122314453125,30.47310494087838]//[50.4584,30.3381];//[39.8283, -98.5795];
 	
 	function createMap(container) {
-	  let m = L.map(container, {preferCanvas: true }).setView(initialView, 12);
+	  let m = L.map(container, {preferCanvas: true }).setView(initialView, 9);
     L.tileLayer(
 	    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
 	    {
@@ -118,12 +182,15 @@
 
 	function createMarker(loc) {
 		let altitude = loc[2];
+		let aircraft = "";//loc[3];
+		
 		let icon = markerIcon(altitude);
 		let marker = L.marker(loc, {icon});
 		bindPopup(marker, (m) => {
 			let c = new MarkerPopup({
 				target: m,
 				props: {
+					aircraft,
 					altitude
 				}
 			});
@@ -138,8 +205,38 @@
 		
 		return marker;
 	}
+
+	function createAircraftMarker(icao,loc) {
+		let aircraft = aircraftsMap[icao];
+		let callSign = aircraft['call'];
+		
+		let id = (callSign === undefined || callSign == "") ? icao : callSign;
+
+		let icon = markerIcon(id);
+		let marker = L.marker(loc, {icon});
+
+		bindPopup(marker, (m) => {
+			let c = new MarkerPopup({
+				target: m,
+				props: {
+					icaoId: icao,
+					icaoSign: callSign,
+					altitude: loc[2]
+				}
+			});
+			
+			c.$on('change', ({detail}) => {
+				altitude = detail;
+				marker.setIcon(markerIcon(altitude));
+			});
+			
+			return c;
+		});
+		
+		return marker;
+	}
 	
-	function createLines() {
+	function createLines(markerLocations) {
 		return L.polyline(markerLocations, { color: '#E4E', opacity: 0.5 });
 	}
 
@@ -150,16 +247,7 @@
     map = createMap(container); 
 		toolbar.addTo(map);
 		
-		markerLayers = L.layerGroup()
- 		for(let location of markerLocations) {
- 			let m = createMarker(location);
-			markerLayers.addLayer(m);
- 		}
-		
-		lineLayers = createLines();
-		
-		markerLayers.addTo(map);
-		lineLayers.addTo(map);
+		syncMarkers(aircraftsList);
 		
 		return {
 		destroy: () => {
@@ -170,16 +258,30 @@
 		};
 	}
 
-	function syncMarkers(markers) {
+	function syncMarkers(aircraftsList) {
 		markerLayers = L.layerGroup()
- 		for(let location of markers) {
- 			let m = createMarker(location);
-			markerLayers.addLayer(m);
- 		}
-		lineLayers = createLines();
+ 		// for(let location of markerLocations) {
+ 		// 	let m = createMarker(location);
+		// 	markerLayers.addLayer(m);
+ 		// }
+		for(let aircraft of aircraftsList) {
+			let icao = aircraft['icao'];
+			let telemetry = aircraft['tel'];
+			
+			let markerLocations = telemetry.map(t => {
+				return [t['lat'],t['lon'],t['alt']];
+			});
+
+			for(let loc of markerLocations) {
+				let m = createAircraftMarker(icao,loc);
+				markerLayers.addLayer(m);
+			}
+
+			lineLayers = createLines(markerLocations);
 		
-		markerLayers.addTo(map);
-		lineLayers.addTo(map);
+			markerLayers.addTo(map);
+			lineLayers.addTo(map);
+		}
 	}
 	
 	// We could do these in the toolbar's click handler but this is an example
@@ -200,21 +302,20 @@
 		}
 	}
 
-	$: if(markerLocations && map) syncMarkers(markerLocations);
+	$: if(aircraftsList && map) syncMarkers(aircraftsList);
 
 	$: {
 		let data = $WS;
 		if(data) {
-			let decoded = decodeData(data);
-			console.log("Decoded: '"+decoded+"'");
+			let updatedAircraftList = updateWithData(data);
+			//console.log(updatedAircraftList);
 
 			markerLayers.remove();
 
-			const last = markerLocations.slice(-5);
-
-			last.push(decodeData(data));
-			markerLocations = last
-			//syncMarkers(markerLocations);
+			// const last = markerLocations.slice(-5);
+			// last.push(decoded);
+			// markerLocations = last
+			syncMarkers(updatedAircraftList);
 		}
 	}
 
