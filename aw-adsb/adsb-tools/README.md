@@ -26,13 +26,24 @@ Decode from dump1090 format and print to stdout
 ./run-player.sh ./data/flight-1.adsb stdout
 ```
 
-Decode from CSV, print, broadcast to websockets, delay between events and repeat 10 times all flow
+Read recorded flight, print decoded, broadcast to websocket clients with delay between events and repeat 10 times all flow
 ```
 ./run-player.sh ./data/flight-1.csv stdout "ws://0.0.0.0:30000" delay "repeat(10)"
 ```
 
-Read from multiple files, broadcast to websockets, sleep for 1 sec and repeat indefinitely
+Read from stdin any data and try to parse it
 ```
-./run-player.sh flight-1.csv flight-2.adsb "ws://0.0.0.0:30000" "sleep(1000) repeat"
+cat flight-2.adsb | ./run-player.sh '/dev/stdin' print"
 ```
+
+Read from recorded flight and track telemetry every 1 second
+```
+./run-player.sh ./data/flight-1.adsb radar(1000)"
+```
+
+Read directly from dump1090, track all and broadcast to websocket clients
+```
+nc rp-1 30002 | ./run-player.sh '/dev/stdin' radar "ws://0.0.0.0:30000"
+```
+
 

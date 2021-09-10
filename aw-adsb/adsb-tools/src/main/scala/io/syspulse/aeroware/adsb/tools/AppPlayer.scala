@@ -122,8 +122,9 @@ object AppPlayer {
               case "csv" => new PipeInputCSV(f)
               case "adsb" => new PipeInputADSB(f)
               case _ => {
-                Console.err.println(s"format unknown: ${f}")
-                new PipeNone
+                Console.err.println(s"format unknown: ${f}, trying as ADSB")
+                //new PipeNone
+                new PipeInputADSB(f)
               }
             }
           }
