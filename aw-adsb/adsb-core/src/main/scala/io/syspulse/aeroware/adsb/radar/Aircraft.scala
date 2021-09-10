@@ -26,6 +26,8 @@ abstract class Trackable(id:AircraftAddress, cacheSize:Int = 100) {
 
   var statTotalEvents:Long = 0L
 
+  def last = tLast
+
   def event(a:ADSB):Trackable = {
     statTotalEvents = statTotalEvents + 1
 
@@ -60,6 +62,10 @@ abstract class Trackable(id:AircraftAddress, cacheSize:Int = 100) {
         telemetry = telemetry :+ t
 
         tLast = Some(t)
+      }
+
+      case _ => {
+        // ignore other events
       }
     }
 

@@ -108,6 +108,15 @@ object AppPlayer {
               }
               new PipeSleep(interval)
             }
+            else
+            if(f.toLowerCase.startsWith("radar")) {
+              val interval = f.split("[()]") match {
+                case Array(_,interval) => interval.toLong
+                case Array(_) => 1000L
+                case _ => 1000L
+              }
+              new PipeRadar(interval)
+            }
             else 
             f.toLowerCase().split("\\.").last match {
               case "csv" => new PipeInputCSV(f)
