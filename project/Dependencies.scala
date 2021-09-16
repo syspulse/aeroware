@@ -11,7 +11,7 @@ object Dependencies {
     lazy val kafkaAvroSerVersion = "5.4.1"
     lazy val quillVersion = "3.6.0"
     
-    lazy val skelVersion = "0.0.3"
+    lazy val skelVersion = "0.0.4"
     lazy val appVersion = "0.0.1"
     lazy val jarPrefix = "server-"
     
