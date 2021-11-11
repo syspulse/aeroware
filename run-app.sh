@@ -33,7 +33,6 @@ CONFIG="application${SITE}.conf"
 >&2 echo "Config: ${CONFIG}"
 
 >&2 echo $CP
-
 >&2 pwd
 
 # command:

@@ -45,5 +45,6 @@ Read directly from dump1090, track all and broadcast to websocket clients
 ```
 nc rp-1 30002 | ./run-player.sh '/dev/stdin' radar "ws://0.0.0.0:30000"
 ```
+Note: ws:// is also *radar* - it is just nice to see the same telemetry in console
 
 

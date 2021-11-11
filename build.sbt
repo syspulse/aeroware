@@ -2,14 +2,19 @@ import scala.sys.process.Process
 import Dependencies._
 import com.typesafe.sbt.packager.docker._
 
-parallelExecution in Test := true
+Global / onChangedBuildSource := ReloadOnSourceChanges
+
+Test / parallelExecution := true
+
+// this will suppress scala-xml:1.2.0 dependency error in dispatchhttp
+ThisBuild / evictionErrorLevel := Level.Info
 
 initialize ~= { _ =>
   System.setProperty("config.file", "conf/application.conf")
 }
 
 fork := true
-connectInput in run := true
+run / connectInput := true
 
 enablePlugins(JavaAppPackaging)
 enablePlugins(DockerPlugin)
@@ -32,8 +37,8 @@ lazy val dockerBuildxSettings = Seq(
         alias + " .", baseDirectory.value / "target" / "docker"/ "stage").!
     )
   },
-  publish in Docker := Def.sequential(
-    publishLocal in Docker,
+  Docker / publish := Def.sequential(
+    Docker / publishLocal,
     ensureDockerBuildx,
     dockerBuildWithBuildx
   ).value
@@ -49,16 +54,16 @@ val sharedConfigDocker = Seq(
   //dockerRepository := "docker.io",
   dockerExposedPorts := Seq(8080),
 
-  defaultLinuxInstallLocation in Docker := appDockerRoot,
+  Docker / defaultLinuxInstallLocation := appDockerRoot,
 
-  daemonUserUid in Docker := None, //Some("1000"), 
-  daemonUser in Docker := "daemon"
+  Docker / daemonUserUid := None, //Some("1000"), 
+  Docker / daemonUser := "daemon"
 )
 
 val sharedConfig = Seq(
     //retrieveManaged := true,  
     organization    := "io.syspulse",
-    scalaVersion    := "2.13.3",
+    scalaVersion    := "2.13.6",
     name            := "aeroware",
     version         := appVersion,
 
@@ -79,15 +84,16 @@ val sharedConfig = Seq(
 
 
 val sharedConfigAssembly = Seq(
-  assemblyMergeStrategy in assembly := {
+  assembly / assemblyMergeStrategy := {
       case x if x.contains("module-info.class") => MergeStrategy.discard
+      case x if x.contains("io.netty.versions.properties") => MergeStrategy.first
       case x => {
-        val oldStrategy = (assemblyMergeStrategy in assembly).value
+        val oldStrategy = (assembly / assemblyMergeStrategy).value
         oldStrategy(x)
       }
   },
-  assemblyExcludedJars in assembly := {
-    val cp = (fullClasspath in assembly).value
+  assembly / assemblyExcludedJars := {
+    val cp = (assembly / fullClasspath).value
     cp filter { f =>
       f.data.getName.contains("snakeyaml-1.27-android.jar") 
       // ||
@@ -96,12 +102,12 @@ val sharedConfigAssembly = Seq(
   },
   
   
-  test in assembly := {}
+  assembly / test := {}
 )
 
 lazy val root = (project in file("."))
-  .aggregate(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live)
-  .dependsOn(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live)
+  .aggregate(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core)
+  .dependsOn(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core)
   .disablePlugins(sbtassembly.AssemblyPlugin) // this is needed to prevent generating useless assembly and merge error
   .settings(
     
@@ -127,11 +133,7 @@ lazy val gamet = (project in file("aw-gamet"))
     libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
       libEnumeratum,
       libFastparseLib 
-    ),
-    
-    // mainClass in run := Some(appBootClassGamet),
-    // mainClass in assembly := Some(appBootClassGamet),
-    // assemblyJarName in assembly := jarPrefix + appNameGamet + "-" + "assembly" + "-"+  appVersion + ".jar",
+    )
 )
 
 lazy val adsb_core = (project in file("aw-adsb/adsb-core"))
@@ -158,8 +160,8 @@ lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
     sharedConfigDocker,
     dockerBuildxSettings,
 
-    mappings in Universal += file("conf/application.conf") -> "conf/application.conf",
-    mappings in Universal += file("conf/logback.xml") -> "conf/logback.xml",
+    Universal / mappings += file("conf/application.conf") -> "conf/application.conf",
+    Universal / mappings += file("conf/logback.xml") -> "conf/logback.xml",
     bashScriptExtraDefines += s"""addJava "-Dconfig.file=${appDockerRoot}/conf/application.conf"""",
     bashScriptExtraDefines += s"""addJava "-Dlogback.configurationFile=${appDockerRoot}/conf/logback.xml"""",
 
@@ -170,9 +172,10 @@ lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
       libUpickle
     ),
     
-    mainClass in run := Some(appBootClassAdsb),
-    mainClass in assembly := Some(appBootClassAdsb),
-    assemblyJarName in assembly := jarPrefix + appNameAdsb + "-" + "assembly" + "-"+  appVersion + ".jar",
+    run / mainClass := Some(appBootClassAdsb),
+    assembly / mainClass := Some(appBootClassAdsb),
+    Compile / mainClass := Some(appBootClassAdsb), // <-- This is very important for DockerPlugin generated stage1 script!
+    assembly / assemblyJarName := jarPrefix + appNameAdsb + "-" + "assembly" + "-"+  appVersion + ".jar",
 
 )
 
@@ -200,3 +203,20 @@ lazy val adsb_live = (project in file("aw-adsb/adsb-live"))
       ),
 )
 
+// use scalaxb sbt target to generate XML bindings
+lazy val gpx_core = (project in file("aw-gpx/gpx-core"))
+  .dependsOn(core)
+  .disablePlugins(sbtassembly.AssemblyPlugin)
+  .enablePlugins(ScalaxbPlugin)
+  .settings (
+      sharedConfig,
+      name := "gpx-core",
+
+      scalaxbPackageName in (Compile, scalaxb) := "generated",
+      // scalaxbAutoPackages in (Compile, scalaxb) := true,
+      scalaxbDispatchVersion in (Compile, scalaxb) := dispatchVersion,
+
+      libraryDependencies ++= libCommon ++ libTest ++ libXML ++ Seq(
+        
+      ),
+)
