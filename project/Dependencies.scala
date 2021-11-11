@@ -10,6 +10,7 @@ object Dependencies {
     lazy val akkaKafkaVersion = "2.0.3"
     lazy val kafkaAvroSerVersion = "5.4.1"
     lazy val quillVersion = "3.6.0"
+    lazy val dispatchVersion = "1.2.0" //"1.1.3"
     
     lazy val skelVersion = "0.0.4"
     lazy val appVersion = "0.0.1"
@@ -32,12 +33,13 @@ object Dependencies {
     val libAlpakkaFile =    "com.lightbend.akka"          %% "akka-stream-alpakka-file" % alpakkaVersion
 
     val libScalaLogging =   "com.typesafe.scala-logging"  %% "scala-logging"        % "3.9.2"
+    val libLogback =        "ch.qos.logback"              %  "logback-classic"      % "1.2.3"
+    val libJanino =         "org.codehaus.janino"         %  "janino"               % "3.1.6"
     // I need this rubbish slf4j to deal with old jboss dependecny which generates exception in loading logback.xml
     //val libSlf4jApi =       "org.slf4j"                   %  "slf4j-api"            % "1.8.0-beta4"
     // Supports only old XML Config file format
     val libSlf4jApi =       "org.slf4j"                   %  "slf4j-api"            % "1.7.26"
-
-    val libLogback =        "ch.qos.logback"              %  "logback-classic"      % "1.2.3"
+    
     val libScalaTest =      "org.scalatest"               %% "scalatest"            % "3.1.2" % Test
     val libAkkaTestkit =    "com.typesafe.akka"           %% "akka-http-testkit"    % akkaHttpVersion// % Test
     val libAkkaTestkitType ="com.typesafe.akka"           %% "akka-actor-testkit-typed" % akkaVersion// % Test
@@ -63,19 +65,28 @@ object Dependencies {
 
     val libEnumeratum =     "com.beachape"                %% "enumeratum"          % "1.6.1"
 
+    
+    val libDispatch =       "org.dispatchhttp"              %% "dispatch-core"              % dispatchVersion exclude("org.scala-lang.modules","scala-xml")
+    val libJaxbApi =        "javax.xml.bind"                % "jaxb-api"                    % "2.3.0"
+    val libScalaXml =       "org.scala-lang.modules"        %% "scala-xml"                  % "2.0.1" //"1.3.0"
+    val libScalaParser =    "org.scala-lang.modules"        %% "scala-parser-combinators"   % "1.1.2"
+    val libXs4s =           "com.scalawilliam"              %% "xs4s-core"                  % "0.9.1"
+
     val libSkelCore =       "io.syspulse"                 %% "skel-core"            % skelVersion
     val libSkelIngest =     "io.syspulse"                 %% "skel-ingest"          % skelVersion
     
     // Projects
-    val libCommon = Seq(libScalaLogging, libSlf4jApi, libLogback, libTypesafeConfig )
+    val libCommon = Seq(libScalaLogging, libSlf4jApi, libLogback, libJanino, libTypesafeConfig )
     val libTest = Seq(libScalaTest, libOsLib)
 
     val libPrometheus = Seq(libPrometheusClient)
     
     val libSkel = Seq(libSkelCore,libSkelIngest)
-    val libAeroware = Seq(libScopt,libUUID)
-
+    
     val libAkka = Seq(libAkkaActor,libAkkaActorTyped,libAkkaStream)
 
+    val libXML = Seq(libDispatch,libJaxbApi,libScalaXml,libScalaParser,libXs4s)
+
+    val libAeroware = Seq(libScopt,libUUID)
 }
   

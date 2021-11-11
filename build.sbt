@@ -6,6 +6,9 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 
 Test / parallelExecution := true
 
+// this will suppress scala-xml:1.2.0 dependency error in dispatchhttp
+ThisBuild / evictionErrorLevel := Level.Info
+
 initialize ~= { _ =>
   System.setProperty("config.file", "conf/application.conf")
 }
@@ -83,6 +86,7 @@ val sharedConfig = Seq(
 val sharedConfigAssembly = Seq(
   assembly / assemblyMergeStrategy := {
       case x if x.contains("module-info.class") => MergeStrategy.discard
+      case x if x.contains("io.netty.versions.properties") => MergeStrategy.first
       case x => {
         val oldStrategy = (assembly / assemblyMergeStrategy).value
         oldStrategy(x)
@@ -102,8 +106,8 @@ val sharedConfigAssembly = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live)
-  .dependsOn(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live)
+  .aggregate(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core)
+  .dependsOn(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core)
   .disablePlugins(sbtassembly.AssemblyPlugin) // this is needed to prevent generating useless assembly and merge error
   .settings(
     
@@ -199,3 +203,20 @@ lazy val adsb_live = (project in file("aw-adsb/adsb-live"))
       ),
 )
 
+// use scalaxb sbt target to generate XML bindings
+lazy val gpx_core = (project in file("aw-gpx/gpx-core"))
+  .dependsOn(core)
+  .disablePlugins(sbtassembly.AssemblyPlugin)
+  .enablePlugins(ScalaxbPlugin)
+  .settings (
+      sharedConfig,
+      name := "gpx-core",
+
+      scalaxbPackageName in (Compile, scalaxb) := "generated",
+      // scalaxbAutoPackages in (Compile, scalaxb) := true,
+      scalaxbDispatchVersion in (Compile, scalaxb) := dispatchVersion,
+
+      libraryDependencies ++= libCommon ++ libTest ++ libXML ++ Seq(
+        
+      ),
+)
