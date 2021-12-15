@@ -33,7 +33,7 @@ object Dependencies {
     val libAlpakkaFile =    "com.lightbend.akka"          %% "akka-stream-alpakka-file" % alpakkaVersion
 
     val libScalaLogging =   "com.typesafe.scala-logging"  %% "scala-logging"        % "3.9.2"
-    val libLogback =        "ch.qos.logback"              %  "logback-classic"      % "1.2.3"
+    val libLogback =        "ch.qos.logback"              %  "logback-classic"      % "1.2.8"
     val libJanino =         "org.codehaus.janino"         %  "janino"               % "3.1.6"
     // I need this rubbish slf4j to deal with old jboss dependecny which generates exception in loading logback.xml
     //val libSlf4jApi =       "org.slf4j"                   %  "slf4j-api"            % "1.8.0-beta4"
