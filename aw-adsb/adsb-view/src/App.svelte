@@ -96,7 +96,7 @@
 	}
 
 	onMount(async () => {
-        const response = await fetch('http://localhost:5000/data.csv');
+        const response = await fetch('http://localhost:5000/data1.csv');
         const dataRsp = await response.text();
 		
 		const data = decodeDataList(dataRsp);
@@ -173,8 +173,14 @@
 	
 	let markers = new Map();
 	
-	function markerIcon(count) {
-		let html = `<div class="map-marker"><div>${markerIcons.library}</div><div class="marker-text">${count}</div></div>`;
+	function markerIcon(id,alt,vel) {
+		let html = `
+		<div class="map-marker">
+			<div>${markerIcons.library}</div>
+			<div class="marker-id">${id}</div>
+			<div class="marker-alt">${alt}</div>
+			<div class="marker-vel">${vel}</div>
+		</div>`;
 		return L.divIcon({
 			html,
 			className: 'map-marker'
@@ -182,39 +188,43 @@
 	}
 	
 
-	function createMarker(loc) {
-		let altitude = loc[2];
-		let aircraft = "";//loc[3];
+	// function createMarker(loc) {
+	// 	let altitude = loc[2];
+	// 	let aircraft = "";//loc[3];
 		
-		let icon = markerIcon(altitude);
-		let marker = L.marker(loc, {icon});
-		bindPopup(marker, (m) => {
-			let c = new MarkerPopup({
-				target: m,
-				props: {
-					aircraft,
-					altitude
-				}
-			});
+	// 	let icon = markerIcon(altitude);
+	// 	let marker = L.marker(loc, {icon});
+	// 	bindPopup(marker, (m) => {
+	// 		let c = new MarkerPopup({
+	// 			target: m,
+	// 			props: {
+	// 				aircraft,
+	// 				altitude
+	// 			}
+	// 		});
 			
-			c.$on('change', ({detail}) => {
-				altitude = detail;
-				marker.setIcon(markerIcon(altitude));
-			});
+	// 		c.$on('change', ({detail}) => {
+	// 			altitude = detail;
+	// 			marker.setIcon(markerIcon(altitude));
+	// 		});
 			
-			return c;
-		});
+	// 		return c;
+	// 	});
 		
-		return marker;
-	}
+	// 	return marker;
+	// }
 
 	function createAircraftMarker(icao,loc) {
 		let aircraft = aircraftsMap[icao];
 		let callSign = aircraft['call'];
 		
-		let id = (callSign === undefined || callSign == "") ? icao : callSign;
+		let id = (callSign === undefined || callSign == "") ? icao  : callSign;
+		let alt = aircraft['tel'][0]['alt'];
+		let hs = aircraft['tel'][0]['hs'];
+		
+		if(isNaN(hs)) hs = 0; else hs = hs.toFixed(2);
 
-		let icon = markerIcon(id);
+		let icon = markerIcon(id, alt, hs);
 		let marker = L.marker(loc, {icon});
 
 		bindPopup(marker, (m) => {
@@ -330,7 +340,7 @@
 <svelte:window on:resize={resizeMap} />
 
 <style>
-	.map :global(.marker-text) {
+	.map :global(.marker-id) {
 		width:100%;
 		text-align:center;
 		font-weight:600;
@@ -338,12 +348,24 @@
 		color:#EEE;
 		border-radius:0.5rem;
 	}
+
+	.map :global(.marker-alt) {
+		width:100%;
+		text-align:center;
+		color:#444;
+	}
+	.map :global(.marker-vel) {
+		width:100%;
+		text-align:center;
+		color:#444;
+	}
 	
 	.map :global(.map-marker) {
 		/* width:30px;
 		transform:translateX(-50%) translateY(-25%); */
-		width:40px;
+		width:60px;
 	}
+	
 </style>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"

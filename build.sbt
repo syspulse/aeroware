@@ -123,6 +123,14 @@ lazy val core = (project in file("aw-core"))
       libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(),
 )
 
+lazy val data = (project in file("aw-data"))
+  .disablePlugins(sbtassembly.AssemblyPlugin)
+  .settings (
+      sharedConfig,
+      name := "aw-data",
+      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(),
+)
+
 lazy val gamet = (project in file("aw-gamet"))
   .dependsOn(core)
   .settings (
@@ -137,7 +145,7 @@ lazy val gamet = (project in file("aw-gamet"))
 )
 
 lazy val adsb_core = (project in file("aw-adsb/adsb-core"))
-  .dependsOn(core)
+  .dependsOn(core,data)
   .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,
@@ -149,7 +157,7 @@ lazy val adsb_core = (project in file("aw-adsb/adsb-core"))
 )
 
 lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
-  .dependsOn(core,adsb_core)
+  .dependsOn(core,data,adsb_core)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .enablePlugins(AshScriptPlugin)
@@ -180,7 +188,7 @@ lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
 )
 
 lazy val adsb_tools = (project in file("aw-adsb/adsb-tools"))
-  .dependsOn(core, adsb_core)
+  .dependsOn(core, data,adsb_core)
   .enablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,
@@ -192,7 +200,7 @@ lazy val adsb_tools = (project in file("aw-adsb/adsb-tools"))
 )
 
 lazy val adsb_live = (project in file("aw-adsb/adsb-live"))
-  .dependsOn(core, adsb_core)
+  .dependsOn(core, data, adsb_core)
   .enablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,

@@ -116,9 +116,14 @@ class RadarSpec extends WordSpec with Matchers with Testables {
     s"update flight Flight(${flight2.size}) with telemetry" in {
       val radar = new Radar
     
+      // with small DB
       val a1 = AircraftAddress("508035","Antonov An-225 Mriya","UR-82060")
 
+      // with full DB
+      //val a1 = AircraftAddress("508035","A225","UR-82060")
+
       for( m <- flight2 ) { 
+        println(s"${decoder.decode(m).get}")
         radar.event(decoder.decode(m).get)
         val aircraft = radar.find(a1)
         aircraft.isDefined should ===(true)
