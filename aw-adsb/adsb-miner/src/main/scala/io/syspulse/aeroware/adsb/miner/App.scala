@@ -96,7 +96,11 @@ class ConfigurationArgs(args:Array[String],ops: Arg[_]*) extends ConfigurationLi
     if (configArgs.get.c.contains(path)) configArgs.get.c.get(path).map(v => Duration.ofMillis(v.asInstanceOf[Long])) else None
 }
 
-case class ADSB_HashEvent(hash:String,ts: Long, raw: String, `type`: String, icaoId:String, aircraft:String,callsign:String) extends ADSB_Event
+case class Config (
+  keystoreDir:String = "",
+  keystorePass:String = "",
+  ingest: io.syspulse.aeroware.adsb.ingest.Config
+)
 
 object App extends skel.Server {
 
@@ -139,40 +143,29 @@ object App extends skel.Server {
           new ConfigurationArgs(args,
             ArgString('s', "sign","Signing Key"),
             ArgString('h', "dump1090.host","Dump1090 host"),
-            ArgInt('p', "dump1090.port","Dump1090 port")
+            ArgInt('p', "dump1090.port","Dump1090 port"),
+            ArgString('k', "keystore.dir","Keystore directory"),
+            ArgString('r', "keystore.pass","Keystore password")
           )
         ))
 
         println(s"${configuration}")
 
-        // (new ADSB_Ingest).run(io.syspulse.aeroware.adsb.ingest.Config(          
-        //   dumpHost = "localhost",
-        //   dumpPort = 30002,
-        //   fileLimit = 1000000L
-        // ))
-
-        val config = io.syspulse.aeroware.adsb.ingest.Config(          
-          dumpHost = configuration.getString("dump1090.host").getOrElse("localhost"),
-          dumpPort = configuration.getInt("dump1090.port").getOrElse(30002),
-          fileLimit = 1000000L,
-          filePattern = "NONE"
+        
+        val config = Config(
+          keystoreDir = configuration.getString("keystore.dir").getOrElse("./keystore/"),
+          keystorePass = configuration.getString("keystore.pass").getOrElse("test123"),
+          ingest = io.syspulse.aeroware.adsb.ingest.Config(          
+            dumpHost = configuration.getString("dump1090.host").getOrElse("rp-1"),
+            dumpPort = configuration.getInt("dump1090.port").getOrElse(30002),
+            fileLimit = 1000000L,
+            filePattern = "NONE"
+          ) 
         )
 
         println(config)
 
-        (new ADSB_Ingest).run(config, 
-          Some(Flow[ADSB].map(a =>{
-            val hash = Util.SHA256(a.raw)
-            ADSB_HashEvent(Util.hex(hash),
-              a.ts, a.raw, a.getClass.getSimpleName,
-              a.aircraftAddr.icaoId,
-              a.aircraftAddr.icaoType,
-              a.aircraftAddr.icaoCallsign) 
-          })),
-          Some((a:ADSB_Event) => {
-            a.toString            
-          })
-        )
+        new ADSB_Miner(config).run()        
 
         //run( config.httpHost, config.httpPort, config.httpUri, configuration, Seq())
         

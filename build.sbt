@@ -79,6 +79,8 @@ val sharedConfig = Seq(
       "sonatype snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
       "typesafe repo"      at "https://repo.typesafe.com/typesafe/releases/",
       "confluent repo"     at "https://packages.confluent.io/maven/",
+      "consensys repo"     at "https://artifacts.consensys.net/public/maven/maven/",
+      "consensys teku"     at "https://artifacts.consensys.net/public/teku/maven/"
     ),
   )
 
@@ -87,6 +89,7 @@ val sharedConfigAssembly = Seq(
   assembly / assemblyMergeStrategy := {
       case x if x.contains("module-info.class") => MergeStrategy.discard
       case x if x.contains("io.netty.versions.properties") => MergeStrategy.first
+      //case x if x.contains("StaticMarkerBinder.class") => MergeStrategy.first // logback-classic-1.2.8.jar vs. log4j-slf4j-impl-2.13.3.jar
       case x => {
         val oldStrategy = (assembly / assemblyMergeStrategy).value
         oldStrategy(x)
@@ -95,7 +98,8 @@ val sharedConfigAssembly = Seq(
   assembly / assemblyExcludedJars := {
     val cp = (assembly / fullClasspath).value
     cp filter { f =>
-      f.data.getName.contains("snakeyaml-1.27-android.jar") 
+      f.data.getName.contains("snakeyaml-1.27-android.jar")  || 
+      f.data.getName.contains("log4j-slf4j-impl-2.13.3.jar") 
       // ||
       // f.data.getName.container("spark-core_2.11-2.0.1.jar")
     }

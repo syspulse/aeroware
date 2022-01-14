@@ -12,7 +12,7 @@ object Dependencies {
     lazy val quillVersion = "3.6.0"
     lazy val dispatchVersion = "1.2.0" //"1.1.3"
     
-    lazy val skelVersion = "0.0.4"
+    lazy val skelVersion = "0.0.5"
     lazy val appVersion = "0.0.1"
     lazy val jarPrefix = "server-"
     
@@ -54,9 +54,9 @@ object Dependencies {
     
     //val libJline =          "org.jline"                   %  "jline"                 % "3.14.1"
     //val libJson4s =         "org.json4s"                  %%  "json4s-native"        % "3.6.7"
-    val libOsLib =          "com.lihaoyi"                 %% "os-lib"               % "0.7.3"
+    val libOsLib =          "com.lihaoyi"                 %% "os-lib"               % "0.8.0"
     val libFastparseLib =   "com.lihaoyi"                 %% "fastparse"            % "2.3.2"
-    val libUpickle =        "com.lihaoyi"                 %% "upickle"              % "1.4.0"
+    val libUpickle =        "com.lihaoyi"                 %% "upickle"              % "1.4.1"
     val libUjsonLib =       "com.lihaoyi"                 %% "ujson"                % "1.3.15" 
     val libCask =           "com.lihaoyi"                 %% "cask"                 % "0.7.11" //exclude("ch.qos.logback","logback-core")
 
@@ -77,6 +77,7 @@ object Dependencies {
 
     val libSkelCore =       "io.syspulse"                 %% "skel-core"            % skelVersion
     val libSkelIngest =     "io.syspulse"                 %% "skel-ingest"          % skelVersion
+    val libSkelCrypto =     "io.syspulse"                 %% "skel-crypto"          % skelVersion
     
     // Projects
     val libCommon = Seq(libScalaLogging, libSlf4jApi, libLogback, libJanino, libTypesafeConfig )
@@ -84,7 +85,7 @@ object Dependencies {
 
     val libPrometheus = Seq(libPrometheusClient)
     
-    val libSkel = Seq(libSkelCore,libSkelIngest)
+    val libSkel = Seq(libSkelCore,libSkelIngest,libSkelCrypto)
     
     val libAkka = Seq(libAkkaActor,libAkkaActorTyped,libAkkaStream)
 

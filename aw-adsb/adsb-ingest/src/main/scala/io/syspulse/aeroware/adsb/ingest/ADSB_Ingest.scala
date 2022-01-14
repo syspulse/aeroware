@@ -68,7 +68,7 @@ class ADSB_Ingest extends IngestClient {
     ADSB_Log(ts, v.raw,`type`,icaoId,aircraft,callsign) 
   })
   
-  def printerFlow = Flow[ADSB].map(v => { 
+  def debugFlow = Flow[ADSB].map(v => { 
     println(s"${v}")
     log.debug(s"${v}")
     v 
@@ -177,7 +177,7 @@ class ADSB_Ingest extends IngestClient {
       .via(filter)
       .via(tracker)
       //.via(transformer.getOrElse(logTransformer))
-      .via(printerFlow)
+      .via(debugFlow)
       // .via(format)
       // .map(ByteString(_))
     }
