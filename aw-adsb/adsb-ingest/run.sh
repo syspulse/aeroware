@@ -15,4 +15,4 @@ MAIN=io.syspulse.aeroware.adsb.ingest.App
 >&2 echo "site: $SITE"
 >&2 echo "main: $MAIN"
 
-exec ../../run-app.sh $APP $MAIN --data-dir $APP_HOME/data $@
+exec ../../run-app.sh $APP $MAIN --data.dir $APP_HOME/data $@

@@ -106,8 +106,8 @@ val sharedConfigAssembly = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core)
-  .dependsOn(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core)
+  .aggregate(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core, adsb_miner)
+  .dependsOn(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core, adsb_miner)
   .disablePlugins(sbtassembly.AssemblyPlugin) // this is needed to prevent generating useless assembly and merge error
   .settings(
     
@@ -160,7 +160,6 @@ lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
   .dependsOn(core,data,adsb_core)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
-  .enablePlugins(AshScriptPlugin)
   .settings (
 
     sharedConfig,
@@ -168,24 +167,54 @@ lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
     sharedConfigDocker,
     dockerBuildxSettings,
 
-    Universal / mappings += file("conf/application.conf") -> "conf/application.conf",
-    Universal / mappings += file("conf/logback.xml") -> "conf/logback.xml",
+    name := appNameAdsbIngest,
+    run / mainClass := Some(appBootClassAdsbIngest),
+    assembly / mainClass := Some(appBootClassAdsbIngest),
+    Compile / mainClass := Some(appBootClassAdsbIngest), // <-- This is very important for DockerPlugin generated stage1 script!
+    assembly / assemblyJarName := jarPrefix + appNameAdsbIngest + "-" + "assembly" + "-"+  appVersion + ".jar",
+
+    Universal / mappings += file(baseDirectory.value.getAbsolutePath+"/conf/application.conf") -> "conf/application.conf",
+    Universal / mappings += file(baseDirectory.value.getAbsolutePath+"/conf/logback.xml") -> "conf/logback.xml",
     bashScriptExtraDefines += s"""addJava "-Dconfig.file=${appDockerRoot}/conf/application.conf"""",
     bashScriptExtraDefines += s"""addJava "-Dlogback.configurationFile=${appDockerRoot}/conf/logback.xml"""",
 
-    name := appNameAdsb,
     libraryDependencies ++= libAkka ++ libSkel ++ libPrometheus ++ Seq(
       libAlpakkaFile,
       libUjsonLib,
       libUpickle
     ),
-    
-    run / mainClass := Some(appBootClassAdsb),
-    assembly / mainClass := Some(appBootClassAdsb),
-    Compile / mainClass := Some(appBootClassAdsb), // <-- This is very important for DockerPlugin generated stage1 script!
-    assembly / assemblyJarName := jarPrefix + appNameAdsb + "-" + "assembly" + "-"+  appVersion + ".jar",
+  )
 
-)
+lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
+  .dependsOn(core,data,adsb_core,adsb_ingest)
+  .enablePlugins(JavaAppPackaging)
+  .enablePlugins(DockerPlugin)
+  .settings (
+
+    sharedConfig,
+    sharedConfigAssembly,
+    sharedConfigDocker,
+    dockerBuildxSettings,
+
+    name := appNameAdsbMiner,
+    run / mainClass := Some(appBootClassAdsbMiner),
+    assembly / mainClass := Some(appBootClassAdsbMiner),
+    Compile / mainClass := Some(appBootClassAdsbMiner), // <-- This is very important for DockerPlugin generated stage1 script!
+    assembly / assemblyJarName := jarPrefix + appNameAdsbMiner + "-" + "assembly" + "-"+  appVersion + ".jar",
+
+    Universal / mappings += file(baseDirectory.value.getAbsolutePath+"/conf/application.conf") -> "conf/application.conf",
+    Universal / mappings += file(baseDirectory.value.getAbsolutePath+"/conf/logback.xml") -> "conf/logback.xml",
+    bashScriptExtraDefines += s"""addJava "-Dconfig.file=${appDockerRoot}/conf/application.conf"""",
+    bashScriptExtraDefines += s"""addJava "-Dlogback.configurationFile=${appDockerRoot}/conf/logback.xml"""",
+
+    libraryDependencies ++= libAkka ++ libSkel ++ libPrometheus ++ Seq(
+      libAlpakkaFile,
+      libUjsonLib,
+      libUpickle
+    ),
+  )
+
+
 
 lazy val adsb_tools = (project in file("aw-adsb/adsb-tools"))
   .dependsOn(core, data,adsb_core)
@@ -197,7 +226,7 @@ lazy val adsb_tools = (project in file("aw-adsb/adsb-tools"))
       libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ Seq(
         libCask  
       ),
-)
+  )
 
 lazy val adsb_live = (project in file("aw-adsb/adsb-live"))
   .dependsOn(core, data, adsb_core)
@@ -209,7 +238,7 @@ lazy val adsb_live = (project in file("aw-adsb/adsb-live"))
       libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ libTest ++ Seq(
         libAkkaTestkitType % Test  
       ),
-)
+  )
 
 // use scalaxb sbt target to generate XML bindings
 lazy val gpx_core = (project in file("aw-gpx/gpx-core"))
@@ -227,4 +256,4 @@ lazy val gpx_core = (project in file("aw-gpx/gpx-core"))
       libraryDependencies ++= libCommon ++ libTest ++ libXML ++ Seq(
         
       ),
-)
+  )

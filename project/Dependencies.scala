@@ -18,8 +18,11 @@ object Dependencies {
     
     lazy val appDockerRoot = "/app"
 
-    lazy val appNameAdsb = "adsb-ingest"
-    lazy val appBootClassAdsb = "io.syspulse.aeroware.adsb.App"
+    lazy val appNameAdsbIngest              = "adsb-ingest"
+    lazy val appBootClassAdsbIngest         = "io.syspulse.aeroware.adsb.ingest.App"
+
+    lazy val appNameAdsbMiner               = "adsb-miner"
+    lazy val appBootClassAdsbMiner          = "io.syspulse.aeroware.adsb.miner.App"
     //lazy val mainAppClassAdsbIngest = "com.syspulse.avia.adsb.Ingest"}
 
     // Akka Libraries
