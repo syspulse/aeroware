@@ -98,6 +98,8 @@ class ConfigurationArgs(args:Array[String],ops: Arg[_]*) extends ConfigurationLi
 case class Config (
   keystoreDir:String = "",
   keystorePass:String = "",
+  batchSize: Int = 3,
+  batchWindow: Long = 1000L,
   ingest: io.syspulse.aeroware.adsb.ingest.Config
 )
 
@@ -144,7 +146,9 @@ object App extends skel.Server {
             ArgString('h', "dump1090.host","Dump1090 host"),
             ArgInt('p', "dump1090.port","Dump1090 port"),
             ArgString('k', "keystore.dir","Keystore directory"),
-            ArgString('r', "keystore.pass","Keystore password")
+            ArgString('r', "keystore.pass","Keystore password"),
+            ArgInt('b', "batch.size","ADSB Batch max size"),
+            ArgInt('w', "batch.window","ADSB Batch time window (msec)")
           )
         ))
 
@@ -154,6 +158,8 @@ object App extends skel.Server {
         val config = Config(
           keystoreDir = configuration.getString("keystore.dir").getOrElse("./keystore/"),
           keystorePass = configuration.getString("keystore.pass").getOrElse("test123"),
+          batchSize = configuration.getInt("batch.size").getOrElse(10),
+          batchWindow = configuration.getLong("batch.window").getOrElse(1000L),
           ingest = io.syspulse.aeroware.adsb.ingest.Config(          
             dumpHost = configuration.getString("dump1090.host").getOrElse("rp-1"),
             dumpPort = configuration.getInt("dump1090.port").getOrElse(30002),

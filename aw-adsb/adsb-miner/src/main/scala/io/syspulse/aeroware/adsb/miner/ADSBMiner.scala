@@ -10,6 +10,7 @@ import akka.util.ByteString
 import akka.NotUsed
 import akka.actor.ActorSystem
 
+import java.util.concurrent.TimeUnit
 import scala.concurrent.duration._
 import scala.concurrent.Await
 
@@ -44,54 +45,55 @@ object ADSB_Mined_SignedData {
 
 class ADSBMiner(config:Config) extends AdsbIngest {
   
-  import ADSB_Mined_SignedData._
+  import MSG_Miner_Data._
+  import MSG_Miner_ADSB._
  
   val wallet = new WalletVaultKeyfiles(config.keystoreDir, (keystoreFile) => {config.keystorePass})
   
   val wr = wallet.load()
   log.info(s"wallet: ${wr}")
+  val signerAddr = wallet.signers.toList.head._2.head.addr
 
   val sinkRestartable =  { 
     RestartSink.withBackoff(retrySettings) { () =>
-      Sink.foreach[ADSB_Mined](m => println(s"${m}"))
+      Sink.foreach[MSG_Miner](m => println(s"${m}"))
     }
   }
 
-  val signParsedFlow = Flow[ADSB].map(a => {
-    ADSB_Mined(
-      a.ts,a.raw,
-      wallet.msign(
-        upickle.default.writeBinary(
-          ADSB_Mined_SignedData(a.ts,a.raw)
-        ),
-        None, None
-      )
-      .head
-    )
-  })
+  // val signParsedFlow = Flow[ADSB].map(a => {
+  //   ADSB_Mined(
+  //     a.ts,a.raw,
+  //     wallet.msign(
+  //       upickle.default.writeBinary(
+  //         ADSB_Mined_SignedData(a.ts,a.raw)
+  //       ),
+  //       None, None
+  //     )
+  //     .headOption.getOrElse("0x0")
+  //   )
+  // })
 
-  val signRawFlow = Flow[ADSB_Log].map(a => {
-    //ADSB_Mined(a.ts,a.raw,Util.hex(Util.SHA256(a.raw)))
-    //val data = s"${a.ts},${a.raw}"
-    //ADSB_Mined(a,Eth.sign(data,"0x1"))
-    ADSB_Mined(
-      a.ts,a.raw,
-      wallet.msign(
-        upickle.default.writeBinary(
-          ADSB_Mined_SignedData(a.ts,a.raw)
-        ),
-        None, None
-      )
-      .headOption.getOrElse("0x0")
+    val signer = Flow[Seq[ADSB]].map( aa => { 
+    val adsbData = aa.map(a => MSG_Miner_ADSB(a.ts,a.raw)).toArray
+    val sigData = upickle.default.writeBinary(adsbData)
+    val sig = wallet.msign(sigData,None, None).head
+
+    val msgData = MSG_Miner_Data(
+      ts = System.currentTimeMillis(),
+      addr = Util.fromHexString(signerAddr),
+      adsbs = adsbData,
+      sig.split(":").foldLeft(Array[Byte]())(_ ++ Util.fromHexString(_))
     )
+
+    msgData
   })
 
   def run() = {
     val adsbSource = flow(config.ingest)
     
     val adsbFlow = adsbSource
-      .via(logFlow)
-      .via(signRawFlow)
+      .groupedWithin(config.batchSize, FiniteDuration(config.batchWindow,TimeUnit.MILLISECONDS))
+      .via(signer)
       //.map(a => ByteString(a.toString))
       .log(s"output -> ")
       .toMat(sinkRestartable)(Keep.both)
