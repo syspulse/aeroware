@@ -48,7 +48,7 @@ object App extends skel.Server {
 
         println(s"${config}")
 
-        (new ADSB_IngestFile(config.dataDir,config.filePattern,config.dataFormat,config.fileLimit,config.fileSize)).run(config)
+        (new AdsbIngestFile(config.dataDir,config.filePattern,config.dataFormat,config.fileLimit,config.fileSize)).run(config)
 
         run( config.httpHost, config.httpPort, config.httpUri, configuration, Seq())
       }

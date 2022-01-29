@@ -31,7 +31,7 @@ import io.syspulse.skel.crypto.wallet.WalletVaultKeyfiles
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
 import io.syspulse.aeroware.adsb.core.adsb.Raw
-import io.syspulse.aeroware.adsb.ingest.ADSB_Ingest
+import io.syspulse.aeroware.adsb.ingest.AdsbIngest
 
 case class ADSB_Mined_SignedData(
   ts:Long,
@@ -42,7 +42,7 @@ object ADSB_Mined_SignedData {
   implicit val rw: RW[ADSB_Mined_SignedData] = macroRW
 }
 
-class ADSBMiner(config:Config) extends ADSB_Ingest {
+class ADSBMiner(config:Config) extends AdsbIngest {
   
   import ADSB_Mined_SignedData._
  
