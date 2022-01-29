@@ -69,10 +69,23 @@ class ADSBMiner(config:Config) extends AdsbIngest {
       ts = System.currentTimeMillis(),
       addr = Util.fromHexString(signerAddr),
       adsbs = adsbData,
-      sig.split(":").foldLeft(Array[Byte]())(_ ++ Util.fromHexString(_))
+      sig = MinerSig(sig)
     )
 
     msgData
+  })
+
+  val verifier = Flow[MSG_MinerData].map( m => { 
+    val adsbData = m.adsbs
+    val sigData = upickle.default.writeBinary(adsbData)
+    val sig = Util.hex2(m.sig.r) + ":" + Util.hex2(m.sig.s)
+
+    val v = wallet.mverify(List(sig),sigData,None,None)
+    if(v == 0) {
+      log.error(s"NOT VERIFIED: ${m.sig}")
+    }else
+      log.info(s"Verified: ${m.sig}")
+    m
   })
 
   def run() = {
@@ -81,6 +94,7 @@ class ADSBMiner(config:Config) extends AdsbIngest {
     val adsbFlow = adsbSource
       .groupedWithin(config.batchSize, FiniteDuration(config.batchWindow,TimeUnit.MILLISECONDS))
       .via(signer)
+      .via(verifier)
       //.map(a => ByteString(a.toString))
       .log(s"output -> ")
       .toMat(sinkRestartable)(Keep.both)

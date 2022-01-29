@@ -36,5 +36,5 @@ CONFIG="application${SITE}.conf"
 >&2 pwd
 
 # command:
-EXEC="$JAVA_HOME/bin/java -Xss512M -Dconfig.resource=$CONFIG -cp $CP $AGENT $OPT $MAIN $@"
+EXEC="$JAVA_HOME/bin/java -Xss512M -Dcolor -Dconfig.resource=$CONFIG -cp $CP $AGENT $OPT $MAIN $@"
 exec $EXEC
