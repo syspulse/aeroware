@@ -165,7 +165,7 @@ object App extends skel.Server {
 
         println(config)
 
-        new ADSB_Miner(config).run()        
+        new ADSBMiner(config).run()        
 
         //run( config.httpHost, config.httpPort, config.httpUri, configuration, Seq())
         

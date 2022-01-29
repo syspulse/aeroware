@@ -78,6 +78,7 @@ object Dependencies {
     val libSkelCore =       "io.syspulse"                 %% "skel-core"            % skelVersion
     val libSkelIngest =     "io.syspulse"                 %% "skel-ingest"          % skelVersion
     val libSkelCrypto =     "io.syspulse"                 %% "skel-crypto"          % skelVersion
+    val libSkelSerde =      "io.syspulse"                 %% "skel-serde"           % skelVersion
     
     // Projects
     val libCommon = Seq(libScalaLogging, libSlf4jApi, libLogback, libJanino, libTypesafeConfig )
@@ -85,7 +86,7 @@ object Dependencies {
 
     val libPrometheus = Seq(libPrometheusClient)
     
-    val libSkel = Seq(libSkelCore,libSkelIngest,libSkelCrypto)
+    val libSkel = Seq(libSkelCore,libSkelIngest,libSkelCrypto,libSkelSerde)
     
     val libAkka = Seq(libAkkaActor,libAkkaActorTyped,libAkkaStream)
 
