@@ -9,8 +9,8 @@ import io.syspulse.aeroware.adsb.core.ADSB
 import io.syspulse.aeroware.adsb.core.adsb.Raw
 import com.fasterxml.jackson.module.scala.deser.overrides
 
-case class MSG_MinerData(ts: Long, addr:Array[Byte], adsbs: Array[MSG_MinerADSB], sig:Array[Byte]) extends MSG_Miner {
-  override def toString = s"${this.getClass.getSimpleName}(${ts},${Util.hex2(addr)},${adsbs.toSeq},${Util.hex2(sig)})"
+case class MSG_MinerData(ts: Long, addr:Array[Byte], adsbs: Array[MSG_MinerADSB], sig:Array[Byte],ver:Int = MSG_Version.V1) extends MSG_Miner {
+  override def toString = s"${this.getClass.getSimpleName}(0x${ver.toHexString},${ts},${Util.hex2(addr)},${adsbs.toSeq},${Util.hex2(sig)})"
 }
 
 object MSG_MinerData {
