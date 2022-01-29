@@ -45,8 +45,8 @@ object ADSB_Mined_SignedData {
 
 class ADSBMiner(config:Config) extends AdsbIngest {
   
-  import MSG_Miner_Data._
-  import MSG_Miner_ADSB._
+  import MSG_MinerData._
+  import MSG_MinerADSB._
  
   val wallet = new WalletVaultKeyfiles(config.keystoreDir, (keystoreFile) => {config.keystorePass})
   
@@ -60,25 +60,12 @@ class ADSBMiner(config:Config) extends AdsbIngest {
     }
   }
 
-  // val signParsedFlow = Flow[ADSB].map(a => {
-  //   ADSB_Mined(
-  //     a.ts,a.raw,
-  //     wallet.msign(
-  //       upickle.default.writeBinary(
-  //         ADSB_Mined_SignedData(a.ts,a.raw)
-  //       ),
-  //       None, None
-  //     )
-  //     .headOption.getOrElse("0x0")
-  //   )
-  // })
-
-    val signer = Flow[Seq[ADSB]].map( aa => { 
-    val adsbData = aa.map(a => MSG_Miner_ADSB(a.ts,a.raw)).toArray
+  val signer = Flow[Seq[ADSB]].map( aa => { 
+    val adsbData = aa.map(a => MSG_MinerADSB(a.ts,a.raw)).toArray
     val sigData = upickle.default.writeBinary(adsbData)
     val sig = wallet.msign(sigData,None, None).head
 
-    val msgData = MSG_Miner_Data(
+    val msgData = MSG_MinerData(
       ts = System.currentTimeMillis(),
       addr = Util.fromHexString(signerAddr),
       adsbs = adsbData,
