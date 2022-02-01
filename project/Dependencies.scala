@@ -12,14 +12,17 @@ object Dependencies {
     lazy val quillVersion = "3.6.0"
     lazy val dispatchVersion = "1.2.0" //"1.1.3"
     
-    lazy val skelVersion = "0.0.4"
+    lazy val skelVersion = "0.0.5"
     lazy val appVersion = "0.0.1"
     lazy val jarPrefix = "server-"
     
     lazy val appDockerRoot = "/app"
 
-    lazy val appNameAdsb = "adsb-ingest"
-    lazy val appBootClassAdsb = "io.syspulse.aeroware.adsb.App"
+    lazy val appNameAdsbIngest              = "adsb-ingest"
+    lazy val appBootClassAdsbIngest         = "io.syspulse.aeroware.adsb.ingest.App"
+
+    lazy val appNameAdsbMiner               = "adsb-miner"
+    lazy val appBootClassAdsbMiner          = "io.syspulse.aeroware.adsb.miner.App"
     //lazy val mainAppClassAdsbIngest = "com.syspulse.avia.adsb.Ingest"}
 
     // Akka Libraries
@@ -33,7 +36,7 @@ object Dependencies {
     val libAlpakkaFile =    "com.lightbend.akka"          %% "akka-stream-alpakka-file" % alpakkaVersion
 
     val libScalaLogging =   "com.typesafe.scala-logging"  %% "scala-logging"        % "3.9.2"
-    val libLogback =        "ch.qos.logback"              %  "logback-classic"      % "1.2.3"
+    val libLogback =        "ch.qos.logback"              %  "logback-classic"      % "1.2.8"
     val libJanino =         "org.codehaus.janino"         %  "janino"               % "3.1.6"
     // I need this rubbish slf4j to deal with old jboss dependecny which generates exception in loading logback.xml
     //val libSlf4jApi =       "org.slf4j"                   %  "slf4j-api"            % "1.8.0-beta4"
@@ -51,9 +54,9 @@ object Dependencies {
     
     //val libJline =          "org.jline"                   %  "jline"                 % "3.14.1"
     //val libJson4s =         "org.json4s"                  %%  "json4s-native"        % "3.6.7"
-    val libOsLib =          "com.lihaoyi"                 %% "os-lib"               % "0.7.3"
+    val libOsLib =          "com.lihaoyi"                 %% "os-lib"               % "0.8.0"
     val libFastparseLib =   "com.lihaoyi"                 %% "fastparse"            % "2.3.2"
-    val libUpickle =        "com.lihaoyi"                 %% "upickle"              % "1.4.0"
+    val libUpickle =        "com.lihaoyi"                 %% "upickle"              % "1.4.1"
     val libUjsonLib =       "com.lihaoyi"                 %% "ujson"                % "1.3.15" 
     val libCask =           "com.lihaoyi"                 %% "cask"                 % "0.7.11" //exclude("ch.qos.logback","logback-core")
 
@@ -74,6 +77,8 @@ object Dependencies {
 
     val libSkelCore =       "io.syspulse"                 %% "skel-core"            % skelVersion
     val libSkelIngest =     "io.syspulse"                 %% "skel-ingest"          % skelVersion
+    val libSkelCrypto =     "io.syspulse"                 %% "skel-crypto"          % skelVersion
+    val libSkelSerde =      "io.syspulse"                 %% "skel-serde"           % skelVersion
     
     // Projects
     val libCommon = Seq(libScalaLogging, libSlf4jApi, libLogback, libJanino, libTypesafeConfig )
@@ -81,7 +86,7 @@ object Dependencies {
 
     val libPrometheus = Seq(libPrometheusClient)
     
-    val libSkel = Seq(libSkelCore,libSkelIngest)
+    val libSkel = Seq(libSkelCore,libSkelIngest,libSkelCrypto,libSkelSerde)
     
     val libAkka = Seq(libAkkaActor,libAkkaActorTyped,libAkkaStream)
 

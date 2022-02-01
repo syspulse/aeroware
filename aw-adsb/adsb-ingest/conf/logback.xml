@@ -1,20 +1,3 @@
-<!-- <?xml version="1.0" encoding="UTF-8"?>
-<configuration>
-
-    <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
-        <target>System.err</target>
-        <!-- encoders are assigned the type
-             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
-        <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-        </encoder>
-    </appender>
-
-    <root level="info">
-        <appender-ref ref="STDERR" />
-    </root>
-</configuration> -->
-
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <appender name="COLOR" class="ch.qos.logback.core.ConsoleAppender">
@@ -28,7 +11,7 @@
             <pattern>[%date] [%level] [%logger{10} %file:%line] %msg%n</pattern>
         </encoder>
     </appender>
-    <root level="debug">
+    <root level="info">
         <!-- to use enable this mode pass -Dcolor to jvm -->
         <if condition='isDefined("color")'>
             <then>

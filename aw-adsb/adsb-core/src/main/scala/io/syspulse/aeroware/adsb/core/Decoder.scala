@@ -28,9 +28,10 @@ import com.typesafe.scalalogging.Logger
 
 import io.syspulse.aeroware.adsb.core._
 import io.syspulse.aeroware.adsb.util._
-import io.syspulse.aeroware.util._
 import io.syspulse.aeroware.core._
 import io.syspulse.aeroware.core.Units
+import io.syspulse.aeroware.data._
+
 import javax.ws.rs.container.Suspended
 
 case class RawALT(a1:BitVector,Q:BitVector,a2:BitVector) {
@@ -318,9 +319,6 @@ object Decoder {
 		val dLon = 360.0 / max(1.0, NL(lat) - (if(isOdd) 1.0 else 0.0))
 		val m = floor(ref.lon / dLon) + floor(0.5 + mod(ref.lon, dLon) / dLon - lonCPR / 131072.0)
 		val lon = dLon * (m + lonCPR / 131072.0 )
-
-    //println(s"latCPR=${latCPR}, lonCPR=${lonCPR}, dLat=${dLat}, j=${j}, rLat=${lat}, dLon=${dLon}, m=${m}, lon=${lon}")
-
 		Location(lat, lon, alt);
 	}
 
@@ -334,7 +332,7 @@ object Decoder {
     }
 		
 		if (a0.isOdd == a1.isOdd) {
-      log.warn(s"same odds (${a0.isOdd}:${a1.isOdd}): ${a0}:${a1}")
+      //log.warn(s"same odds (${a0.isOdd}:${a1.isOdd}): ${a0}:${a1}")
       return a1.loc
     }
 		

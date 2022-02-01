@@ -7,6 +7,7 @@
 2. [adsb-ingest](adsb-ingest) - Ingestion from RP sensors
 3. [adsb-tools](adsb-tools) - Shell tools to work with ADS-B data
 4. [adsb-view](adsb-view) - Map viewer
+5. [adsb-proxy](adsb-proxy) - simple dump1090 proxy
 
 
 ## Kafka Artchitecture Examples

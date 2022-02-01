@@ -11,6 +11,7 @@ import io.syspulse.skel
 import io.syspulse.skel.config._
 
 import io.syspulse.aeroware.adsb.core._
+import io.syspulse.aeroware.data.AircraftICAORegistry
 
 case class Config (
   httpHost: String = "0.0.0.0",
@@ -132,6 +133,10 @@ object AppPlayer {
           pipe = pipe :+ p
         }
         
+        Console.err.println(s"Aircrafts Registry: loading...")
+        AircraftICAORegistry.sync()
+        Console.err.println(s"Aircrafts Registry: ${AircraftICAORegistry.size}")
+
         Console.err.println(s"Pipe: ${pipe}")
 
         var finished = false

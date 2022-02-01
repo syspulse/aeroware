@@ -10,7 +10,6 @@ import scodec.Codec
 import com.typesafe.scalalogging.Logger
 
 import io.syspulse.aeroware.adsb.core._
-import io.syspulse.aeroware.util._
 
 object Dump1090 {
 

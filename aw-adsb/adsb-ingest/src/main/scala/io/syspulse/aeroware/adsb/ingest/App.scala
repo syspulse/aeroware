@@ -10,24 +10,6 @@ import io.syspulse.skel.util.Util
 
 import akka.NotUsed
 
-case class Config (
-  httpHost: String = "0.0.0.0",
-  httpPort: Int = 8080,
-  httpUri: String = "/api/v1/adsb",
-
-  dumpHost: String = "localhost",
-  dumpPort: Int = 30002,
-  fileLimit: Long = 1000000L,
-  fileSize: Long = 1024L * 1024L * 10L,
-  filePattern: String = "ADSB-{yyyy-MM-dd'T'HH:mm:ssZ}.log",
-  connectTimeout: Long = 3000L,
-  idleTimeout: Long = 60000L,
-  dataDir:String = "/data",
-  dataFormat:String = "json",
-  trackAircraft:String = "", // [Aa][nN].* - Antonov track
-  args:Seq[String] = Seq()
-)
-
 object App extends skel.Server {
   def main(args: Array[String]):Unit = {
 
@@ -41,11 +23,11 @@ object App extends skel.Server {
         opt[Int]('p', "port").action((x, c) => c.copy(httpPort = x)).text("Listen port"),
         opt[String]('u', "uri").action((x, c) => c.copy(httpUri = x)).text("Uri (/api/v1/adsb)"),
 
-        opt[String]('o', "dump1090-host").action((x, c) => c.copy(dumpHost = x)).text("dump1090 Host"),  
-        opt[Int]('r', "dump1090-port").action((x, c) => c.copy(dumpPort = x)).text("dump1090 port"),
+        opt[String]('o', "dump1090.host").action((x, c) => c.copy(dumpHost = x)).text("dump1090 Host"),  
+        opt[Int]('r', "dump1090.port").action((x, c) => c.copy(dumpPort = x)).text("dump1090 port"),
         
-        opt[String]('d', "data-dir").action((x, c) => c.copy(dataDir = x)).text("Data directory (def: /data)"),
-        opt[String]('j', "data-format").action((x, c) => c.copy(dataFormat = x)).text("Data format (json|csv) (def: json)"),
+        opt[String]('d', "data.dir").action((x, c) => c.copy(dataDir = x)).text("Data directory (def: /data)"),
+        opt[String]('j', "data.format").action((x, c) => c.copy(dataFormat = x)).text("Data format (json|csv) (def: json)"),
 
         opt[Long]('l', "limit").action((x, c) => c.copy(fileLimit = x)).text("Limit ADSB events per file"),
         opt[Long]('s', "size").action((x, c) => c.copy(fileSize = x)).text("Limit ADSB file size"),
@@ -62,13 +44,13 @@ object App extends skel.Server {
 
     OParser.parse(parser1, args, Config()) match {
       case Some(config) => {
-        val confuration = Configuration.withPriority(Seq(new ConfigurationEnv,new ConfigurationAkka))
+        val configuration = Configuration.default
 
         println(s"${config}")
 
-        (new ADSB_Ingest).run(config)
+        (new AdsbIngestFile(config.dataDir,config.filePattern,config.dataFormat,config.fileLimit,config.fileSize)).run(config)
 
-        run( config.httpHost, config.httpPort, config.httpUri, confuration, Seq())
+        run( config.httpHost, config.httpPort, config.httpUri, configuration, Seq())
       }
       case _ =>
         System.exit(1)
