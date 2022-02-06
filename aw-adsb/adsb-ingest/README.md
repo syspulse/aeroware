@@ -4,7 +4,7 @@ Ingest ADSB events from __dump1090__ (Raspberry)
 
 This reference architecture for PoC/Testing
 
-<img src="doc/Aeroware-Architecture-adsb-ingest.png" width="850">
+<img src="doc/Aeroware-Architecture-adsb-ingest.jpg" width="850">
 
 <br>
 
