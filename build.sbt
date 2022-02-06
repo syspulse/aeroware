@@ -214,7 +214,8 @@ lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
     libraryDependencies ++= libAkka ++ libSkel ++ libPrometheus ++ Seq(
       libAlpakkaFile,
       libUjsonLib,
-      libUpickle
+      libUpickle,
+      libAlpakkaMQTT
     ),
   )
 

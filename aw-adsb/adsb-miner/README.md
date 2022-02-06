@@ -6,4 +6,18 @@ Miner prototype
 2. Signs (can multisign) batches
 3. Verifies batch signature internally
 
+### MQTT
+
+__MQTT Brocker__
+
+```
+docker run -d -p 1883:1883 --name nanomq nanomq/nanomq:0.5.9
+```
+
+__MQTT Subscriber__
+
+```
+docker exec -ti  nanomq nanomq sub start -t adsb-topic
+```
+
 

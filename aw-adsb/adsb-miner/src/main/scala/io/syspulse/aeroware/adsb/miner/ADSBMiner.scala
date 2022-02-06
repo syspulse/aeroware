@@ -33,6 +33,19 @@ import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
 import io.syspulse.aeroware.adsb.core.adsb.Raw
 import io.syspulse.aeroware.adsb.ingest.AdsbIngest
+import akka.stream.alpakka.mqtt.streaming.MqttSessionSettings
+import akka.stream.alpakka.mqtt.streaming.scaladsl.ActorMqttClientSession
+import akka.stream.alpakka.mqtt.streaming.scaladsl.Mqtt
+import akka.stream.alpakka.mqtt.streaming.MqttCodec
+import akka.stream.alpakka.mqtt.streaming.Event
+import akka.stream.alpakka.mqtt.streaming.Publish
+import akka.stream.alpakka.mqtt.streaming.Command
+import scala.concurrent.Future
+import akka.stream.alpakka.mqtt.streaming.Connect
+import akka.stream.alpakka.mqtt.streaming.Subscribe
+import akka.stream.alpakka.mqtt.streaming.ConnectFlags
+import akka.stream.alpakka.mqtt.streaming.ControlPacketFlags
+import scala.util.Random
 
 case class ADSB_Mined_SignedData(
   ts:Long,
@@ -59,6 +72,50 @@ class ADSBMiner(config:Config) extends AdsbIngest {
       Sink.foreach[MSG_Miner](m => println(s"${m}"))
     }
   }
+
+  // ==============================================================================================
+  val mqttHost = "localhost"
+  val mqttPort = 1883
+  val mqttSettings = MqttSessionSettings().withMaxPacketSize(8192)
+  val mqttSession = ActorMqttClientSession(mqttSettings)
+  val mqttConnection = Tcp().outgoingConnection(mqttHost, mqttPort)
+  val mqttClientId = "ADSB-MQTT-Client-1"
+  val mqttConnectionId = "1"
+  val mqttTopc = "adsb-topic"
+
+  val mqttFlow: Flow[Command[Nothing], Either[MqttCodec.DecodeError, Event[Nothing]], NotUsed] =
+    Mqtt
+      .clientSessionFlow(mqttSession, ByteString(mqttConnectionId))
+      .join(mqttConnection)
+
+  val (mqttQueue: SourceQueueWithComplete[Command[Nothing]], events: Future[Publish]) =
+    Source
+      .queue(10, OverflowStrategy.fail)
+      .via(mqttFlow)
+      .collect {
+        case Right(Event(p: Publish, _)) => {
+          log.debug(s"${p}")
+          p
+        }
+      }
+      .log(s"MQTT(${mqttHost}:${mqttPort}): ")
+      .async
+      .toMat(Sink.head)(Keep.both)
+      .run()
+
+  mqttQueue.offer(Command(Connect(mqttClientId, ConnectFlags.CleanSession)))
+  // mqttQueue.offer(Command(Subscribe(mqttTopc)))
+  
+  val mqtt = Flow[MSG_MinerData].map( md => {
+    val mqttData = Util.hex2(md.toString.getBytes())
+    log.info(s"=> MQTT(${mqttHost}:${mqttPort}): ${mqttConnection}: ${mqttData}")
+    mqttSession ! Command(
+      //Publish(ControlPacketFlags.RETAIN | ControlPacketFlags.QoSAtLeastOnceDelivery, mqttTopc, mqttData)
+      Publish(ControlPacketFlags.QoSAtLeastOnceDelivery, mqttTopc, ByteString(mqttData))
+    )
+    md
+  })
+  // ===============================================================================================
 
   val signer = Flow[Seq[ADSB]].map( aa => { 
     val adsbData = aa.map(a => MSG_MinerADSB(a.ts,a.raw)).toArray
@@ -94,6 +151,7 @@ class ADSBMiner(config:Config) extends AdsbIngest {
     val adsbFlow = adsbSource
       .groupedWithin(config.batchSize, FiniteDuration(config.batchWindow,TimeUnit.MILLISECONDS))
       .via(signer)
+      .via(mqtt)
       .via(verifier)
       //.map(a => ByteString(a.toString))
       .log(s"output -> ")
