@@ -46,6 +46,17 @@ Raspberry Pie uses __sig-proxy__ component is used for flow transformation (inbo
 
 <br>
 
+----
+
+<br>
+
+### DataLake
+
+Reference Architecture for DataLake Concept
+
+<img src="doc/Aeroware-BigData.jpg" width="850">
+
+<br>
 
 ----
 
