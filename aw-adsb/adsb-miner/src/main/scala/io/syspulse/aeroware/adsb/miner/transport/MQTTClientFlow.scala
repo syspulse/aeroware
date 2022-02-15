@@ -1,6 +1,4 @@
-package io.syspulse.aeroware.adsb.miner
-
-import java.nio.file.{Path,Paths, Files}
+package io.syspulse.aeroware.adsb.miner.transport
 
 import scala.util.{Try,Failure,Success}
 import akka.stream._
@@ -47,33 +45,14 @@ import akka.stream.alpakka.mqtt.streaming.ConnectFlags
 import akka.stream.alpakka.mqtt.streaming.ControlPacketFlags
 import scala.util.Random
 
-case class ADSB_Mined_SignedData(
-  ts:Long,
-  raw:Raw
-)
+import io.syspulse.aeroware.adsb.miner.Config
+import io.syspulse.aeroware.adsb.miner.protocol.MSG_MinerData
 
-object ADSB_Mined_SignedData {
-  implicit val rw: RW[ADSB_Mined_SignedData] = macroRW
-}
 
-class ADSBMiner(config:Config) extends AdsbIngest {
+class MQTTClientFlow(config:Config)(implicit val as:ActorSystem,log:Logger) {
   
   import MSG_MinerData._
-  import MSG_MinerADSB._
  
-  val wallet = new WalletVaultKeyfiles(config.keystoreDir, (keystoreFile) => {config.keystorePass})
-  
-  val wr = wallet.load()
-  log.info(s"wallet: ${wr}")
-  val signerAddr = wallet.signers.toList.head._2.head.addr
-
-  val sinkRestartable =  { 
-    RestartSink.withBackoff(retrySettings) { () =>
-      Sink.foreach[MSG_Miner](m => println(s"${m}"))
-    }
-  }
-
-  // ==============================================================================================
   val mqttHost = "localhost"
   val mqttPort = 1883
   val mqttSettings = MqttSessionSettings().withMaxPacketSize(8192)
@@ -104,61 +83,15 @@ class ADSBMiner(config:Config) extends AdsbIngest {
       .run()
 
   mqttQueue.offer(Command(Connect(mqttClientId, ConnectFlags.CleanSession)))
-  // mqttQueue.offer(Command(Subscribe(mqttTopc)))
   
   val mqtt = Flow[MSG_MinerData].map( md => {
-    val mqttData = Util.hex2(md.toString.getBytes())
-    log.info(s"=> MQTT(${mqttHost}:${mqttPort}): ${mqttConnection}: ${mqttData}")
+    val mqttData = Util.hex2(md.sigData)
+    log.info(s"(${mqttData}) -> MQTT(${mqttHost}:${mqttPort})")
     mqttSession ! Command(
-      //Publish(ControlPacketFlags.RETAIN | ControlPacketFlags.QoSAtLeastOnceDelivery, mqttTopc, mqttData)
       Publish(ControlPacketFlags.QoSAtLeastOnceDelivery, mqttTopc, ByteString(mqttData))
     )
     md
   })
-  // ===============================================================================================
-
-  val signer = Flow[Seq[ADSB]].map( aa => { 
-    val adsbData = aa.map(a => MSG_MinerADSB(a.ts,a.raw)).toArray
-    val sigData = upickle.default.writeBinary(adsbData)
-    val sig = wallet.msign(sigData,None, None).head
-
-    val msgData = MSG_MinerData(
-      ts = System.currentTimeMillis(),
-      addr = Util.fromHexString(signerAddr),
-      adsbs = adsbData,
-      sig = MinerSig(sig)
-    )
-
-    msgData
-  })
-
-  val verifier = Flow[MSG_MinerData].map( m => { 
-    val adsbData = m.adsbs
-    val sigData = upickle.default.writeBinary(adsbData)
-    val sig = Util.hex2(m.sig.r) + ":" + Util.hex2(m.sig.s)
-
-    val v = wallet.mverify(List(sig),sigData,None,None)
-    if(v == 0) {
-      log.error(s"NOT VERIFIED: ${m.sig}")
-    }else
-      log.info(s"Verified: ${m.sig}")
-    m
-  })
-
-  def run() = {
-    val adsbSource = flow(config.ingest)
     
-    val adsbFlow = adsbSource
-      .groupedWithin(config.batchSize, FiniteDuration(config.batchWindow,TimeUnit.MILLISECONDS))
-      .via(signer)
-      .via(mqtt)
-      .via(verifier)
-      //.map(a => ByteString(a.toString))
-      .log(s"output -> ")
-      .toMat(sinkRestartable)(Keep.both)
-      .run()
-
-    adsbFlow
-  }
-    
+  def flow() = mqtt
 }

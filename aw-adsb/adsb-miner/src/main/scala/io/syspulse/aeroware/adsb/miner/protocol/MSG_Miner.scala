@@ -1,4 +1,4 @@
-package io.syspulse.aeroware.adsb.miner
+package io.syspulse.aeroware.adsb.miner.protocol
 
 trait MSG_Miner {
   def ver:Int

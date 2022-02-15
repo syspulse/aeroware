@@ -75,7 +75,7 @@ class AdsbIngest extends IngestClient {
   
   def flow(config:Config):Source[ADSB,_] = {
     
-    implicit val system = ActorSystem("ADSB-Ingest")
+    //implicit val system = ActorSystem("ADSB-Ingest")
     
     val retrySettings = RestartSettings(
       minBackoff = 1.seconds,

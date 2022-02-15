@@ -1,4 +1,4 @@
-package io.syspulse.aeroware.adsb.miner
+package io.syspulse.aeroware.adsb.miner.protocol
 
 import io.syspulse.skel.util.Util
 
@@ -25,7 +25,7 @@ object MinerSig {
   }
 }
 
-case class MSG_MinerData(ts: Long, addr:Array[Byte], adsbs: Array[MSG_MinerADSB], sig:MinerSig,ver:Int = MSG_Version.V1) extends MSG_Miner {
+case class MSG_MinerData(ts: Long, addr:Array[Byte], adsbs: Array[MSG_MinerADSB], sigData:Array[Byte],sig:MinerSig,ver:Int = MSG_Version.V1) extends MSG_Miner {
   override def toString = s"${this.getClass.getSimpleName}(0x${ver.toHexString},${ts},${Util.hex2(addr)},${adsbs.toSeq},${sig})"
 }
 

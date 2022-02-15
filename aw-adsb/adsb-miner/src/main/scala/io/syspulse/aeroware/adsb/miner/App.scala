@@ -170,7 +170,7 @@ object App extends skel.Server {
 
         println(config)
 
-        new ADSBMiner(config).run()        
+        new MinerStream(config).run()        
 
         //run( config.httpHost, config.httpPort, config.httpUri, configuration, Seq())
         
