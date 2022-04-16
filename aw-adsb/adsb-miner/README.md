@@ -8,7 +8,7 @@ Miner prototype
 
 ### MQTT
 
-__MQTT Brocker__
+__MQTT Broker__
 
 ```
 docker run -d -p 1883:1883 --name nanomq nanomq/nanomq:0.5.9
