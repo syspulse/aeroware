@@ -47,21 +47,19 @@ import io.syspulse.aeroware.adsb.core.adsb.Raw
 import io.syspulse.aeroware.adsb.ingest.AdsbIngest
 
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
+import scala.concurrent.ExecutionContext
 
-case class MQTTConfig()
-
-class MQTTClientFlow(config:MQTTConfig)(implicit val as:ActorSystem,log:Logger) {
-  
+class MQTTClientSubscriber(config:MQTTConfig)(implicit val as:ActorSystem,implicit val ec:ExecutionContext,log:Logger) {
   import MSG_MinerData._
  
-  val mqttHost = "localhost"
-  val mqttPort = 1883
+  val mqttHost = config.host
+  val mqttPort = config.port
   val mqttSettings = MqttSessionSettings().withMaxPacketSize(8192)
   val mqttSession = ActorMqttClientSession(mqttSettings)
   val mqttConnection = Tcp().outgoingConnection(mqttHost, mqttPort)
-  val mqttClientId = "ADSB-MQTT-Client-1"
-  val mqttConnectionId = "1"
-  val mqttTopc = "adsb-topic"
+  val mqttClientId = s"${config.clientId}}"
+  val mqttConnectionId = s"${math.abs(Random.nextLong())}"
+  val mqttTopic = config.topic
 
   val mqttFlow: Flow[Command[Nothing], Either[MqttCodec.DecodeError, Event[Nothing]], NotUsed] =
     Mqtt
@@ -74,25 +72,21 @@ class MQTTClientFlow(config:MQTTConfig)(implicit val as:ActorSystem,log:Logger) 
       .via(mqttFlow)
       .collect {
         case Right(Event(p: Publish, _)) => {
-          log.debug(s"${p}")
+          log.info(s"event: ${p}: ${p.payload.utf8String}")
           p
         }
       }
+      //.wireTap(event => log.info(s"Client: ${mqttConnectionId}: event=${event}"))
       .log(s"MQTT(${mqttHost}:${mqttPort}): ")
-      .async
-      .toMat(Sink.head)(Keep.both)
+      //.async
+      .toMat(Sink.ignore)(Keep.both)
       .run()
 
+  log.info(s"mqttQueue=${mqttQueue}, events=${events}")
   mqttQueue.offer(Command(Connect(mqttClientId, ConnectFlags.CleanSession)))
-  
-  val mqtt = Flow[MSG_MinerData].map( md => {
-    val mqttData = Util.hex2(md.sigData)
-    log.info(s"(${mqttData}) -> MQTT(${mqttHost}:${mqttPort})")
-    mqttSession ! Command(
-      Publish(ControlPacketFlags.QoSAtLeastOnceDelivery, mqttTopc, ByteString(mqttData))
-    )
-    md
-  })
+  log.info(s"mqttQueue=${mqttQueue}, events=${events}")
+  mqttQueue.offer(Command(Subscribe(Seq((mqttTopic, ControlPacketFlags.QoSAtMostOnceDelivery)))))
+  //mqttQueue.offer(Command(Subscribe(mqttTopic)))
     
-  def flow() = mqtt
+  def flow() = events
 }

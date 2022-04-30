@@ -34,6 +34,7 @@ import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
 
 import akka.NotUsed
+import scala.concurrent.ExecutionContext
 
 
 class AdsbIngest extends IngestClient {

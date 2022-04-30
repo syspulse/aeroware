@@ -1,4 +1,4 @@
-package io.syspulse.aeroware.adsb.mesh.miner
+package io.syspulse.aeroware.adsb.mesh.validator
 
 import java.time.Duration
 
@@ -61,6 +61,6 @@ object App extends skel.Server {
 
     println(config)
 
-    new Miner(config).run()
+    new Validator(config).run()
   }
 }

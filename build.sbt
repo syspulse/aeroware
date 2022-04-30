@@ -110,8 +110,8 @@ val sharedConfigAssembly = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core, adsb_miner, adsb_validator)
-  .dependsOn(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core, adsb_miner, adsb_validator)
+  .aggregate(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core, adsb_mesh, adsb_miner, adsb_validator)
+  .dependsOn(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core, adsb_mesh, adsb_miner, adsb_validator)
   .disablePlugins(sbtassembly.AssemblyPlugin) // this is needed to prevent generating useless assembly and merge error
   .settings(
     

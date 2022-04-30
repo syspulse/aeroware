@@ -49,7 +49,9 @@ import io.syspulse.aeroware.adsb.core._
 import io.syspulse.aeroware.adsb.core.adsb.Raw
 import io.syspulse.aeroware.adsb.ingest.AdsbIngest
 import io.syspulse.aeroware.adsb.mesh.protocol._
-import io.syspulse.aeroware.adsb.mesh.transport.{ MQTTClientFlow, MQTTConfig}
+import io.syspulse.aeroware.adsb.mesh.transport.{ MQTTClientPublisher, MQTTConfig}
+import scala.concurrent.ExecutionContext
+import io.syspulse.aeroware.adsb.mesh.transport.MQTTClientPublisher
 
 case class ADSB_Mined_SignedData(
   ts:Long,
@@ -60,8 +62,9 @@ object ADSB_Mined_SignedData {
   implicit val rw: RW[ADSB_Mined_SignedData] = macroRW
 }
 
-class MinerStream(config:Config) extends AdsbIngest {
-  
+class Miner(config:Config) extends AdsbIngest {
+  implicit val ec = ExecutionContext.global
+
   import MSG_MinerData._
   import MSG_MinerADSB._
  
@@ -77,7 +80,7 @@ class MinerStream(config:Config) extends AdsbIngest {
     }
   }
 
-  val mqtt = new MQTTClientFlow(MQTTConfig()).flow()
+  val mqtt = new MQTTClientPublisher(MQTTConfig(host="localhost",clientId="adsb-miner")).flow()
   
   val signer = Flow[Seq[ADSB]].map( aa => { 
     val adsbData = aa.map(a => MSG_MinerADSB(a.ts,a.raw)).toArray
