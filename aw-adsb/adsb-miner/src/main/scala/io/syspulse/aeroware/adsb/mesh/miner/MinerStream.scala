@@ -1,4 +1,4 @@
-package io.syspulse.aeroware.adsb.miner
+package io.syspulse.aeroware.adsb.mesh.miner
 
 import java.nio.file.{Path,Paths, Files}
 
@@ -48,8 +48,8 @@ import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
 import io.syspulse.aeroware.adsb.core.adsb.Raw
 import io.syspulse.aeroware.adsb.ingest.AdsbIngest
-import io.syspulse.aeroware.adsb.miner.protocol._
-import io.syspulse.aeroware.adsb.miner.transport.MQTTClientFlow
+import io.syspulse.aeroware.adsb.mesh.protocol._
+import io.syspulse.aeroware.adsb.mesh.transport.{ MQTTClientFlow, MQTTConfig}
 
 case class ADSB_Mined_SignedData(
   ts:Long,
@@ -62,8 +62,8 @@ object ADSB_Mined_SignedData {
 
 class MinerStream(config:Config) extends AdsbIngest {
   
-  import protocol.MSG_MinerData._
-  import protocol.MSG_MinerADSB._
+  import MSG_MinerData._
+  import MSG_MinerADSB._
  
   val wallet = new WalletVaultKeyfiles(config.keystoreDir, (keystoreFile) => {config.keystorePass})
   
@@ -77,7 +77,7 @@ class MinerStream(config:Config) extends AdsbIngest {
     }
   }
 
-  val mqtt = new MQTTClientFlow(config).flow()
+  val mqtt = new MQTTClientFlow(MQTTConfig()).flow()
   
   val signer = Flow[Seq[ADSB]].map( aa => { 
     val adsbData = aa.map(a => MSG_MinerADSB(a.ts,a.raw)).toArray

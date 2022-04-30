@@ -1,4 +1,4 @@
-package io.syspulse.aeroware.adsb.miner.protocol
+package io.syspulse.aeroware.adsb.mesh.protocol
 
 import upickle._
 import upickle.default.{ReadWriter => RW, macroRW}

@@ -1,4 +1,4 @@
-package io.syspulse.aeroware.adsb.miner.transport
+package io.syspulse.aeroware.adsb.mesh.transport
 
 import scala.util.{Try,Failure,Success}
 import akka.stream._
@@ -27,10 +27,6 @@ import io.syspulse.skel.util.Util
 import io.syspulse.skel.crypto.Eth
 import io.syspulse.skel.crypto.wallet.WalletVaultKeyfiles
 
-import io.syspulse.aeroware.adsb._
-import io.syspulse.aeroware.adsb.core._
-import io.syspulse.aeroware.adsb.core.adsb.Raw
-import io.syspulse.aeroware.adsb.ingest.AdsbIngest
 import akka.stream.alpakka.mqtt.streaming.MqttSessionSettings
 import akka.stream.alpakka.mqtt.streaming.scaladsl.ActorMqttClientSession
 import akka.stream.alpakka.mqtt.streaming.scaladsl.Mqtt
@@ -45,11 +41,16 @@ import akka.stream.alpakka.mqtt.streaming.ConnectFlags
 import akka.stream.alpakka.mqtt.streaming.ControlPacketFlags
 import scala.util.Random
 
-import io.syspulse.aeroware.adsb.miner.Config
-import io.syspulse.aeroware.adsb.miner.protocol.MSG_MinerData
+import io.syspulse.aeroware.adsb._
+import io.syspulse.aeroware.adsb.core._
+import io.syspulse.aeroware.adsb.core.adsb.Raw
+import io.syspulse.aeroware.adsb.ingest.AdsbIngest
 
+import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
 
-class MQTTClientFlow(config:Config)(implicit val as:ActorSystem,log:Logger) {
+case class MQTTConfig()
+
+class MQTTClientFlow(config:MQTTConfig)(implicit val as:ActorSystem,log:Logger) {
   
   import MSG_MinerData._
  

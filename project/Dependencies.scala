@@ -23,6 +23,10 @@ object Dependencies {
 
     lazy val appNameAdsbMiner               = "adsb-miner"
     lazy val appBootClassAdsbMiner          = "io.syspulse.aeroware.adsb.miner.App"
+
+    lazy val appNameAdsbValidator           = "adsb-validator"
+    lazy val appBootClassAdsbValidator      = "io.syspulse.aeroware.adsb.validator.App"
+
     //lazy val mainAppClassAdsbIngest = "com.syspulse.avia.adsb.Ingest"}
 
     // Akka Libraries

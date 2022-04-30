@@ -1,4 +1,4 @@
-package io.syspulse.aeroware.adsb.miner
+package io.syspulse.aeroware.adsb.mesh.miner
 
 import java.time.Duration
 

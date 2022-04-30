@@ -9,7 +9,7 @@ CONF=`echo $APP | awk -F"-" '{print $2}'`
 
 export SITE=${SITE:-$CONF}
 
-MAIN=io.syspulse.aeroware.adsb.miner.App
+MAIN=io.syspulse.aeroware.adsb.mesh.miner.App
 
 >&2 echo "app: $APP"
 >&2 echo "site: $SITE"

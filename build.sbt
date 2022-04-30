@@ -110,8 +110,8 @@ val sharedConfigAssembly = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core, adsb_miner)
-  .dependsOn(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core, adsb_miner)
+  .aggregate(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core, adsb_miner, adsb_validator)
+  .dependsOn(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core, adsb_miner, adsb_validator)
   .disablePlugins(sbtassembly.AssemblyPlugin) // this is needed to prevent generating useless assembly and merge error
   .settings(
     
@@ -160,6 +160,20 @@ lazy val adsb_core = (project in file("aw-adsb/adsb-core"))
       ),
 )
 
+lazy val adsb_mesh = (project in file("aw-adsb/adsb-mesh"))
+  .dependsOn(core,adsb_core,adsb_ingest)
+  .disablePlugins(sbtassembly.AssemblyPlugin)
+  .settings (
+      sharedConfig,
+      name := "adsb-mesh",
+      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(
+        libAlpakkaFile,
+        libUjsonLib,
+        libUpickle,
+        libAlpakkaMQTT
+      ),
+)
+
 lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
   .dependsOn(core,data,adsb_core)
   .enablePlugins(JavaAppPackaging)
@@ -190,7 +204,7 @@ lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
   )
 
 lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
-  .dependsOn(core,data,adsb_core,adsb_ingest)
+  .dependsOn(core,data,adsb_core,adsb_ingest,adsb_mesh)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .settings (
@@ -219,6 +233,35 @@ lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
     ),
   )
 
+lazy val adsb_validator = (project in file("aw-adsb/adsb-validator"))
+  .dependsOn(core,data,adsb_core,adsb_ingest,adsb_mesh)
+  .enablePlugins(JavaAppPackaging)
+  .enablePlugins(DockerPlugin)
+  .settings (
+
+    sharedConfig,
+    sharedConfigAssembly,
+    sharedConfigDocker,
+    dockerBuildxSettings,
+
+    name := appNameAdsbValidator,
+    run / mainClass := Some(appBootClassAdsbValidator),
+    assembly / mainClass := Some(appBootClassAdsbValidator),
+    Compile / mainClass := Some(appBootClassAdsbValidator), // <-- This is very important for DockerPlugin generated stage1 script!
+    assembly / assemblyJarName := jarPrefix + appNameAdsbValidator + "-" + "assembly" + "-"+  appVersion + ".jar",
+
+    Universal / mappings += file(baseDirectory.value.getAbsolutePath+"/conf/application.conf") -> "conf/application.conf",
+    Universal / mappings += file(baseDirectory.value.getAbsolutePath+"/conf/logback.xml") -> "conf/logback.xml",
+    bashScriptExtraDefines += s"""addJava "-Dconfig.file=${appDockerRoot}/conf/application.conf"""",
+    bashScriptExtraDefines += s"""addJava "-Dlogback.configurationFile=${appDockerRoot}/conf/logback.xml"""",
+
+    libraryDependencies ++= libAkka ++ libSkel ++ libPrometheus ++ Seq(
+      libAlpakkaFile,
+      libUjsonLib,
+      libUpickle,
+      libAlpakkaMQTT
+    ),
+  )
 
 
 lazy val adsb_tools = (project in file("aw-adsb/adsb-tools"))

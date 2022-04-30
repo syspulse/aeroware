@@ -8,6 +8,8 @@
 3. [adsb-tools](adsb-tools) - Shell tools to work with ADS-B data
 4. [adsb-view](adsb-view) - Map viewer
 5. [adsb-proxy](adsb-proxy) - simple dump1090 proxy
+6. [adsb-mesh](adsb-mesh) - decentralized mesh network
+7. [adsb-miner](adsb-miner) - prototype for ADSB feed miner for mesh
 
 
 ## Kafka Artchitecture Examples
