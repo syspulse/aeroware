@@ -76,7 +76,7 @@ class Miner(config:Config) extends AdsbIngest {
 
   val sinkRestartable =  { 
     RestartSink.withBackoff(retrySettings) { () =>
-      Sink.foreach[MSG_Miner](m => println(s"${m}"))
+      Sink.foreach[Array[Byte]](m => log.debug(s"${Util.hex2(m)}"))
     }
   }
 
@@ -91,21 +91,20 @@ class Miner(config:Config) extends AdsbIngest {
       ts = System.currentTimeMillis(),
       addr = Util.fromHexString(signerAddr),
       adsbs = adsbData,
-      sigData = sigData,
       sig = MinerSig(sig)
     )
 
     msgData
   })
 
-  val verifier = Flow[MSG_MinerData].map( m => { 
+  val checksum = Flow[MSG_MinerData].map( m => { 
     val adsbData = m.adsbs
     val sigData = upickle.default.writeBinary(adsbData)
     val sig = Util.hex2(m.sig.r) + ":" + Util.hex2(m.sig.s)
 
     val v = wallet.mverify(List(sig),sigData,None,None)
     if(v == 0) {
-      log.error(s"NOT VERIFIED: ${m.sig}")
+      log.error(s"Invalid signature: ${m.sig}")
     }else
       log.info(s"Verified: ${m.sig}")
     m
@@ -114,17 +113,17 @@ class Miner(config:Config) extends AdsbIngest {
   def run() = {
     val adsbSource = flow(config.ingest)
     
-    val adsbFlow = adsbSource
+    val minerFlow = adsbSource
       .groupedWithin(config.batchSize, FiniteDuration(config.batchWindow,TimeUnit.MILLISECONDS))
       .via(signer)
+      .via(checksum)
       .via(mqtt)
-      .via(verifier)
       //.map(a => ByteString(a.toString))
       .log(s"output -> ")
       .toMat(sinkRestartable)(Keep.both)
       .run()
 
-    adsbFlow
+    minerFlow
   }
     
 }

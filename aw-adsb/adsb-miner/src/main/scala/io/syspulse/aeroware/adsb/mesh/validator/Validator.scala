@@ -68,9 +68,6 @@ class Validator(config:Config) {
   log.info(s"wallet: ${wr}")
   val signerAddr = wallet.signers.toList.head._2.head.addr
 
-
-  val mqtt = new MQTTClientSubscriber(MQTTConfig(host="localhost",clientId="adsb-validator")).flow()
-  
   val verifier = Flow[MSG_MinerData].map( m => { 
     val adsbData = m.adsbs
     val sigData = upickle.default.writeBinary(adsbData)
@@ -78,20 +75,16 @@ class Validator(config:Config) {
 
     val v = wallet.mverify(List(sig),sigData,None,None)
     if(v == 0) {
-      log.error(s"NOT VERIFIED: ${m.sig}")
+      log.error(s"Invalid signature: ${m.sig}")
     }else
       log.info(s"Verified: ${m.sig}")
     m
   })
 
   def run() = {
-    
-    for {
-      e <- mqtt
-    } yield {
-      println(s"=> ${e}")
-    }
-    
+    val mqtt = new MQTTClientSubscriber(MQTTConfig(host="localhost",clientId="adsb-validator")).run(
+      verifier
+    )
   }
-    
+      
 }

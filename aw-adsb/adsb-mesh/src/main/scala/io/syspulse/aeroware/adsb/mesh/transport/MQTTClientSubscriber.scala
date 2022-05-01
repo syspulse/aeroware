@@ -48,6 +48,8 @@ import io.syspulse.aeroware.adsb.ingest.AdsbIngest
 
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
 import scala.concurrent.ExecutionContext
+import io.syspulse.aeroware.adsb.mesh.protocol.MinerSig
+import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Version
 
 class MQTTClientSubscriber(config:MQTTConfig)(implicit val as:ActorSystem,implicit val ec:ExecutionContext,log:Logger) {
   import MSG_MinerData._
@@ -66,27 +68,43 @@ class MQTTClientSubscriber(config:MQTTConfig)(implicit val as:ActorSystem,implic
       .clientSessionFlow(mqttSession, ByteString(mqttConnectionId))
       .join(mqttConnection)
 
-  val (mqttQueue: SourceQueueWithComplete[Command[Nothing]], events: Future[Publish]) =
+  val mqttSource =
     Source
       .queue(10, OverflowStrategy.fail)
       .via(mqttFlow)
       .collect {
         case Right(Event(p: Publish, _)) => {
-          log.info(s"event: ${p}: ${p.payload.utf8String}")
-          p
+          val wireData = p.payload
+          log.info(s"event: ${p}: ${Util.hex2(wireData.toArray)}")
+
+          val data = if(config.protocolVer == MSG_Version.V1) Util.fromHexString(wireData.utf8String) else wireData.toArray
+          val msg = upickle.default.readBinary[MSG_MinerData](data)
+          msg
         }
       }
-      //.wireTap(event => log.info(s"Client: ${mqttConnectionId}: event=${event}"))
+
+  // val (mqttQueue: SourceQueueWithComplete[Command[Nothing]], events: Future[Publish]) =
+  //     mqttSource
+  //     .log(s"MQTT(${mqttHost}:${mqttPort}): ")
+  //     //.async
+  //     .toMat(Sink.ignore)(Keep.both)
+  //     .run()
+
+  def run(flow: Flow[MSG_MinerData,_,_]) = {
+    val (mqttQueue: SourceQueueWithComplete[Command[Nothing]], events: Future[Publish]) =
+      mqttSource
+      .via(flow)
       .log(s"MQTT(${mqttHost}:${mqttPort}): ")
       //.async
       .toMat(Sink.ignore)(Keep.both)
       .run()
 
-  log.info(s"mqttQueue=${mqttQueue}, events=${events}")
-  mqttQueue.offer(Command(Connect(mqttClientId, ConnectFlags.CleanSession)))
-  log.info(s"mqttQueue=${mqttQueue}, events=${events}")
-  mqttQueue.offer(Command(Subscribe(Seq((mqttTopic, ControlPacketFlags.QoSAtMostOnceDelivery)))))
-  //mqttQueue.offer(Command(Subscribe(mqttTopic)))
-    
-  def flow() = events
+    log.info(s"Connect -> MQTT(${mqttHost}:${mqttPort})")
+    mqttQueue.offer(Command(Connect(mqttClientId, ConnectFlags.CleanSession)))
+    log.info(s"Subscribe -> MQTT(${mqttHost}:${mqttPort})")
+    mqttQueue.offer(Command(Subscribe(Seq((mqttTopic, ControlPacketFlags.QoSAtMostOnceDelivery)))))
+  }
+
+  
+  def source() = mqttSource
 }

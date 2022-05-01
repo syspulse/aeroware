@@ -48,6 +48,7 @@ import io.syspulse.aeroware.adsb.ingest.AdsbIngest
 
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
 import scala.concurrent.ExecutionContext
+import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Version
 
 class MQTTClientPublisher(config:MQTTConfig)(implicit val as:ActorSystem,implicit val ec:ExecutionContext,log:Logger) {
   import MSG_MinerData._
@@ -84,12 +85,16 @@ class MQTTClientPublisher(config:MQTTConfig)(implicit val as:ActorSystem,implici
   mqttQueue.offer(Command(Connect(mqttClientId, ConnectFlags.CleanSession)))
   
   val mqttPublisher = Flow[MSG_MinerData].map( md => {
-    val mqttData = Util.hex2(md.sigData)
-    log.info(s"(${mqttData}) -> MQTT(${mqttHost}:${mqttPort})")
+    
+    val mqttData = upickle.default.writeBinary(md)
+    val wireData = if(config.protocolVer == MSG_Version.V1) Util.hex2(mqttData).getBytes else mqttData
+
+    log.info(s"(${Util.hex2(mqttData)}) -> MQTT(${mqttHost}:${mqttPort})")
     mqttSession ! Command(
-      Publish(ControlPacketFlags.QoSAtLeastOnceDelivery, mqttTopic, ByteString(mqttData))
+      Publish(ControlPacketFlags.QoSAtLeastOnceDelivery, mqttTopic, ByteString(wireData))
     )
-    md
+    
+    mqttData
   })
     
   def flow() = mqttPublisher
