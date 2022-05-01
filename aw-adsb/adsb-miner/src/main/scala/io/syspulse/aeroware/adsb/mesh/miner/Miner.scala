@@ -72,7 +72,7 @@ class Miner(config:Config) extends AdsbIngest {
   
   val wr = wallet.load()
   log.info(s"wallet: ${wr}")
-  val signerAddr = wallet.signers.toList.head._2.head.addr
+  val signerPk = wallet.signers.toList.head._2.head.pk
 
   val sinkRestartable =  { 
     RestartSink.withBackoff(retrySettings) { () =>
@@ -89,7 +89,7 @@ class Miner(config:Config) extends AdsbIngest {
 
     val msgData = MSG_MinerData(
       ts = System.currentTimeMillis(),
-      addr = Util.fromHexString(signerAddr),
+      pk = signerPk,
       adsbs = adsbData,
       sig = MinerSig(sig)
     )

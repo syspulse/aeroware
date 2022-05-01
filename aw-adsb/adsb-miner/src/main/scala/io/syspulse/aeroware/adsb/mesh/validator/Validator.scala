@@ -62,19 +62,20 @@ class Validator(config:Config) {
   import MSG_MinerData._
   import MSG_MinerADSB._
  
-  val wallet = new WalletVaultKeyfiles(config.keystoreDir, (keystoreFile) => {config.keystorePass})
+  // val wallet = new WalletVaultKeyfiles(config.keystoreDir, (keystoreFile) => {config.keystorePass})
   
-  val wr = wallet.load()
-  log.info(s"wallet: ${wr}")
-  val signerAddr = wallet.signers.toList.head._2.head.addr
+  // val wr = wallet.load()
+  // log.info(s"wallet: ${wr}")
+  // val signerAddr = wallet.signers.toList.head._2.head.addr
 
   val verifier = Flow[MSG_MinerData].map( m => { 
     val adsbData = m.adsbs
     val sigData = upickle.default.writeBinary(adsbData)
     val sig = Util.hex2(m.sig.r) + ":" + Util.hex2(m.sig.s)
 
-    val v = wallet.mverify(List(sig),sigData,None,None)
-    if(v == 0) {
+    val pk = m.pk
+    val v = Eth.verify(sigData,sig,pk) //wallet.mverify(List(sig),sigData,None,None)
+    if(!v) {
       log.error(s"Invalid signature: ${m.sig}")
     }else
       log.info(s"Verified: ${m.sig}")

@@ -33,7 +33,7 @@ object App extends skel.Server {
       new ConfigurationAkka,
       new ConfigurationProp,
       new ConfigurationEnv, 
-      new ConfigurationArgs(args,
+      new ConfigurationArgs(args,"adsb-validator","",
         ArgString('s', "sign","Signing Key"),
         ArgString('h', "dump1090.host","Dump1090 host"),
         ArgInt('p', "dump1090.port","Dump1090 port"),
