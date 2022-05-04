@@ -21,7 +21,9 @@ case class Config (
   keystorePass:String = "",
   batchSize: Int = 3,
   batchWindow: Long = 1000L,
-  ingest: io.syspulse.aeroware.adsb.ingest.Config
+  ingest: io.syspulse.aeroware.adsb.ingest.Config,
+  mqttHost:String = "",
+  mqttPort:Int = 0
 )
 
 object App extends skel.Server {
@@ -40,7 +42,9 @@ object App extends skel.Server {
         ArgString('k', "keystore.dir","Keystore directory"),
         ArgString('r', "keystore.pass","Keystore password"),
         ArgInt('b', "batch.size","ADSB Batch max size"),
-        ArgInt('w', "batch.window","ADSB Batch time window (msec)")
+        ArgInt('w', "batch.window","ADSB Batch time window (msec)"),
+        ArgString('m', "mqtt.host","MQTT broker host"),
+        ArgInt('q', "mqtt.port","MQTT borker port"),
       )
     ))
 
@@ -48,7 +52,7 @@ object App extends skel.Server {
     
     val config = Config(
       keystoreDir = configuration.getString("keystore.dir").getOrElse("./keystore/"),
-      keystorePass = configuration.getString("keystore.pass").getOrElse("test123"),
+      keystorePass = configuration.getString("keystore.pass").getOrElse("abcd1234"),
       batchSize = configuration.getInt("batch.size").getOrElse(10),
       batchWindow = configuration.getLong("batch.window").getOrElse(1000L),
       ingest = io.syspulse.aeroware.adsb.ingest.Config(          
@@ -56,7 +60,9 @@ object App extends skel.Server {
         dumpPort = configuration.getInt("dump1090.port").getOrElse(30002),
         fileLimit = 1000000L,
         filePattern = "NONE"
-      ) 
+      ),
+      mqttHost = configuration.getString("mqtt.host").getOrElse("localhost"),
+      mqttPort = configuration.getInt("mqtt.port").getOrElse(1883),
     )
 
     println(config)

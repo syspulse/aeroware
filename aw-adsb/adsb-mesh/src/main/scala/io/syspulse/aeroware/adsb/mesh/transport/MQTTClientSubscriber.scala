@@ -83,13 +83,6 @@ class MQTTClientSubscriber(config:MQTTConfig)(implicit val as:ActorSystem,implic
         }
       }
 
-  // val (mqttQueue: SourceQueueWithComplete[Command[Nothing]], events: Future[Publish]) =
-  //     mqttSource
-  //     .log(s"MQTT(${mqttHost}:${mqttPort}): ")
-  //     //.async
-  //     .toMat(Sink.ignore)(Keep.both)
-  //     .run()
-
   def run(flow: Flow[MSG_MinerData,_,_]) = {
     val (mqttQueue: SourceQueueWithComplete[Command[Nothing]], events: Future[Publish]) =
       mqttSource

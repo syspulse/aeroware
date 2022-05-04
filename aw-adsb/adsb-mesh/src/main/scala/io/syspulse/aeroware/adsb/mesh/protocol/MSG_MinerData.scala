@@ -25,8 +25,8 @@ object MinerSig {
   }
 }
 
-case class MSG_MinerData(ts: Long, addr:Array[Byte], adsbs: Array[MSG_MinerADSB], sig:MinerSig,ver:Int = MSG_Version.V1) extends MSG_Miner {
-  override def toString = s"${this.getClass.getSimpleName}(0x${ver.toHexString},${ts},${Util.hex2(addr)},${adsbs.toSeq},${sig})"
+case class MSG_MinerData(ts: Long, pk:Array[Byte], adsbs: Array[MSG_MinerADSB], sig:MinerSig,ver:Int = MSG_Version.V1) extends MSG_Miner {
+  override def toString = s"${this.getClass.getSimpleName}(0x${ver.toHexString},${ts},${Util.hex2(pk)},${adsbs.toSeq},${sig})"
 }
 
 object MSG_MinerData {

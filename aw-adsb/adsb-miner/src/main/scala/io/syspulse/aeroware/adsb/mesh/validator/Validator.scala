@@ -55,36 +55,49 @@ import scala.concurrent.ExecutionContext
 import io.syspulse.aeroware.adsb.mesh.transport.MQTTClientSubscriber
 
 class Validator(config:Config) {
-  implicit val log = Logger(s"${this}")
+  implicit val log = Logger(s"${this.getClass().getSimpleName()}")
   implicit val system = ActorSystem("ActorSystem-Validator")
   implicit val ec = ExecutionContext.global
 
   import MSG_MinerData._
   import MSG_MinerADSB._
  
-  // val wallet = new WalletVaultKeyfiles(config.keystoreDir, (keystoreFile) => {config.keystorePass})
+  val wallet = new WalletVaultKeyfiles(config.keystoreDir, (keystoreFile) => {config.keystorePass})
   
-  // val wr = wallet.load()
-  // log.info(s"wallet: ${wr}")
-  // val signerAddr = wallet.signers.toList.head._2.head.addr
+  val wr = wallet.load()
+  log.info(s"wallet: ${wr}")
+  val signerAddr = wallet.signers.toList.head._2.head.addr
 
-  val verifier = Flow[MSG_MinerData].map( m => { 
-    val adsbData = m.adsbs
-    val sigData = upickle.default.writeBinary(adsbData)
-    val sig = Util.hex2(m.sig.r) + ":" + Util.hex2(m.sig.s)
+  val validationEngine = new ValidationEngineADSB()
+  val rewardEngine = new RewardEngineADSB()
+  val fleet = new Fleet(config)
 
-    val pk = m.pk
-    val v = Eth.verify(sigData,sig,pk) //wallet.mverify(List(sig),sigData,None,None)
-    if(!v) {
-      log.error(s"Invalid signature: ${m.sig}")
-    }else
-      log.info(s"Verified: ${m.sig}")
+  val validator = Flow[MSG_MinerData].map( m => { 
+    // val adsbData = m.adsbs
+    // val sigData = upickle.default.writeBinary(adsbData)
+    // val sig = Util.hex2(m.sig.r) + ":" + Util.hex2(m.sig.s)
+
+    // val pk = m.pk
+    // val v = Eth.verify(sigData,sig,pk) //wallet.mverify(List(sig),sigData,None,None)
+    // if(!v) {
+    //   log.error(s"Invalid signature: ${m.sig}")
+    // }else
+    //   log.info(s"Verified: ${m.sig}")
+    val v1 = validationEngine.validate(m)
+    if(v1) {
+      val miner = fleet.+(m.pk)
+      val reward = rewardEngine.calculate(m)
+      miner.rewards.+(reward)
+    }
+
+    log.info(s"\n${fleet.toString()}")
+
     m
   })
 
   def run() = {
-    val mqtt = new MQTTClientSubscriber(MQTTConfig(host="localhost",clientId="adsb-validator")).run(
-      verifier
+    val mqtt = new MQTTClientSubscriber(MQTTConfig(host=config.mqttHost,port=config.mqttPort,clientId=s"adsb-validator-${signerAddr}")).run(
+      validator
     )
   }
       

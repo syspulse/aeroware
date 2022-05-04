@@ -73,6 +73,7 @@ class Miner(config:Config) extends AdsbIngest {
   val wr = wallet.load()
   log.info(s"wallet: ${wr}")
   val signerPk = wallet.signers.toList.head._2.head.pk
+  val signerAddr = wallet.signers.toList.head._2.head.addr
 
   val sinkRestartable =  { 
     RestartSink.withBackoff(retrySettings) { () =>
@@ -80,7 +81,7 @@ class Miner(config:Config) extends AdsbIngest {
     }
   }
 
-  val mqtt = new MQTTClientPublisher(MQTTConfig(host="localhost",clientId="adsb-miner")).flow()
+  val mqtt = new MQTTClientPublisher(MQTTConfig(host=config.mqttHost,port=config.mqttPort,clientId=s"adsb-miner-${signerAddr}")).flow()
   
   val signer = Flow[Seq[ADSB]].map( aa => { 
     val adsbData = aa.map(a => MSG_MinerADSB(a.ts,a.raw)).toArray
