@@ -75,7 +75,7 @@ class MQTTClientSubscriber(config:MQTTConfig)(implicit val as:ActorSystem,implic
       .collect {
         case Right(Event(p: Publish, _)) => {
           val wireData = p.payload
-          log.info(s"event: ${p}: ${Util.hex2(wireData.toArray)}")
+          log.info(s"event: ${p}: ${Util.hex(wireData.toArray)}")
 
           val data = if(config.protocolVer == MSG_Version.V1) Util.fromHexString(wireData.utf8String) else wireData.toArray
           val msg = upickle.default.readBinary[MSG_MinerData](data)

@@ -17,7 +17,7 @@ import io.syspulse.aeroware.adsb.ADSB_Event
 
 
 case class Config (
-  keystoreDir:String = "",
+  keystore:String = "",
   keystorePass:String = "",
   batchSize: Int = 3,
   batchWindow: Long = 1000L,
@@ -39,7 +39,7 @@ object App extends skel.Server {
         ArgString('s', "sign","Signing Key"),
         ArgString('h', "dump1090.host","Dump1090 host"),
         ArgInt('p', "dump1090.port","Dump1090 port"),
-        ArgString('k', "keystore.dir","Keystore directory"),
+        ArgString('k', "keystore","Keystore file (def: keystore/miner.json)"),
         ArgString('r', "keystore.pass","Keystore password"),
         ArgInt('b', "batch.size","ADSB Batch max size"),
         ArgInt('w', "batch.window","ADSB Batch time window (msec)"),
@@ -51,7 +51,7 @@ object App extends skel.Server {
     println(s"${configuration}")
     
     val config = Config(
-      keystoreDir = configuration.getString("keystore.dir").getOrElse("./keystore/"),
+      keystore = configuration.getString("keystore").getOrElse("./keystore/miner-1.json"),
       keystorePass = configuration.getString("keystore.pass").getOrElse("test123"),
       batchSize = configuration.getInt("batch.size").getOrElse(10),
       batchWindow = configuration.getLong("batch.window").getOrElse(1000L),

@@ -39,7 +39,7 @@ class ValidationEngineADSB extends ValidationEngine[MSG_MinerData] {
     // verify signature
     val adsbData = m.adsbs
     val sigData = upickle.default.writeBinary(adsbData)
-    val sig = Util.hex2(m.sig.r) + ":" + Util.hex2(m.sig.s)
+    val sig = Util.hex(m.sig.r) + ":" + Util.hex(m.sig.s)
 
     val pk = m.pk
     val v = Eth.verify(sigData,sig,pk) //wallet.mverify(List(sig),sigData,None,None)
@@ -108,7 +108,7 @@ class Fleet(config:Config) {
   val miners: concurrent.Map[String, PeerMiner] = new ConcurrentHashMap().asScala
       
   def +(pk:PK): PeerMiner = {
-    val k = Util.hex2(pk)
+    val k = Util.hex(pk)
     val miner = miners.get(k)
     if(! miner.isDefined) {
       val miner = new PeerMiner(pk)

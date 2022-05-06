@@ -42,7 +42,7 @@ import scala.util.Random
 import io.syspulse.skel.ingest.IngestClient
 import io.syspulse.skel.util.Util
 import io.syspulse.skel.crypto.Eth
-import io.syspulse.skel.crypto.wallet.WalletVaultKeyfiles
+import io.syspulse.skel.crypto.wallet.WalletVaultKeyfile
 
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
@@ -68,7 +68,7 @@ class Miner(config:Config) extends AdsbIngest {
   import MSG_MinerData._
   import MSG_MinerADSB._
  
-  val wallet = new WalletVaultKeyfiles(config.keystoreDir, (keystoreFile) => {config.keystorePass})
+  val wallet = new WalletVaultKeyfile(config.keystore, config.keystorePass)
   
   val wr = wallet.load()
   log.info(s"wallet: ${wr}")
@@ -77,7 +77,7 @@ class Miner(config:Config) extends AdsbIngest {
 
   val sinkRestartable =  { 
     RestartSink.withBackoff(retrySettings) { () =>
-      Sink.foreach[Array[Byte]](m => log.debug(s"${Util.hex2(m)}"))
+      Sink.foreach[Array[Byte]](m => log.debug(s"${Util.hex(m)}"))
     }
   }
 
@@ -101,7 +101,7 @@ class Miner(config:Config) extends AdsbIngest {
   val checksum = Flow[MSG_MinerData].map( m => { 
     val adsbData = m.adsbs
     val sigData = upickle.default.writeBinary(adsbData)
-    val sig = Util.hex2(m.sig.r) + ":" + Util.hex2(m.sig.s)
+    val sig = Util.hex(m.sig.r) + ":" + Util.hex(m.sig.s)
 
     val v = wallet.mverify(List(sig),sigData,None,None)
     if(v == 0) {

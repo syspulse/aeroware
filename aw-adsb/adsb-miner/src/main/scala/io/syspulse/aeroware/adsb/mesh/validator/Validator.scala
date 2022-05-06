@@ -42,7 +42,7 @@ import scala.util.Random
 import io.syspulse.skel.ingest.IngestClient
 import io.syspulse.skel.util.Util
 import io.syspulse.skel.crypto.Eth
-import io.syspulse.skel.crypto.wallet.WalletVaultKeyfiles
+import io.syspulse.skel.crypto.wallet.WalletVaultKeyfile
 
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
@@ -62,7 +62,7 @@ class Validator(config:Config) {
   import MSG_MinerData._
   import MSG_MinerADSB._
  
-  val wallet = new WalletVaultKeyfiles(config.keystoreDir, (keystoreFile) => {config.keystorePass})
+  val wallet = new WalletVaultKeyfile(config.keystore, config.keystorePass)
   
   val wr = wallet.load()
   log.info(s"wallet: ${wr}")
