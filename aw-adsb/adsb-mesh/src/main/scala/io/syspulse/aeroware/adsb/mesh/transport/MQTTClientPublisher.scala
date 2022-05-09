@@ -49,6 +49,8 @@ import io.syspulse.aeroware.adsb.ingest.AdsbIngest
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
 import scala.concurrent.ExecutionContext
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Version
+import io.swagger.v3.oas.models.security.SecurityScheme.In
+import java.net.InetSocketAddress
 
 class MQTTClientPublisher(config:MQTTConfig)(implicit val as:ActorSystem,implicit val ec:ExecutionContext,log:Logger) {
   import MSG_MinerData._
@@ -57,20 +59,29 @@ class MQTTClientPublisher(config:MQTTConfig)(implicit val as:ActorSystem,implici
   val mqttPort = config.port
   val mqttSettings = MqttSessionSettings().withMaxPacketSize(8192)
   val mqttSession = ActorMqttClientSession(mqttSettings)
-  val mqttConnection = Tcp().outgoingConnection(mqttHost, mqttPort)
   val mqttClientId = s"${config.clientId}}"
   val mqttConnectionId = s"${math.abs(Random.nextLong())}"
   val mqttTopic = config.topic
 
+  val mqttConnection = Tcp().outgoingConnection(
+    remoteAddress = new InetSocketAddress(mqttHost, mqttPort),
+    connectTimeout = Duration("3 seconds"),
+    idleTimeout = Duration("10 seconds")
+  )
+
+  val restartSettings = RestartSettings(1.second, 5.seconds, 0.2)//.withMaxRestarts(10, 1.minute)
+  val restartFlowTcp = RestartFlow.onFailuresWithBackoff(restartSettings)(() => mqttConnection)
+  val restartFlowMQTT = RestartFlow.onFailuresWithBackoff(restartSettings)(() => mqttFlow)
+
   val mqttFlow: Flow[Command[Nothing], Either[MqttCodec.DecodeError, Event[Nothing]], NotUsed] =
     Mqtt
       .clientSessionFlow(mqttSession, ByteString(mqttConnectionId))
-      .join(mqttConnection)
+      .join(restartFlowTcp)
 
   val (mqttQueue: SourceQueueWithComplete[Command[Nothing]], events: Future[Publish]) =
     Source
       .queue(10, OverflowStrategy.fail)
-      .via(mqttFlow)
+      .via(restartFlowMQTT)
       .collect {
         case Right(Event(p: Publish, _)) => {
           log.debug(s"${p}")
@@ -78,7 +89,7 @@ class MQTTClientPublisher(config:MQTTConfig)(implicit val as:ActorSystem,implici
         }
       }
       .log(s"MQTT(${mqttHost}:${mqttPort}): ")
-      .async
+      //.async
       .toMat(Sink.head)(Keep.both)
       .run()
 
@@ -89,7 +100,7 @@ class MQTTClientPublisher(config:MQTTConfig)(implicit val as:ActorSystem,implici
     val mqttData = upickle.default.writeBinary(md)
     val wireData = if(config.protocolVer == MSG_Version.V1) Util.hex(mqttData).getBytes else mqttData
 
-    log.info(s"(${Util.hex(mqttData)}) -> MQTT(${mqttHost}:${mqttPort})")
+    log.debug(s"(${Util.hex(mqttData)}) -> MQTT(${mqttHost}:${mqttPort})")
     mqttSession ! Command(
       Publish(ControlPacketFlags.QoSAtLeastOnceDelivery, mqttTopic, ByteString(wireData))
     )

@@ -67,7 +67,7 @@ class MQTTServerFlow(config:MQTTConfig)(implicit val as:ActorSystem,ec:Execution
   val mqttConnectionId = s"${config.clientId}- ${math.abs(Random.nextLong())}"
   val mqttTopc = config.topic
   val mqttMaxConnections = 1
-
+  
   val bindSource: Source[Either[MqttCodec.DecodeError, Event[Nothing]], Future[Tcp.ServerBinding]] =
     Tcp()
     .bind(config.host, config.port)
