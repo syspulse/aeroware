@@ -66,11 +66,11 @@ class MQTTClientPublisher(config:MQTTConfig)(implicit val as:ActorSystem,implici
   val mqttConnection = Tcp().outgoingConnection(
     remoteAddress = new InetSocketAddress(mqttHost, mqttPort),
     connectTimeout = Duration("3 seconds"),
-    idleTimeout = Duration("10 seconds")
+    idleTimeout = Duration("30 seconds")
   )
 
-  val restartSettings = RestartSettings(1.second, 5.seconds, 0.2)//.withMaxRestarts(10, 1.minute)
-  val restartFlowTcp = RestartFlow.onFailuresWithBackoff(restartSettings)(() => mqttConnection)
+  val restartSettings = RestartSettings(1.second, 1.seconds, 0.2)//.withMaxRestarts(10, 1.minute)
+  val restartFlowTcp = RestartFlow.withBackoff(restartSettings)(() => mqttConnection)
   val restartFlowMQTT = RestartFlow.onFailuresWithBackoff(restartSettings)(() => mqttFlow)
 
   val mqttFlow: Flow[Command[Nothing], Either[MqttCodec.DecodeError, Event[Nothing]], NotUsed] =
