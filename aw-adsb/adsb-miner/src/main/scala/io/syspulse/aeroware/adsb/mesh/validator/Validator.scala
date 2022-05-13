@@ -73,16 +73,6 @@ class Validator(config:Config) {
   val fleet = new Fleet(config)
 
   val validator = Flow[MSG_MinerData].map( m => { 
-    // val adsbData = m.adsbs
-    // val sigData = upickle.default.writeBinary(adsbData)
-    // val sig = Util.hex2(m.sig.r) + ":" + Util.hex2(m.sig.s)
-
-    // val pk = m.pk
-    // val v = Eth.verify(sigData,sig,pk) //wallet.mverify(List(sig),sigData,None,None)
-    // if(!v) {
-    //   log.error(s"Invalid signature: ${m.sig}")
-    // }else
-    //   log.info(s"Verified: ${m.sig}")
     val v1 = validationEngine.validate(m)
     if(v1) {
       val miner = fleet.+(m.pk)
@@ -95,10 +85,26 @@ class Validator(config:Config) {
     m
   })
 
+  val retrySettings = RestartSettings(
+    minBackoff = 1.seconds,
+    maxBackoff = 3.seconds,
+    randomFactor = 0.2 // adds 20% "noise" to vary the intervals slightly
+  )
+  val mqttClient = new MQTTClientSubscriber(MQTTConfig(host=config.mqttHost,port=config.mqttPort,clientId=s"adsb-validator-${signerAddr}"))
+  val mqttSource =  { 
+    RestartSource.onFailuresWithBackoff(retrySettings) { 
+      log.info(s"-> MQTT(${config.mqttHost}:${config.mqttPort})")
+      () => mqttClient.source() 
+    }
+  }
+
   def run() = {
-    val mqtt = new MQTTClientSubscriber(MQTTConfig(host=config.mqttHost,port=config.mqttPort,clientId=s"adsb-validator-${signerAddr}")).run(
-      validator
-    )
+    val validatorFlow = mqttSource
+      .via(mqttClient.mqttSubscriber)
+      .via(validator)
+      .runWith(Sink.ignore)
+
+    log.info(s"validatorFlow: ${validatorFlow}")  
   }
       
 }

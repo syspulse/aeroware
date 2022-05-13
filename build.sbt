@@ -89,6 +89,9 @@ val sharedConfigAssembly = Seq(
   assembly / assemblyMergeStrategy := {
       case x if x.contains("module-info.class") => MergeStrategy.discard
       case x if x.contains("io.netty.versions.properties") => MergeStrategy.first
+      case x if x.contains("StaticMarkerBinder.class") => MergeStrategy.first
+      case x if x.contains("StaticMDCBinder.class") => MergeStrategy.first
+      case x if x.contains("StaticLoggerBinder.class") => MergeStrategy.first
       //case x if x.contains("StaticMarkerBinder.class") => MergeStrategy.first // logback-classic-1.2.8.jar vs. log4j-slf4j-impl-2.13.3.jar
       case x => {
         val oldStrategy = (assembly / assemblyMergeStrategy).value
@@ -170,7 +173,8 @@ lazy val adsb_mesh = (project in file("aw-adsb/adsb-mesh"))
         libAlpakkaFile,
         libUjsonLib,
         libUpickle,
-        libAlpakkaMQTT
+        libAlpakkaMQTT,
+        libAlpakkaPaho
       ),
 )
 
@@ -229,8 +233,12 @@ lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
       libAlpakkaFile,
       libUjsonLib,
       libUpickle,
-      libAlpakkaMQTT
+      //libAlpakkaMQTT,
+      libAlpakkaPaho
     ),
+
+    assembly / packageOptions += sbt.Package.ManifestAttributes("Multi-Release" -> "true")
+    
   )
 
 lazy val adsb_validator = (project in file("aw-adsb/adsb-validator"))
@@ -259,7 +267,8 @@ lazy val adsb_validator = (project in file("aw-adsb/adsb-validator"))
       libAlpakkaFile,
       libUjsonLib,
       libUpickle,
-      libAlpakkaMQTT
+      //libAlpakkaMQTT,
+      libAlpakkaPaho
     ),
   )
 

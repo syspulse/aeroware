@@ -75,14 +75,14 @@ class Miner(config:Config) extends AdsbIngest {
   val signerPk = wallet.signers.toList.head._2.head.pk
   val signerAddr = wallet.signers.toList.head._2.head.addr
 
-  val sinkRestartable =  { 
-    RestartSink.withBackoff(retrySettings) { () =>
-      Sink.foreach[Array[Byte]](m => log.debug(s"${Util.hex(m)}"))
+  val mqttClient = new MQTTClientPublisher(MQTTConfig(host=config.mqttHost,port=config.mqttPort,clientId=s"adsb-miner-${signerAddr}"))
+  val mqttSink =  { 
+    RestartSink.withBackoff(retrySettings) { 
+      log.info(s"-> MQTT(${config.mqttHost}:${config.mqttPort})")
+      () => mqttClient.sink() 
     }
   }
 
-  val mqtt = new MQTTClientPublisher(MQTTConfig(host=config.mqttHost,port=config.mqttPort,clientId=s"adsb-miner-${signerAddr}")).flow()
-  
   val signer = Flow[Seq[ADSB]].map( aa => { 
     val adsbData = aa.map(a => MSG_MinerADSB(a.ts,a.raw)).toArray
     val sigData = upickle.default.writeBinary(adsbData)
@@ -118,10 +118,8 @@ class Miner(config:Config) extends AdsbIngest {
       .groupedWithin(config.batchSize, FiniteDuration(config.batchWindow,TimeUnit.MILLISECONDS))
       .via(signer)
       .via(checksum)
-      .via(mqtt)
-      //.map(a => ByteString(a.toString))
-      .log(s"output -> ")
-      .toMat(sinkRestartable)(Keep.both)
+      .via(mqttClient.flow())
+      .toMat(mqttSink)(Keep.both)
       .run()
 
     minerFlow

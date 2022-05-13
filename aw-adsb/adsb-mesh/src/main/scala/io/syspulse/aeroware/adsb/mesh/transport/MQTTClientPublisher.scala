@@ -27,18 +27,7 @@ import io.syspulse.skel.util.Util
 import io.syspulse.skel.crypto.Eth
 import io.syspulse.skel.crypto.wallet.WalletVaultKeyfiles
 
-import akka.stream.alpakka.mqtt.streaming.MqttSessionSettings
-import akka.stream.alpakka.mqtt.streaming.scaladsl.ActorMqttClientSession
-import akka.stream.alpakka.mqtt.streaming.scaladsl.Mqtt
-import akka.stream.alpakka.mqtt.streaming.MqttCodec
-import akka.stream.alpakka.mqtt.streaming.Event
-import akka.stream.alpakka.mqtt.streaming.Publish
-import akka.stream.alpakka.mqtt.streaming.Command
 import scala.concurrent.Future
-import akka.stream.alpakka.mqtt.streaming.Connect
-import akka.stream.alpakka.mqtt.streaming.Subscribe
-import akka.stream.alpakka.mqtt.streaming.ConnectFlags
-import akka.stream.alpakka.mqtt.streaming.ControlPacketFlags
 import scala.util.Random
 
 import io.syspulse.aeroware.adsb._
@@ -51,62 +40,39 @@ import scala.concurrent.ExecutionContext
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Version
 import io.swagger.v3.oas.models.security.SecurityScheme.In
 import java.net.InetSocketAddress
+import akka.stream.alpakka.mqtt.MqttConnectionSettings
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
+import akka.stream.alpakka.mqtt.MqttMessage
+import akka.Done
+import akka.stream.alpakka.mqtt.scaladsl.MqttSink
+import akka.stream.alpakka.mqtt.MqttQoS
 
 class MQTTClientPublisher(config:MQTTConfig)(implicit val as:ActorSystem,implicit val ec:ExecutionContext,log:Logger) {
   import MSG_MinerData._
  
   val mqttHost = config.host
   val mqttPort = config.port
-  val mqttSettings = MqttSessionSettings().withMaxPacketSize(8192)
-  val mqttSession = ActorMqttClientSession(mqttSettings)
+  val mqttConnectionSettings = MqttConnectionSettings(
+    broker = s"tcp://${config.host}:${config.port}", 
+    clientId = config.clientId, 
+    persistence = new MemoryPersistence 
+  ).withAutomaticReconnect(true)
+
   val mqttClientId = s"${config.clientId}}"
   val mqttConnectionId = s"${math.abs(Random.nextLong())}"
   val mqttTopic = config.topic
 
-  val mqttConnection = Tcp().outgoingConnection(
-    remoteAddress = new InetSocketAddress(mqttHost, mqttPort),
-    connectTimeout = Duration("3 seconds"),
-    idleTimeout = Duration("30 seconds")
-  )
-
-  val restartSettings = RestartSettings(1.second, 1.seconds, 0.2)//.withMaxRestarts(10, 1.minute)
-  val restartFlowTcp = RestartFlow.withBackoff(restartSettings)(() => mqttConnection)
-  val restartFlowMQTT = RestartFlow.onFailuresWithBackoff(restartSettings)(() => mqttFlow)
-
-  val mqttFlow: Flow[Command[Nothing], Either[MqttCodec.DecodeError, Event[Nothing]], NotUsed] =
-    Mqtt
-      .clientSessionFlow(mqttSession, ByteString(mqttConnectionId))
-      .join(restartFlowTcp)
-
-  val (mqttQueue: SourceQueueWithComplete[Command[Nothing]], events: Future[Publish]) =
-    Source
-      .queue(10, OverflowStrategy.fail)
-      .via(restartFlowMQTT)
-      .collect {
-        case Right(Event(p: Publish, _)) => {
-          log.debug(s"${p}")
-          p
-        }
-      }
-      .log(s"MQTT(${mqttHost}:${mqttPort}): ")
-      //.async
-      .toMat(Sink.head)(Keep.both)
-      .run()
-
-  mqttQueue.offer(Command(Connect(mqttClientId, ConnectFlags.CleanSession)))
-  
+  val mqttSink: Sink[MqttMessage, Future[Done]] = MqttSink(mqttConnectionSettings, MqttQoS.AtLeastOnce)
+    
   val mqttPublisher = Flow[MSG_MinerData].map( md => {
     
     val mqttData = upickle.default.writeBinary(md)
     val wireData = if(config.protocolVer == MSG_Version.V1) Util.hex(mqttData).getBytes else mqttData
 
     log.debug(s"(${Util.hex(mqttData)}) -> MQTT(${mqttHost}:${mqttPort})")
-    mqttSession ! Command(
-      Publish(ControlPacketFlags.QoSAtLeastOnceDelivery, mqttTopic, ByteString(wireData))
-    )
-    
-    mqttData
+    MqttMessage(config.topic,ByteString(wireData))  
   })
     
   def flow() = mqttPublisher
+  def sink() = mqttSink
 }

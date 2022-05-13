@@ -4,7 +4,7 @@ case class MQTTConfig(
   host:String,
   port:Int = 1883,
   topic:String = "adsb-topic",
-  clientId:String = "adsb-client",
+  clientId:String = "",
   protocolVer:Int = 0x100
 )
 

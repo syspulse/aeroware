@@ -27,18 +27,7 @@ import io.syspulse.skel.util.Util
 import io.syspulse.skel.crypto.Eth
 import io.syspulse.skel.crypto.wallet.WalletVaultKeyfiles
 
-import akka.stream.alpakka.mqtt.streaming.MqttSessionSettings
-import akka.stream.alpakka.mqtt.streaming.scaladsl.ActorMqttClientSession
-import akka.stream.alpakka.mqtt.streaming.scaladsl.Mqtt
-import akka.stream.alpakka.mqtt.streaming.MqttCodec
-import akka.stream.alpakka.mqtt.streaming.Event
-import akka.stream.alpakka.mqtt.streaming.Publish
-import akka.stream.alpakka.mqtt.streaming.Command
 import scala.concurrent.Future
-import akka.stream.alpakka.mqtt.streaming.Connect
-import akka.stream.alpakka.mqtt.streaming.Subscribe
-import akka.stream.alpakka.mqtt.streaming.ConnectFlags
-import akka.stream.alpakka.mqtt.streaming.ControlPacketFlags
 import scala.util.Random
 
 import io.syspulse.aeroware.adsb._
@@ -51,63 +40,42 @@ import scala.concurrent.ExecutionContext
 import io.syspulse.aeroware.adsb.mesh.protocol.MinerSig
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Version
 import java.net.InetSocketAddress
+import akka.stream.alpakka.mqtt.MqttConnectionSettings
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
+import akka.stream.alpakka.mqtt.MqttMessage
+import akka.stream.alpakka.mqtt.scaladsl.MqttSource
+import akka.Done
+import akka.stream.alpakka.mqtt.MqttSubscriptions
+import akka.stream.alpakka.mqtt.MqttQoS
 
 class MQTTClientSubscriber(config:MQTTConfig)(implicit val as:ActorSystem,implicit val ec:ExecutionContext,log:Logger) {
   import MSG_MinerData._
  
   val mqttHost = config.host
   val mqttPort = config.port
-  val mqttSettings = MqttSessionSettings().withMaxPacketSize(8192)
-  val mqttSession = ActorMqttClientSession(mqttSettings)
+  val mqttConnectionSettings = MqttConnectionSettings(
+    broker = s"tcp://${config.host}:${config.port}", 
+    clientId = config.clientId, 
+    persistence = new MemoryPersistence 
+  ).withAutomaticReconnect(true)
+
   val mqttClientId = s"${config.clientId}}"
   val mqttConnectionId = s"${math.abs(Random.nextLong())}"
   val mqttTopic = config.topic
-  
-  val mqttConnection = Tcp().outgoingConnection(
-    remoteAddress = new InetSocketAddress(mqttHost, mqttPort),
-    connectTimeout = Duration("3 seconds"),
-    idleTimeout = Duration("30 seconds")
-  )
 
-  val restartSettings = RestartSettings(1.second, 1.seconds, 0.2)//.withMaxRestarts(10, 1.minute)
-  val restartFlowTcp = RestartFlow.withBackoff(restartSettings)(() => mqttConnection)
-  val restartFlowMQTT = RestartFlow.onFailuresWithBackoff(restartSettings)(() => mqttFlow)
+  val mqttSource: Source[MqttMessage, Future[Done]] = MqttSource.atMostOnce(
+    mqttConnectionSettings,
+    MqttSubscriptions(Map(config.topic -> MqttQoS.AtLeastOnce)),
+    bufferSize = 8)
 
-  val mqttFlow: Flow[Command[Nothing], Either[MqttCodec.DecodeError, Event[Nothing]], NotUsed] =
-    Mqtt
-      .clientSessionFlow(mqttSession, ByteString(mqttConnectionId))
-      .join(restartFlowTcp)
-
-  val mqttSource =
-    Source
-      .queue(10, OverflowStrategy.fail)
-      .via(mqttFlow)
-      .log(s"MQTT(${mqttHost}:${mqttPort}): ")
-      .collect {
-        case Right(Event(p: Publish, _)) => {
-          val wireData = p.payload
-          log.info(s"event: ${p}: ${Util.hex(wireData.toArray)}")
-
-          val data = if(config.protocolVer == MSG_Version.V1) Util.fromHexString(wireData.utf8String) else wireData.toArray
-          val msg = upickle.default.readBinary[MSG_MinerData](data)
-          msg
-        }
-      }
-
-  def run(flow: Flow[MSG_MinerData,_,_]) = {
-    val (mqttQueue: SourceQueueWithComplete[Command[Nothing]], events: Future[Publish]) =
-      mqttSource
-      .via(flow)
-      //.log(s"MQTT(${mqttHost}:${mqttPort}): ")
-      //.async
-      .toMat(Sink.ignore)(Keep.both)
-      .run()
-
-      log.info(s"Connect -> MQTT(${mqttHost}:${mqttPort})")
-    mqttQueue.offer(Command(Connect(mqttClientId, ConnectFlags.CleanSession)))
-    log.info(s"Subscribe -> MQTT(${mqttHost}:${mqttPort})")
-    mqttQueue.offer(Command(Subscribe(Seq((mqttTopic, ControlPacketFlags.QoSAtMostOnceDelivery)))))
-  }
+  def mqttSubscriber = Flow[MqttMessage].map(mqtt => {
+    val wireData = mqtt.payload
+    log.debug(s"mqtt: ${Util.hex(wireData.toArray)}")
+ 
+    val data = if(config.protocolVer == MSG_Version.V1) Util.fromHexString(wireData.utf8String) else wireData.toArray
+    val msg = upickle.default.readBinary[MSG_MinerData](data)
+    msg
+  })
 
   
   def source() = mqttSource
