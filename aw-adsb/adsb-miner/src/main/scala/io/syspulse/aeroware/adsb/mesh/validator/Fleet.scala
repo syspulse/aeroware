@@ -27,7 +27,8 @@ import io.syspulse.skel.crypto.key.PK
 
 
 trait ValidationEngine[T] {
-  def validate(t:T):Boolean
+  // account for possible reward adjustment (to prevent Spam)
+  def validate(t:T):Double
 }
 
 class ValidationEngineADSB extends ValidationEngine[MSG_MinerData] {
@@ -35,29 +36,50 @@ class ValidationEngineADSB extends ValidationEngine[MSG_MinerData] {
 
   val tsDistance = new java.util.TreeMap[Long,Double]().asScala
   
-  def validate(m:MSG_MinerData):Boolean = {
+  def validate(m:MSG_MinerData):Double = {
     // verify signature
     val adsbData = m.adsbs
+    val pk = m.pk
+    val addr = Eth.address(pk)
+    
+    if(m.adsbs.size == 0) {
+      log.warn(s"No ADSB data: ${addr}")
+      return RewardEngineADSB.penaltyNoData
+    }
+
+    val invalidCount = m.adsbs.filter( a => a.adsb == null || a.adsb.isBlank()).size
+    if(invalidCount > 0) 
+    {
+      log.warn(s"Missing ADSB raw data: ${addr}")
+      return RewardEngineADSB.penaltyMissingSomeData
+    }
+
     val sigData = upickle.default.writeBinary(adsbData)
     val sig = Util.hex(m.sig.r) + ":" + Util.hex(m.sig.s)
-
-    val pk = m.pk
+    
     val v = Eth.verify(sigData,sig,pk) //wallet.mverify(List(sig),sigData,None,None)
     if(!v) {
-      log.error(s"Invalid signature: ${Eth.address(pk)}: ${m.sig}")
-      return false
+      log.error(s"Invalid signature: ${addr}: ${m.sig}")
+      return RewardEngineADSB.penaltyInvalidSig
     }else
-      log.info(s"Verified: ${Eth.address(pk)}: ${m.sig}")
+      log.info(s"Verified: ${addr}: ${m.sig}")
     
-    true
+    // validation does not mean reward
+    return 0.0
   }
 }
 
 trait RewardEngine {
-  val minReward:Double = 0.1
-  val maxReward:Double = 3.0
+  val rewardMax:Double = 0.1
+  val rewardMin:Double = 3.0
 
   def calculate(a:MSG_MinerData):Double
+}
+
+object RewardEngineADSB {
+  val penaltyInvalidSig = -0.001
+  val penaltyNoData = -0.002            // no ADSB Data
+  val penaltyMissingSomeData = -0.0005  // some ADSB data
 }
 
 class RewardEngineADSB extends RewardEngine {
@@ -72,7 +94,7 @@ class RewardEngineADSB extends RewardEngine {
       else
       if(math.abs(tsDiff) < 50) (2.0, 0.1)
       else
-        (maxReward, 0.0)
+        (rewardMax, 0.0)
 
     val rewardTs = if(tsDiff < 0 ) (r1,r2) else (r2,r1)
 
@@ -80,7 +102,7 @@ class RewardEngineADSB extends RewardEngine {
   }
 
   def calculate(a1:MSG_MinerData): Double = {
-    maxReward
+    rewardMax
   }
 }
 

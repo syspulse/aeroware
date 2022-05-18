@@ -73,11 +73,15 @@ class Validator(config:Config) {
   val fleet = new Fleet(config)
 
   val validator = Flow[MSG_MinerData].map( m => { 
-    val v1 = validationEngine.validate(m)
-    if(v1) {
-      val miner = fleet.+(m.pk)
-      val reward = rewardEngine.calculate(m)
+    val r1 = validationEngine.validate(m)
+    
+    val miner = fleet.+(m.pk)
+    if(r1 >= 0.0) {
+      val reward = rewardEngine.calculate(m) + r1
       miner.rewards.+(reward)
+    } else {
+      // penalty 
+      miner.rewards.+(r1)
     }
 
     log.info(s"\n${fleet.toString()}")
@@ -88,7 +92,7 @@ class Validator(config:Config) {
   val retrySettings = RestartSettings(
     minBackoff = 1.seconds,
     maxBackoff = 3.seconds,
-    randomFactor = 0.2 // adds 20% "noise" to vary the intervals slightly
+    randomFactor = 0.2 
   )
   val mqttClient = new MQTTClientSubscriber(MQTTConfig(host=config.mqttHost,port=config.mqttPort,clientId=s"adsb-validator-${signerAddr}"))
   val mqttSource =  { 

@@ -57,6 +57,18 @@ import akka.stream.alpakka.mqtt.streaming.scaladsl.MqttServerSession
 import akka.stream.alpakka.mqtt.streaming.ConnAckFlags
 import scala.concurrent.ExecutionContext
 import akka.stream.alpakka.mqtt.streaming.scaladsl.ActorMqttServerSession
+import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Options
+import java.net.InetSocketAddress
+import akka.stream.alpakka.mqtt.streaming.PacketId
+import akka.stream.alpakka.mqtt.streaming.ControlPacket
+import akka.stream.alpakka.mqtt.streaming.ControlPacketType
+
+
+case class PublishWithAddr (addr: InetSocketAddress,
+                            flags: ControlPacketFlags,
+                            topicName: String,
+                            packetId: Option[PacketId],
+                            payload: ByteString)
 
 class MQTTServerFlow(config:MQTTConfig)(implicit val as:ActorSystem,ec:ExecutionContext,log:Logger) {
   
@@ -66,39 +78,75 @@ class MQTTServerFlow(config:MQTTConfig)(implicit val as:ActorSystem,ec:Execution
   val mqttSession = ActorMqttServerSession(mqttSettings)
   val mqttConnectionId = s"${config.clientId}- ${math.abs(Random.nextLong())}"
   val mqttTopc = config.topic
-  val mqttMaxConnections = 1
+  val mqttMaxConnections = 2
   
-  val bindSource: Source[Either[MqttCodec.DecodeError, Event[Nothing]], Future[Tcp.ServerBinding]] =
+  val bindSource = //: Source[Either[MqttCodec.DecodeError, Event[Nothing]], Future[Tcp.ServerBinding]] =
     Tcp()
-    .bind(config.host, config.port)
+    .bind(config.host, config.port, halfClose = false, idleTimeout = Duration("10 seconds"))
     .flatMapMerge(
       mqttMaxConnections, { connection =>
-        val mqttFlow: Flow[Command[Nothing], Either[MqttCodec.DecodeError, Event[Nothing]], NotUsed] =
-          Mqtt
-            .serverSessionFlow(mqttSession, ByteString(connection.remoteAddress.getAddress.getAddress))
-            .join(connection.flow)
-
+        log.info(s"Miner(${connection.remoteAddress}) ---> MQTT(${config.host}:${config.port})")
+        val mqttConnectionFlow: Flow[Command[Nothing], Either[MqttCodec.DecodeError, Event[Nothing]], NotUsed] =
+            Mqtt
+              .serverSessionFlow(mqttSession, ByteString(connection.remoteAddress.getAddress.getAddress))
+              .join(
+                RestartFlow.withBackoff(RestartSettings(1.second, 1.seconds, 0.1))(() => {
+                  log.info(s"Miner(${connection.remoteAddress}) * -> MQTT(${config.host}:${config.port})")
+                  connection.flow.log(s"Miner(${connection.remoteAddress}) ? -> MQTT(${config.host}:${config.port})")
+                })
+              )
+          
         val (queue, source) = Source
           .queue[Command[Nothing]](3, OverflowStrategy.dropHead)
-          .via(mqttFlow)
+          .via(mqttConnectionFlow)
+          .toMat(BroadcastHub.sink)(Keep.both)
+          .run()
+
+        // very unoptimial way to work around types
+        // Publish Event is sealed and I cannot pass connection address from source (which is Event typed)
+        // downstream
+        // This queue is a type-decoupling
+        val (queueOut, sourceOut) = Source
+          .queue[PublishWithAddr](3, OverflowStrategy.dropHead)
           .toMat(BroadcastHub.sink)(Keep.both)
           .run()
 
         val subscribed = Promise[Done]
         source
-          .runForeach {
+          .map(r => {
+            log.debug(s"${r} -> MQTT(${config.host}:${config.port})")
+            r
+          })
+          .map {
             case Right(Event(_: Connect, _)) =>
               queue.offer(Command(ConnAck(ConnAckFlags.None, ConnAckReturnCode.ConnectionAccepted)))
+              
+              
             case Right(Event(cp: Subscribe, _)) =>
               queue.offer(Command(SubAck(cp.packetId, cp.topicFilters.map(_._2)), Some(subscribed), None))
-            case Right(Event(publish @ Publish(flags, _, Some(packetId), _), _))
-                if flags.contains(ControlPacketFlags.RETAIN) =>
+              
+              
+            case Right(Event(publish @ Publish(flags, topic, Some(packetId), payload), _))
+                //if flags.contains(ControlPacketFlags.RETAIN) =>
+                => 
+            
               queue.offer(Command(PubAck(packetId)))
               subscribed.future.foreach(_ => mqttSession ! Command(publish))
-            case _ => // Ignore everything else
-          }
 
-        source
+              queueOut.offer(
+                PublishWithAddr(
+                    connection.remoteAddress,
+                    publish.flags,
+                    publish.topicName,
+                    publish.packetId,
+                    publish.payload
+              ))
+              
+             case _ => // Ignore everything else
+          }
+          .run()  
+
+        sourceOut
       }
     )
   
@@ -111,13 +159,26 @@ class MQTTServerFlow(config:MQTTConfig)(implicit val as:ActorSystem,ec:Execution
   //server.shutdown()
   //session.shutdown()
 
+  // val mqtt = bindSource
+  //   .map(e => {
+  //     println(s"${e}")
+  //     e
+  //   })
+    
+    
+  def source() = bindSource
 
-  val mqtt = bindSource
-    .map(e => {
-      println(s"${e}")
-      e
-    })
-    
-    
-  def flow() = mqtt
+  def flow() = source()
+    .collect( mqtt => 
+      mqtt match {
+        case PublishWithAddr(remoteAddr,flags,topicName,packetId,payload) => {
+        //case Right(Event(publish @ Publish(flags, topic, Some(packetId), payload), _)) => {
+          val wireData = payload
+          log.debug(s"mqtt: ${Util.hex(wireData.toArray)}")
+          val data = if(MSG_Options.isV1(config.protocolVer)) Util.fromHexString(wireData.utf8String) else wireData.toArray
+          val msg = upickle.default.readBinary[MSG_MinerData](data)
+          msg.copy(socket = remoteAddr.toString)
+        }
+      }
+    )
 }

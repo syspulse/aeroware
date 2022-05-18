@@ -27,9 +27,9 @@ Decode from dump1090 format and print to stdout
 ./run-player.sh ./data/flight-1.adsb stdout
 ```
 
-Decode from dump1090 format and emulate dump1090 by accepting tcp clients and sending feed to them
+Decode from dump1090 format and emulate dump1090 by accepting tcp clients and sending feed to them with 1 msg/sec
 ```
-./run-player.sh ./data/flight-1.adsb "sleep(1000)" tcp://0.0.0.0:30002
+./run-player.sh ./data/flight-1.adsb "sleep(1000)" tcp://0.0.0.0:30002 repeat
 ```
 
 Read recorded flight, print decoded, broadcast to websocket clients with delay between events and repeat 10 times all flow

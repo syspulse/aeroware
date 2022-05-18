@@ -37,7 +37,7 @@ import io.syspulse.aeroware.adsb.ingest.AdsbIngest
 
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
 import scala.concurrent.ExecutionContext
-import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Version
+import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Options
 import io.swagger.v3.oas.models.security.SecurityScheme.In
 import java.net.InetSocketAddress
 import akka.stream.alpakka.mqtt.MqttConnectionSettings
@@ -67,7 +67,7 @@ class MQTTClientPublisher(config:MQTTConfig)(implicit val as:ActorSystem,implici
   val mqttPublisher = Flow[MSG_MinerData].map( md => {
     
     val mqttData = upickle.default.writeBinary(md)
-    val wireData = if(config.protocolVer == MSG_Version.V1) Util.hex(mqttData).getBytes else mqttData
+    val wireData = if(MSG_Options.isV1(config.protocolVer)) Util.hex(mqttData).getBytes else mqttData
 
     log.debug(s"(${Util.hex(mqttData)}) -> MQTT(${mqttHost}:${mqttPort})")
     MqttMessage(config.topic,ByteString(wireData))  

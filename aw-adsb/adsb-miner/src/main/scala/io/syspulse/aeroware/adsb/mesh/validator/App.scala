@@ -67,6 +67,7 @@ object App extends skel.Server {
 
     println(config)
 
-    new Validator(config).run()
+    //new Validator(config).run()
+    new ValidatorBroker(config).run()
   }
 }

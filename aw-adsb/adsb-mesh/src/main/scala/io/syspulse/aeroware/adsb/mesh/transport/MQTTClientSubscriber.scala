@@ -38,7 +38,7 @@ import io.syspulse.aeroware.adsb.ingest.AdsbIngest
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
 import scala.concurrent.ExecutionContext
 import io.syspulse.aeroware.adsb.mesh.protocol.MinerSig
-import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Version
+import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Options
 import java.net.InetSocketAddress
 import akka.stream.alpakka.mqtt.MqttConnectionSettings
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
@@ -72,7 +72,7 @@ class MQTTClientSubscriber(config:MQTTConfig)(implicit val as:ActorSystem,implic
     val wireData = mqtt.payload
     log.debug(s"mqtt: ${Util.hex(wireData.toArray)}")
  
-    val data = if(config.protocolVer == MSG_Version.V1) Util.fromHexString(wireData.utf8String) else wireData.toArray
+    val data = if(MSG_Options.isV1(config.protocolVer)) Util.fromHexString(wireData.utf8String) else wireData.toArray
     val msg = upickle.default.readBinary[MSG_MinerData](data)
     msg
   })
