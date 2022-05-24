@@ -84,23 +84,28 @@ class MQTTServerFlow(config:MQTTConfig)(implicit val as:ActorSystem,ec:Execution
     Tcp()
     .bind(config.host, config.port, halfClose = false, idleTimeout = Duration("10 seconds"))
     .flatMapMerge(
-      mqttMaxConnections, { connection =>
+      mqttMaxConnections, { connection:Tcp.IncomingConnection =>
+    // .map( connection => {
         log.info(s"Miner(${connection.remoteAddress}) ---> MQTT(${config.host}:${config.port})")
         val mqttConnectionFlow: Flow[Command[Nothing], Either[MqttCodec.DecodeError, Event[Nothing]], NotUsed] =
             Mqtt
               .serverSessionFlow(mqttSession, ByteString(connection.remoteAddress.getAddress.getAddress))
               .join(
-                RestartFlow.withBackoff(RestartSettings(1.second, 1.seconds, 0.1))(() => {
-                  log.info(s"Miner(${connection.remoteAddress}) * -> MQTT(${config.host}:${config.port})")
-                  connection.flow.log(s"Miner(${connection.remoteAddress}) ? -> MQTT(${config.host}:${config.port})")
+                connection.flow.log(s"Miner(${connection.remoteAddress}) ? -> MQTT(${config.host}:${config.port})")
+                .watchTermination()( (v, f) => 
+                  f.onComplete {
+                    case Failure(err) => log.error(s"connection flow failed: $err")
+                    case Success(_) => log.warn(s"connection terminated: client: ${connection.remoteAddress}")
                 })
-              )
+              )      
           
         val (queue, source) = Source
           .queue[Command[Nothing]](3, OverflowStrategy.dropHead)
           .via(mqttConnectionFlow)
+          .log(s"MQTT Command Queue")
           .toMat(BroadcastHub.sink)(Keep.both)
           .run()
+        
 
         // very unoptimial way to work around types
         // Publish Event is sealed and I cannot pass connection address from source (which is Event typed)
@@ -120,11 +125,9 @@ class MQTTServerFlow(config:MQTTConfig)(implicit val as:ActorSystem,ec:Execution
           .map {
             case Right(Event(_: Connect, _)) =>
               queue.offer(Command(ConnAck(ConnAckFlags.None, ConnAckReturnCode.ConnectionAccepted)))
-              
-              
+                            
             case Right(Event(cp: Subscribe, _)) =>
               queue.offer(Command(SubAck(cp.packetId, cp.topicFilters.map(_._2)), Some(subscribed), None))
-              
               
             case Right(Event(publish @ Publish(flags, topic, Some(packetId), payload), _))
                 //if flags.contains(ControlPacketFlags.RETAIN) =>
@@ -158,15 +161,13 @@ class MQTTServerFlow(config:MQTTConfig)(implicit val as:ActorSystem,ec:Execution
   // for shutting down properly
   //server.shutdown()
   //session.shutdown()
+  
+  // def source() = RestartSource.onFailuresWithBackoff(RestartSettings(1.seconds,3.seconds,0.2)) { 
+  //   () => bindSource
+  // }
 
-  // val mqtt = bindSource
-  //   .map(e => {
-  //     println(s"${e}")
-  //     e
-  //   })
-    
-    
   def source() = bindSource
+
 
   def flow() = source()
     .collect( mqtt => 

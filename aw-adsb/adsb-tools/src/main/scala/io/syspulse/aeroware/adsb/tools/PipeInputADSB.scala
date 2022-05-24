@@ -9,8 +9,9 @@ import io.syspulse.aeroware.adsb.util.Dump1090
 
 
 class PipeInputADSB(inputFile:String) extends Pipe {
-
   val decoder = new Decoder()
+
+  // This is a streaming file pipe, it cat read huge ADSB dumps in a streaming fashion
   var raw:Iterator[Array[String]] = Iterator.empty
   var data:Iterator[(String,String)] = Iterator.empty
 
@@ -21,12 +22,19 @@ class PipeInputADSB(inputFile:String) extends Pipe {
         // try to understand the format
         // [ts,adsb]
         // [adsb]
-        raw = scala.io.Source.fromFile(inputFile).getLines().filter(_.trim!="").map( s => s.split("\\s+"))
+        
+        if(! data.hasNext) {
+          // reread the file stream again
+          Console.err.println(s"reading: ${inputFile}")
+          raw = scala.io.Source.fromFile(inputFile).getLines().filter(_.trim!="").map( s => s.split("\\s+"))
+        }
+
         data = raw.flatMap( ss => ss match {
           case Array(ts,adsb) => Some((ts,adsb))
           case Array(adsb) => Some((System.currentTimeMillis().toString,adsb))
           case _ => Console.err.println(s"could not parse line: ${ss}"); None; // skip error line
         })
+
       } catch {
         case e:Exception => {
           Console.err.println(s"failed to read: ${inputFile}: ${e}")
