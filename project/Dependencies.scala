@@ -23,6 +23,10 @@ object Dependencies {
 
     lazy val appNameAdsbMiner               = "adsb-miner"
     lazy val appBootClassAdsbMiner          = "io.syspulse.aeroware.adsb.miner.App"
+
+    lazy val appNameAdsbValidator           = "adsb-validator"
+    lazy val appBootClassAdsbValidator      = "io.syspulse.aeroware.adsb.validator.App"
+
     //lazy val mainAppClassAdsbIngest = "com.syspulse.avia.adsb.Ingest"}
 
     // Akka Libraries
@@ -34,6 +38,8 @@ object Dependencies {
     val libAkkaStream =     "com.typesafe.akka"           %% "akka-stream"          % akkaVersion
 
     val libAlpakkaFile =    "com.lightbend.akka"          %% "akka-stream-alpakka-file" % alpakkaVersion
+    val libAlpakkaMQTT=     "com.lightbend.akka"          %% "akka-stream-alpakka-mqtt-streaming" % alpakkaVersion
+    val libAlpakkaPaho=     "com.lightbend.akka"          %% "akka-stream-alpakka-mqtt" % alpakkaVersion
 
     val libScalaLogging =   "com.typesafe.scala-logging"  %% "scala-logging"        % "3.9.2"
     val libLogback =        "ch.qos.logback"              %  "logback-classic"      % "1.2.8"

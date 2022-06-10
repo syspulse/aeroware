@@ -1,0 +1,46 @@
+{
+    "aid" : {
+        "icao_callsign": "ur-82060",
+        "adsb_id": "508035",
+        "name": "Antonov An-225 Mriya"
+    },
+    "data" : {
+        "general": {
+            "crew": 6,
+            "capacity": "253820",
+            "length": 84,
+            "wingspan": 88.4,
+            "height": 18.1,
+            "wing_area": 905,
+            "aspect_ratio": 8.6,
+            "empty_weight": 285000,
+            "mtow": 640000,
+            "fuel_capacity": 300000
+        },
+        "cargo" : {
+            "volume": 1300, 
+            "long": 43.35,
+            "wide": 6.4,
+            "tall": 4.4
+            
+        },
+        "engines" : {
+            "num": 6,
+            "thurst": 229.5,
+            "eid": "0x6706bd362c338dae6848d80a07fa053932b9d488c765923fb1145e7b1e5dbcee",
+            "name": "Progress D-18T turbofans"
+        },
+        "performance": {
+            "max_speed": 850,
+            "cruise_speed": 800,
+            "range": {
+                "with_max_fuel": 15400,
+                "with_payload": 4000,
+                "payload": 200000
+            },
+            "ceiling": 11000,
+            "wing_loading": 662.9,
+            "thrust_weight": 0.234
+        }
+    }
+}

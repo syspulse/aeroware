@@ -64,6 +64,17 @@ object AppPlayer {
           Console.err.println(s"Creating pipe: ${f}")
 
           val p = {
+            if(f.toLowerCase.startsWith("tcp://")) {
+              val (uri,interval) = f.split(",") match {
+                case Array(uri,interval) => (uri,interval.trim.toLong)
+                case Array(uri) => (uri,1L)
+                case _ => { Console.err.println(s"Missing URI: ${f}"); ("",0L) }
+              }
+              val uriParts = new URI(uri.toLowerCase)
+              val (tcpHost,tcpPort) = (uriParts.getHost,uriParts.getPort)
+              new PipeTcpServer(tcpHost,tcpPort)
+            } 
+            else
             if(f.toLowerCase.startsWith("ws://")) {
               val (uri,interval) = f.split(",") match {
                 case Array(uri,interval) => (uri,interval.trim.toLong)

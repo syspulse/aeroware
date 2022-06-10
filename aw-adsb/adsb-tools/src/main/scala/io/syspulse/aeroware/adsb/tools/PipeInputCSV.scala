@@ -15,7 +15,12 @@ class PipeInputCSV(inputFile:String) extends Pipe {
   def flow(a:Try[ADSB]):Try[ADSB] = {
     if(a.isSuccess && a.get.isInstanceOf[ADSB_Continue]) {
       try {
-        raw = scala.io.Source.fromFile(inputFile).getLines().filter(_.trim!="").map( s => s.split(","))
+        if(! data.hasNext) {
+          // reread the file stream again
+          Console.err.println(s"reading: ${inputFile}")
+          raw = scala.io.Source.fromFile(inputFile).getLines().filter(_.trim!="").map( s => s.split(","))
+        }
+        
         data = raw.flatMap( ss => {
           ss match {
           case Array(ts,adsb,_*) => Some((ts,adsb))

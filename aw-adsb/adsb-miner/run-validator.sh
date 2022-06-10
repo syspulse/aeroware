@@ -9,7 +9,8 @@ CONF=`echo $APP | awk -F"-" '{print $2}'`
 
 export SITE=${SITE:-$CONF}
 
-MAIN=io.syspulse.aeroware.adsb.mesh.miner.App
+MAIN=io.syspulse.aeroware.adsb.mesh.validator.App
+export OPT=-Djava.util.logging.config.file="$t/conf/jsr47min.properties"
 
 >&2 echo "app: $APP"
 >&2 echo "site: $SITE"
