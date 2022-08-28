@@ -4,7 +4,9 @@ import scala.util._
 
 import scodec.bits._
 
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.should.Matchers
 
 import java.time._
 import io.jvm.uuid._
@@ -12,7 +14,7 @@ import io.jvm.uuid._
 import io.syspulse.aeroware.adsb.Testables
 import io.syspulse.skel.util.Util
 
-class AircraftAddressSpec extends WordSpec with Matchers with Testables {
+class AircraftAddressSpec extends AnyWordSpec with Matchers with Testables {
 
   val v1 = AircraftAddress("UK-CQF-001","C-172","UR-CQF")
   val v2 = AircraftAddress("UK-CQF-001","C-172","UR-CQF")

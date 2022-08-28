@@ -4,16 +4,23 @@ object Dependencies {
 
     // Versions
     lazy val versionScalaLogging = "3.9.2"
-    lazy val akkaVersion    = "2.6.14"
-    lazy val alpakkaVersion = "3.0.3"  
-    lazy val akkaHttpVersion = "10.2.1"
+    lazy val akkaVersion    = "2.6.19"
+    lazy val alpakkaVersion = "3.0.4"  
+    lazy val akkaHttpVersion = "10.2.9" //"10.2.4"
     lazy val akkaKafkaVersion = "2.0.3"
     lazy val kafkaAvroSerVersion = "5.4.1"
     lazy val quillVersion = "3.6.0"
+    lazy val influxDBVersion = "3.2.0"
+    lazy val slickVersion = "3.3.3"
+    lazy val sparkVersion = "3.2.0"
+    lazy val hadoopAWSVersion = "3.2.2"
+    lazy val janinoVersion = "3.0.16" //"3.1.6" //"3.0.16"
+    lazy val elastic4sVersion = "7.17.3"
+
     lazy val dispatchVersion = "1.2.0" //"1.1.3"
     
     lazy val skelVersion = "0.0.5"
-    lazy val appVersion = "0.0.1"
+    lazy val appVersion = "0.0.2"
     lazy val jarPrefix = "server-"
     
     lazy val appDockerRoot = "/app"

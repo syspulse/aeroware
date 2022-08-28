@@ -55,7 +55,7 @@ class AdsbIngestFile(dataDir:String,filePattern:String,dataFormat:String,fileLim
           None
         } else {
           currentFilename = Some(getFileName())
-          val outputPath = s"${Util.getDirWithSlash(dataDir)}${getFileName()}"
+          val outputPath = s"${Util.toDirWithSlash(dataDir)}${getFileName()}"
           log.info(s"Writing -> File(${outputPath})...")
           count = 0L
           size = 0L

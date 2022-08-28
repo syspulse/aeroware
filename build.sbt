@@ -1,5 +1,6 @@
 import scala.sys.process.Process
 import Dependencies._
+import com.typesafe.sbt.packager.docker.DockerAlias
 import com.typesafe.sbt.packager.docker._
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
@@ -44,10 +45,25 @@ lazy val dockerBuildxSettings = Seq(
   ).value
 )
 
+val dockerRegistryLocal = Seq(
+  dockerRepository := Some("docker.u132.net:5000"),
+  dockerUsername := Some("syspulse"),
+  // this fixes stupid idea of adding registry in publishLocal 
+  dockerAlias := DockerAlias(registryHost=None,username = dockerUsername.value, name = name.value, tag = Some(version.value))
+)
+
+val dockerRegistryDockerHub = Seq(
+  dockerUsername := Some("syspulse")
+)
+
 val sharedConfigDocker = Seq(
   maintainer := "Dev0 <dev0@syspulse.io>",
   // openjdk:8-jre-alpine - NOT WORKING ON RP4+ (arm64). Crashes JVM in kubernetes
-  dockerBaseImage := "openjdk:18-slim", //"openjdk:8u212-jre-alpine3.9", //"openjdk:8-jre-alpine",
+  // dockerBaseImage := "openjdk:8u212-jre-alpine3.9", //"openjdk:8-jre-alpine",
+
+  //dockerBaseImage := "openjdk:8-jre-alpine",
+  dockerBaseImage := "openjdk:18-slim",
+  
   dockerUpdateLatest := true,
   dockerUsername := Some("syspulse"),
   dockerExposedVolumes := Seq(s"${appDockerRoot}/logs",s"${appDockerRoot}/conf",s"${appDockerRoot}/data","/data"),
@@ -58,7 +74,8 @@ val sharedConfigDocker = Seq(
 
   Docker / daemonUserUid := None, //Some("1000"), 
   Docker / daemonUser := "daemon"
-)
+) ++ dockerRegistryLocal
+
 
 val sharedConfig = Seq(
     //retrieveManaged := true,  
@@ -89,10 +106,10 @@ val sharedConfigAssembly = Seq(
   assembly / assemblyMergeStrategy := {
       case x if x.contains("module-info.class") => MergeStrategy.discard
       case x if x.contains("io.netty.versions.properties") => MergeStrategy.first
-      case x if x.contains("StaticMarkerBinder.class") => MergeStrategy.first
-      case x if x.contains("StaticMDCBinder.class") => MergeStrategy.first
-      case x if x.contains("StaticLoggerBinder.class") => MergeStrategy.first
-      //case x if x.contains("StaticMarkerBinder.class") => MergeStrategy.first // logback-classic-1.2.8.jar vs. log4j-slf4j-impl-2.13.3.jar
+      case x if x.contains("slf4j/impl/StaticMarkerBinder.class") => MergeStrategy.first
+      case x if x.contains("slf4j/impl/StaticMDCBinder.class") => MergeStrategy.first
+      case x if x.contains("slf4j/impl/StaticLoggerBinder.class") => MergeStrategy.first
+      case x if x.contains("google/protobuf") => MergeStrategy.first
       case x => {
         val oldStrategy = (assembly / assemblyMergeStrategy).value
         oldStrategy(x)
@@ -101,17 +118,40 @@ val sharedConfigAssembly = Seq(
   assembly / assemblyExcludedJars := {
     val cp = (assembly / fullClasspath).value
     cp filter { f =>
-      f.data.getName.contains("snakeyaml-1.27-android.jar")  || 
-      f.data.getName.contains("log4j-slf4j-impl-2.13.3.jar") 
-      // ||
-      // f.data.getName.container("spark-core_2.11-2.0.1.jar")
+      f.data.getName.contains("snakeyaml-1.27-android.jar") || 
+      f.data.getName.contains("jakarta.activation-api-1.2.1") 
+      //|| f.data.getName == "spark-core_2.11-2.0.1.jar"
     }
   },
-  
   
   assembly / test := {}
 )
 
+def appDockerConfig(appName:String,appMainClass:String) = 
+  Seq(
+    name := appName,
+
+    run / mainClass := Some(appMainClass),
+    assembly / mainClass := Some(appMainClass),
+    Compile / mainClass := Some(appMainClass), // <-- This is very important for DockerPlugin generated stage1 script!
+    assembly / assemblyJarName := jarPrefix + appName + "-" + "assembly" + "-"+  appVersion + ".jar",
+
+    Universal / mappings += file(baseDirectory.value.getAbsolutePath+"/conf/application.conf") -> "conf/application.conf",
+    Universal / mappings += file(baseDirectory.value.getAbsolutePath+"/conf/logback.xml") -> "conf/logback.xml",
+    bashScriptExtraDefines += s"""addJava "-Dconfig.file=${appDockerRoot}/conf/application.conf"""",
+    bashScriptExtraDefines += s"""addJava "-Dlogback.configurationFile=${appDockerRoot}/conf/logback.xml"""",   
+  )
+
+def appAssemblyConfig(appName:String,appMainClass:String) = 
+  Seq(
+    name := appName,
+    run / mainClass := Some(appMainClass),
+    assembly / mainClass := Some(appMainClass),
+    Compile / mainClass := Some(appMainClass),
+    assembly / assemblyJarName := jarPrefix + appName + "-" + "assembly" + "-"+  appVersion + ".jar",
+  )
+
+// ======================================================================================================================
 lazy val root = (project in file("."))
   .aggregate(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core, adsb_mesh, adsb_miner, adsb_validator)
   .dependsOn(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core, adsb_mesh, adsb_miner, adsb_validator)
@@ -182,23 +222,13 @@ lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
   .dependsOn(core,data,adsb_core)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
-  .settings (
-
+  .settings (    
     sharedConfig,
     sharedConfigAssembly,
     sharedConfigDocker,
     dockerBuildxSettings,
 
-    name := appNameAdsbIngest,
-    run / mainClass := Some(appBootClassAdsbIngest),
-    assembly / mainClass := Some(appBootClassAdsbIngest),
-    Compile / mainClass := Some(appBootClassAdsbIngest), // <-- This is very important for DockerPlugin generated stage1 script!
-    assembly / assemblyJarName := jarPrefix + appNameAdsbIngest + "-" + "assembly" + "-"+  appVersion + ".jar",
-
-    Universal / mappings += file(baseDirectory.value.getAbsolutePath+"/conf/application.conf") -> "conf/application.conf",
-    Universal / mappings += file(baseDirectory.value.getAbsolutePath+"/conf/logback.xml") -> "conf/logback.xml",
-    bashScriptExtraDefines += s"""addJava "-Dconfig.file=${appDockerRoot}/conf/application.conf"""",
-    bashScriptExtraDefines += s"""addJava "-Dlogback.configurationFile=${appDockerRoot}/conf/logback.xml"""",
+    appDockerConfig(appNameAdsbIngest,appBootClassAdsbIngest),
 
     libraryDependencies ++= libAkka ++ libSkel ++ libPrometheus ++ Seq(
       libAlpakkaFile,
@@ -218,16 +248,7 @@ lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
     sharedConfigDocker,
     dockerBuildxSettings,
 
-    name := appNameAdsbMiner,
-    run / mainClass := Some(appBootClassAdsbMiner),
-    assembly / mainClass := Some(appBootClassAdsbMiner),
-    Compile / mainClass := Some(appBootClassAdsbMiner), // <-- This is very important for DockerPlugin generated stage1 script!
-    assembly / assemblyJarName := jarPrefix + appNameAdsbMiner + "-" + "assembly" + "-"+  appVersion + ".jar",
-
-    Universal / mappings += file(baseDirectory.value.getAbsolutePath+"/conf/application.conf") -> "conf/application.conf",
-    Universal / mappings += file(baseDirectory.value.getAbsolutePath+"/conf/logback.xml") -> "conf/logback.xml",
-    bashScriptExtraDefines += s"""addJava "-Dconfig.file=${appDockerRoot}/conf/application.conf"""",
-    bashScriptExtraDefines += s"""addJava "-Dlogback.configurationFile=${appDockerRoot}/conf/logback.xml"""",
+    appDockerConfig(appNameAdsbMiner,appBootClassAdsbMiner),
 
     libraryDependencies ++= libAkka ++ libSkel ++ libPrometheus ++ Seq(
       libAlpakkaFile,
@@ -252,16 +273,7 @@ lazy val adsb_validator = (project in file("aw-adsb/adsb-validator"))
     sharedConfigDocker,
     dockerBuildxSettings,
 
-    name := appNameAdsbValidator,
-    run / mainClass := Some(appBootClassAdsbValidator),
-    assembly / mainClass := Some(appBootClassAdsbValidator),
-    Compile / mainClass := Some(appBootClassAdsbValidator), // <-- This is very important for DockerPlugin generated stage1 script!
-    assembly / assemblyJarName := jarPrefix + appNameAdsbValidator + "-" + "assembly" + "-"+  appVersion + ".jar",
-
-    Universal / mappings += file(baseDirectory.value.getAbsolutePath+"/conf/application.conf") -> "conf/application.conf",
-    Universal / mappings += file(baseDirectory.value.getAbsolutePath+"/conf/logback.xml") -> "conf/logback.xml",
-    bashScriptExtraDefines += s"""addJava "-Dconfig.file=${appDockerRoot}/conf/application.conf"""",
-    bashScriptExtraDefines += s"""addJava "-Dlogback.configurationFile=${appDockerRoot}/conf/logback.xml"""",
+    appDockerConfig(appNameAdsbValidator,appBootClassAdsbValidator),
 
     libraryDependencies ++= libAkka ++ libSkel ++ libPrometheus ++ Seq(
       libAlpakkaFile,
@@ -279,7 +291,9 @@ lazy val adsb_tools = (project in file("aw-adsb/adsb-tools"))
   .settings (
       sharedConfig,
       sharedConfigAssembly,
-      name := "adsb-tools",
+
+      appAssemblyConfig("adsb-live","io.syspulse.aeroware.adsb.tools.AppPlayer"),
+
       libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ Seq(
         libCask  
       ),
@@ -291,7 +305,9 @@ lazy val adsb_live = (project in file("aw-adsb/adsb-live"))
   .settings (
       sharedConfig,
       sharedConfigAssembly,
-      name := "adsb-live",
+      
+      appAssemblyConfig("adsb-live","io.syspulse.aeroware.adsb.live.App"),
+
       libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ libTest ++ Seq(
         libAkkaTestkitType % Test  
       ),
@@ -310,7 +326,6 @@ lazy val gpx_core = (project in file("aw-gpx/gpx-core"))
       // scalaxbAutoPackages in (Compile, scalaxb) := true,
       scalaxbDispatchVersion in (Compile, scalaxb) := dispatchVersion,
 
-      libraryDependencies ++= libCommon ++ libTest ++ libXML ++ Seq(
-        
+      libraryDependencies ++= libCommon ++ libTest ++ libXML ++ Seq(        
       ),
   )
