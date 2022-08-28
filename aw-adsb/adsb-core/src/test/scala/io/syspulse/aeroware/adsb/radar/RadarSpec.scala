@@ -4,7 +4,10 @@ import scala.util._
 
 import scodec.bits._
 
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.should.Matchers
+
 import scala.concurrent.duration.Duration
 
 import java.time._
@@ -19,7 +22,7 @@ import io.syspulse.aeroware.adsb.core._
 
 import org.scalactic.TolerantNumerics
 
-class RadarSpec extends WordSpec with Matchers with Testables {
+class RadarSpec extends AnyWordSpec with Matchers with Testables {
 
   implicit val doubleEquality = TolerantNumerics.tolerantDoubleEquality(0.0001)
   

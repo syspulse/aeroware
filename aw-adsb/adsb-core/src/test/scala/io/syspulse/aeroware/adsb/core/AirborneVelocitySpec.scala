@@ -4,7 +4,9 @@ import scala.util._
 
 import scodec.bits._
 
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.should.Matchers
 
 import java.time._
 import io.jvm.uuid._
@@ -20,7 +22,7 @@ import io.syspulse.aeroware.core.Speed
 import org.scalactic.Equality
 import org.scalactic.TolerantNumerics
 
-class AirborneVelocitySpec extends WordSpec with Matchers with Testables {
+class AirborneVelocitySpec extends AnyWordSpec with Matchers with Testables {
 
   implicit val doubleEquality = TolerantNumerics.tolerantDoubleEquality(0.01)
   implicit val speedEq = new Equality[Speed] { def areEqual(a: Speed, b: Any): Boolean =

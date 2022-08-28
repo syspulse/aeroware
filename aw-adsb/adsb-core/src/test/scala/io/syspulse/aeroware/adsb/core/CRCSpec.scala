@@ -4,7 +4,9 @@ import scala.util._
 
 import org.scalatest.{ Matchers, WordSpec, Ignore}
 
-import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.should.Matchers
 
 import java.time._
 import io.jvm.uuid._
@@ -13,7 +15,7 @@ import io.syspulse.aeroware.adsb.Testables
 import io.syspulse.skel.util.Util
 import io.syspulse.aeroware.adsb.util._
 
-class CRCSpec extends WordSpec with Matchers with Testables {
+class CRCSpec extends AnyWordSpec with Matchers with Testables {
 
   val msg1    = "8D4840D6202CC371C32CE0576098"
   val msgErr1 = "8D5840D6202CC371C32CE0576098"

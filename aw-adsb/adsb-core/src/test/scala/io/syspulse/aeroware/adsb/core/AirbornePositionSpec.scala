@@ -4,7 +4,9 @@ import scala.util._
 
 import scodec.bits._
 
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.should.Matchers
 
 import java.time._
 import io.jvm.uuid._
@@ -16,7 +18,7 @@ import io.syspulse.aeroware.core.Altitude
 import io.syspulse.aeroware.core.Location
 import org.scalactic.TolerantNumerics
 
-class AirbornePositionSpec extends WordSpec with Matchers with Testables {
+class AirbornePositionSpec extends AnyWordSpec with Matchers with Testables {
 
   implicit val doubleEquality = TolerantNumerics.tolerantDoubleEquality(0.0001)
   
