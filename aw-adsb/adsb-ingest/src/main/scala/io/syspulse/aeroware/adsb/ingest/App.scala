@@ -1,59 +1,119 @@
 package io.syspulse.aeroware.adsb.ingest
 
+import scala.jdk.CollectionConverters._
+import scala.concurrent.duration.{Duration,FiniteDuration}
 import com.typesafe.scalalogging.Logger
+import scala.concurrent.{Await, ExecutionContext, Future}
 
-import scopt.OParser
+import java.util.concurrent.TimeUnit
+import scala.concurrent.Awaitable
 
 import io.syspulse.skel
-import io.syspulse.skel.config._
 import io.syspulse.skel.util.Util
+import io.syspulse.skel.config._
 
-import akka.NotUsed
+import io.syspulse.aeroware.adsb.ingest.flow.PipelineADSB
 
-object App extends skel.Server {
-  def main(args: Array[String]):Unit = {
+case class Config(  
+  
+  feed:String = "",
+  output:String = "",
+  
+  limit:Long = 0L,
+  freq: Long = 0L,
+  delimiter:String = "",
+  buffer:Int = 0,
+  throttle:Long = 0L,
+  
+  entity:String = "",
+  filter:Seq[String] = Seq(),
+    
+  datastore:String = "",
 
-    println(s"args: ${args.size}: ${args.toSeq}")
+  tokens:Seq[String] = Seq(),
 
-    val builder = OParser.builder[Config]
-    val parser1 = {
-      import builder._
-      OParser.sequence(programName(Util.info._1), head(Util.info._1, Util.info._2),
-        opt[String]('h', "host").action((x, c) => c.copy(httpHost = x)).text("Listen address"),  
-        opt[Int]('p', "port").action((x, c) => c.copy(httpPort = x)).text("Listen port"),
-        opt[String]('u', "uri").action((x, c) => c.copy(httpUri = x)).text("Uri (/api/v1/adsb)"),
+  cmd:String = "",
+  params: Seq[String] = Seq(),
+  sinks:Seq[String] = Seq()
+)
 
-        opt[String]('o', "dump1090.host").action((x, c) => c.copy(dumpHost = x)).text("dump1090 Host"),  
-        opt[Int]('r', "dump1090.port").action((x, c) => c.copy(dumpPort = x)).text("dump1090 port"),
+object App {
+  
+  def main(args:Array[String]):Unit = {
+    Console.err.println(s"args: '${args.mkString(",")}'")
+
+    val c = Configuration.withPriority(Seq(
+      new ConfigurationAkka,
+      new ConfigurationProp,
+      new ConfigurationEnv, 
+      new ConfigurationArgs(args,"adsb-ingest","",
+                
+        ArgString('f', "feed","Input Feed (def: )"),
+        ArgString('o', "output","Output file (pattern is supported: data-{yyyy-MM-dd-HH-mm}.log)"),
+        ArgString('e', "entity","Ingest entity: (coin,coins)"),
+
+        ArgLong('_', "limit","Limit"),
+        ArgLong('_', "freq","Frequency"),
+        ArgString('_', "delimiter","""Delimiter characteds (def: ''). Usage example: --delimiter=`echo -e $"\r"` """),
+        ArgInt('_', "buffer","Frame buffer (Akka Framing) (def: 1M)"),
+        ArgLong('_', "throttle","Throttle messages in msec (def: 0)"),
+
+        ArgString('t', "filter","Filter (ex: 'AN-225')"),
         
-        opt[String]('d', "data.dir").action((x, c) => c.copy(dataDir = x)).text("Data directory (def: /data)"),
-        opt[String]('j', "data.format").action((x, c) => c.copy(dataFormat = x)).text("Data format (json|csv) (def: json)"),
+        ArgString('d', "datastore","datastore [elastic,stdout,file] (def: stdout)"),
+        
+        ArgCmd("ingest","Ingest pipeline"),
+        
+        ArgParam("<params>","")
+      ).withExit(1)
+    ))
 
-        opt[Long]('l', "limit").action((x, c) => c.copy(fileLimit = x)).text("Limit ADSB events per file"),
-        opt[Long]('s', "size").action((x, c) => c.copy(fileSize = x)).text("Limit ADSB file size"),
-        opt[String]('f', "file").action((x, c) => c.copy(filePattern = x)).text("Output file pattern (def=ADSB-{yyyy-MM-dd'T'HH:mm:ssZ}.log  use 'NONE' for no Sinking)"),
-        opt[Long]('c', "connect").action((x, c) => c.copy(connectTimeout = x)).text("connect timeout"),
-        opt[Long]('i', "idle").action((x, c) => c.copy(idleTimeout = x)).text("idle timeout"),
-        opt[String]('a', "aircraft").action((x, c) => c.copy(trackAircraft = x)).text("Aircraft(s) tracker (icaoType,callSign,icaoId). RexExp (e.g. '[Aa][nN].*' - Track All AN"),
-        arg[String]("<args>...").unbounded().optional()
-          .action((x, c) => c.copy(args = c.args :+ x))
-          .text("optional args"),
-          note("" + sys.props("line.separator")),
-      )
-    }
+    val config = Config(
+      
+      feed = c.getString("feed").getOrElse(""),
+      output = c.getString("output").getOrElse(""),
+      entity = c.getString("entity").getOrElse("adsb"),
 
-    OParser.parse(parser1, args, Config()) match {
-      case Some(config) => {
-        val configuration = Configuration.default
+      limit = c.getLong("limit").getOrElse(0),
+      freq = c.getLong("freq").getOrElse(0),
+      delimiter = c.getString("delimiter").getOrElse("\n"),
+      buffer = c.getInt("buffer").getOrElse(1024*1024),
+      throttle = c.getLong("throttle").getOrElse(0L),     
+    
+      filter = c.getString("filter").getOrElse("").split(",").toSeq,
+      
+      datastore = c.getString("datastore").getOrElse("stdout"),
+      
+      cmd = c.getCmd().getOrElse("ingest"),
+      
+      params = c.getParams(),
+    )
 
-        println(s"${config}")
+    Console.err.println(s"Config: ${config}")
 
-        (new AdsbIngestFile(config.dataDir,config.filePattern,config.dataFormat,config.fileLimit,config.fileSize)).run(config)
+    config.cmd match {
+      case "ingest" => {
+        val pp = config.entity match {
+          case "adsb" =>
+            new PipelineADSB(config.feed,config.output)(config)
+          
+          case _ =>  Console.err.println(s"Uknown entity: '${config.entity}'"); sys.exit(1)
+        } 
 
-        run( config.httpHost, config.httpPort, config.httpUri, configuration, Seq())
+        val r = pp.run()
+        println(s"r=${r}")
+        r match {
+          case a:Awaitable[_] => {
+            val rr = Await.result(a,FiniteDuration(30,TimeUnit.MINUTES))
+            Console.err.println(s"result: ${rr}")
+          }
+          case akka.NotUsed => 
+        }
+
+        Console.err.println(s"Events: ${pp.countObj}")
+        sys.exit(0)
       }
-      case _ =>
-        System.exit(1)
+
     }
   }
 }

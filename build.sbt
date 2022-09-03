@@ -231,6 +231,11 @@ lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
     appDockerConfig(appNameAdsbIngest,appBootClassAdsbIngest),
 
     libraryDependencies ++= libAkka ++ libSkel ++ libPrometheus ++ Seq(
+      libSkelIngest,
+      libSkelIngestFlow,
+
+      libKebsSpray,
+      
       libAlpakkaFile,
       libUjsonLib,
       libUpickle

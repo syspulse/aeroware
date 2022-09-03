@@ -88,8 +88,11 @@ object Dependencies {
     val libScalaParser =    "org.scala-lang.modules"        %% "scala-parser-combinators"   % "1.1.2"
     val libXs4s =           "com.scalawilliam"              %% "xs4s-core"                  % "0.9.1"
 
+    val libKebsSpray =      "pl.iterators"                  %% "kebs-spray-json"            % "1.9.3"
+
     val libSkelCore =       "io.syspulse"                 %% "skel-core"            % skelVersion
     val libSkelIngest =     "io.syspulse"                 %% "skel-ingest"          % skelVersion
+    val libSkelIngestFlow =   "io.syspulse"               %% "ingest-flow"          % skelVersion
     val libSkelCrypto =     "io.syspulse"                 %% "skel-crypto"          % skelVersion
     val libSkelSerde =      "io.syspulse"                 %% "skel-serde"           % skelVersion
     
@@ -99,7 +102,7 @@ object Dependencies {
 
     val libPrometheus = Seq(libPrometheusClient)
     
-    val libSkel = Seq(libSkelCore,libSkelIngest,libSkelCrypto,libSkelSerde)
+    val libSkel = Seq(libSkelCore,libSkelCrypto,libSkelSerde)
     
     val libAkka = Seq(libAkkaActor,libAkkaActorTyped,libAkkaStream)
 
