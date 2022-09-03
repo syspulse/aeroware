@@ -27,10 +27,9 @@ case class Config(
   
   entity:String = "",
   filter:Seq[String] = Seq(),
+  format:String = "",
     
   datastore:String = "",
-
-  tokens:Seq[String] = Seq(),
 
   cmd:String = "",
   params: Seq[String] = Seq(),
@@ -50,7 +49,9 @@ object App {
                 
         ArgString('f', "feed","Input Feed (def: )"),
         ArgString('o', "output","Output file (pattern is supported: data-{yyyy-MM-dd-HH-mm}.log)"),
-        ArgString('e', "entity","Ingest entity: (coin,coins)"),
+        ArgString('e', "entity","Ingest entity: (def: all)"),
+        
+        ArgString('_', "format","Outptu format (none,json,csv) (def: none)"),
 
         ArgLong('_', "limit","Limit"),
         ArgLong('_', "freq","Frequency"),
@@ -72,7 +73,8 @@ object App {
       
       feed = c.getString("feed").getOrElse(""),
       output = c.getString("output").getOrElse(""),
-      entity = c.getString("entity").getOrElse("adsb"),
+      entity = c.getString("entity").getOrElse("all"),
+      format = c.getString("format").getOrElse(""),
 
       limit = c.getLong("limit").getOrElse(0),
       freq = c.getLong("freq").getOrElse(0),
@@ -94,7 +96,7 @@ object App {
     config.cmd match {
       case "ingest" => {
         val pp = config.entity match {
-          case "adsb" =>
+          case "adsb" | "all" =>
             new PipelineADSB(config.feed,config.output)(config)
           
           case _ =>  Console.err.println(s"Uknown entity: '${config.entity}'"); sys.exit(1)

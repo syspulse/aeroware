@@ -19,43 +19,35 @@ import pl.iterators.kebs.json.KebsEnumFormats
 import pl.iterators.kebs.json.SprayJsonValueEnum
 
 
-trait UnitsJsonProtocol extends DefaultJsonProtocol with SprayJsonValueEnum { 
-  // implicit object UnitsJsonFormat extends RootJsonFormat[Units] {
-  //   def write(t: Units) = {
-  //     JsObject(
-  //       //"value" -> JsNumber(t.value),
-  //       "name" -> JsString(t.name),
-  //     )
-  //   }
+trait AdsbJsonProtocol extends DefaultJsonProtocol with SprayJsonValueEnum
 
-  //   def read(value: JsValue):Units = value match {
-  //     case JsArray(
-  //       Vector(
-  //         JsString(name), 
-  //         //JsNumber(value)
-  //       )) => Units.withName(name)
-  //     case _ => deserializationError("name expected")
-  //   }
-  // }
-}
-
-object AdsbJson extends UnitsJsonProtocol {
+object AdsbJson extends AdsbJsonProtocol {
   //import DefaultJsonProtocol._
-  //import UnitsJsonProtocol._
- 
+  
   implicit val jf_aa = jsonFormat3(AircraftAddress.apply _)
   implicit val jf_un = jsonFormat(Units)
+  implicit val jf_st = jsonFormat(SpeedType)
 
   implicit val jf_al = jsonFormat3(Altitude.apply _)
   implicit val jf_l = jsonFormat4(Location.apply _)
+  implicit val jf_vr = jsonFormat3(VRate.apply _)
+  implicit val jf_sp = jsonFormat4(Speed.apply _)
   
   implicit val jf_ap = jsonFormat5(ADSB_Unknown)
 
   implicit val jf_ai = jsonFormat8(ADSB_AircraftIdentification)
   implicit val jf_apb = jsonFormat9(ADSB_AirbornePositionBaro)
+  implicit val jf_vel = jsonFormat8(ADSB_AirborneVelocity)
+  implicit val jf_as = jsonFormat5(ADSB_AircraftStatus)
+
+  implicit val jf_sf = jsonFormat5(ADSB_SurfacePosition)
+  implicit val jf_apg = jsonFormat5(ADSB_AirbornePositionGNSS)
+  implicit val jf_r = jsonFormat5(ADSB_Reserved)
+  implicit val jf_ts = jsonFormat5(ADSB_TargetState)
+  implicit val jf_aos = jsonFormat5(ADSB_AircraftOperationStatus)
 }
 
-object AdsbIngestedJsonProtocol extends DefaultJsonProtocol with UnitsJsonProtocol { 
+object AdsbIngestedJsonProtocol extends DefaultJsonProtocol with AdsbJsonProtocol { 
   
   implicit object AdsbIngestedJsonFormat extends JsonFormat[ADSB_Ingested] {
     import AdsbJson._
@@ -64,7 +56,15 @@ object AdsbIngestedJsonProtocol extends DefaultJsonProtocol with UnitsJsonProtoc
       a.adsb match {
         case adsb:ADSB_AircraftIdentification => adsb.toJson
         case adsb:ADSB_AirbornePositionBaro => adsb.toJson
-        //case adsb:ADSB_AirborneVelocity => 
+        case adsb:ADSB_AirborneVelocity => adsb.toJson
+        case adsb:ADSB_AircraftStatus => adsb.toJson
+        
+        case adsb:ADSB_SurfacePosition => adsb.toJson
+        case adsb:ADSB_AirbornePositionGNSS => adsb.toJson
+        case adsb:ADSB_Reserved => adsb.toJson
+        case adsb:ADSB_TargetState => adsb.toJson
+        case adsb:ADSB_AircraftOperationStatus => adsb.toJson
+
         case _ => JsString(a.adsb.toString)
       }      
     }
