@@ -35,10 +35,8 @@ import io.syspulse.aeroware.adsb.core._
 import io.syspulse.aeroware.adsb.core.adsb.Raw
 import io.syspulse.aeroware.adsb.ingest.AdsbIngest
 import io.syspulse.aeroware.adsb.mesh.protocol._
-import io.syspulse.aeroware.adsb.mesh.transport.{ MQTTClientSubscriber, MQTTConfig}
+import io.syspulse.aeroware.adsb.mesh.transport.{ MQTTConfig}
 import io.syspulse.aeroware.adsb.mesh.transport.MQTTServerFlow
-
-import io.syspulse.aeroware.adsb.mesh.transport.MQTTClientSubscriber
 
 class ValidatorBroker(config:Config) {
   implicit val log = Logger(s"${this.getClass().getSimpleName()}")
