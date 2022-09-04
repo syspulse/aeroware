@@ -210,6 +210,7 @@ lazy val adsb_mesh = (project in file("aw-adsb/adsb-mesh"))
       sharedConfig,
       name := "adsb-mesh",
       libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(
+        
         libAlpakkaFile,
         libUjsonLib,
         libUpickle,
@@ -256,6 +257,9 @@ lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
     appDockerConfig(appNameAdsbMiner,appBootClassAdsbMiner),
 
     libraryDependencies ++= libAkka ++ libSkel ++ libPrometheus ++ Seq(
+      libSkelIngest,
+      libSkelIngestFlow,
+      
       libAlpakkaFile,
       libUjsonLib,
       libUpickle,
@@ -281,6 +285,9 @@ lazy val adsb_validator = (project in file("aw-adsb/adsb-validator"))
     appDockerConfig(appNameAdsbValidator,appBootClassAdsbValidator),
 
     libraryDependencies ++= libAkka ++ libSkel ++ libPrometheus ++ Seq(
+      libSkelIngest,
+      libSkelIngestFlow,
+
       libAlpakkaFile,
       libUjsonLib,
       libUpickle,
