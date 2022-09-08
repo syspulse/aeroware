@@ -2,6 +2,14 @@
 
 1. [data](data) - DB Dump files
 
+## Lake
+
+Reference Architecture for DataLake Concept based on Deltalake Store
+
+<img src="doc/Aeroware-BigData.jpg" width="850">
+
+<br>
+
 
 ----
 

@@ -11,6 +11,15 @@
 6. [adsb-mesh](adsb-mesh) - decentralized mesh network
 7. [adsb-miner](adsb-miner) - prototype for ADSB feed miner for mesh
 
+---
+## Aeroware Mesh
+
+High Level Overview
+
+<img src="doc/Aeroware-Mesh-Overview.drawio.png" width="850">
+
+
+---
 
 ## Kafka Artchitecture Examples
 
@@ -49,14 +58,6 @@ Raspberry Pie uses __sig-proxy__ component is used for flow transformation (inbo
 <br>
 
 ----
-
-<br>
-
-## DataLake
-
-Reference Architecture for DataLake Concept based on Deltalake Store
-
-<img src="doc/Aeroware-BigData.jpg" width="850">
 
 <br>
 
