@@ -5,24 +5,16 @@ import io.syspulse.skel.Ingestable
 
 import spray.json._
 import AdsbIngestedJsonProtocol._
+import io.syspulse.skel.util.Util
 
-object CSV {
-  implicit class CSVPrinter(val prod: Product) extends AnyVal {
-    def toCSV: String = prod.productIterator.map{
-      case p: Product =>  p.toCSV
-      case rest => rest
-    }.mkString(",")
-  }
-
-  def toCSV(prod: Product) = prod.toCSV
-}
 
 case class ADSB_Ingested(adsb:ADSB,format:String="") extends Ingestable {
-  import CSV._
 
   override def toString: String = format match {
     case "json" => this.toJson.compactPrint
-    case "csv" => CSV.toCSV(adsb.asInstanceOf[Product])
+    case "csv" => Util.toCSV(adsb.asInstanceOf[Product])
+    // format used for replay with live timestamp
+    case "adsb" => s"${adsb.ts} ${adsb.raw}"
     case _ => super.toString
   }
 }

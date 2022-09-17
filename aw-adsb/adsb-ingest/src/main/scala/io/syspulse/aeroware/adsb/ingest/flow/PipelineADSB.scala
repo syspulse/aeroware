@@ -45,20 +45,30 @@ class PipelineADSB(feed:String,output:String)(implicit config:Config) extends Pi
   
   override def processing:Flow[ADSB,ADSB,_] = Flow[ADSB].map(v => v)
 
-  def decode(data:String):Option[ADSB] = {
-    Decoder.decodeDump1090(data) match {
+  def decode(data:String,ts:Long):Option[ADSB] = {
+    Decoder.decode(data,ts) match {
       case Success(a) => Some(a)
       case Failure(e) => None
     }
   }
 
+  // expect format 'timestamp adsb'
   def parse(data:String):Seq[ADSB] = {
     if(data.isEmpty()) return Seq()
     try {
       //val coin = data.toJson
-      val a = decode(data)
+      val a = data.trim.split("\\s+").toList match {
+        case ts :: a :: Nil => decode(a,ts.toLong)
+        case _ => {
+          log.error(s"failed to parse: invalid format (expected: 'Timestamp ADSB': ${data}")
+          return Seq.empty
+          None
+        }
+      }
+      
       log.debug(s"adsb=${a}")
       a.toSeq
+      
     } catch {
       case e:Exception => 
         log.error(s"failed to parse: '${data}'",e)

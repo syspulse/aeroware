@@ -12,7 +12,7 @@ import io.syspulse.skel
 import io.syspulse.skel.util.Util
 import io.syspulse.skel.config._
 
-import io.syspulse.aeroware.adsb.ingest.flow.PipelineADSB
+import io.syspulse.aeroware.adsb.ingest.flow.{ PipelineADSB, PipelineDump1090}
 
 case class Config(  
   
@@ -47,11 +47,11 @@ object App {
       new ConfigurationEnv, 
       new ConfigurationArgs(args,"adsb-ingest","",
                 
-        ArgString('f', "feed","Input Feed (def: )"),
+        ArgString('f', "feed","Input Feed (dump1090://host:port, file://, kafka://, (def: stdin://) )"),
         ArgString('o', "output","Output file (pattern is supported: data-{yyyy-MM-dd-HH-mm}.log)"),
-        ArgString('e', "entity","Ingest entity: (def: all)"),
+        ArgString('e', "entity","Ingest entity format: (adsb,dump1090) (def: dump1090)"),
         
-        ArgString('_', "format","Outptu format (none,json,csv) (def: none)"),
+        ArgString('_', "output.format","Output format (json,csv,adsb) (def: csv)"),
 
         ArgLong('_', "limit","Limit"),
         ArgLong('_', "freq","Frequency"),
@@ -59,9 +59,9 @@ object App {
         ArgInt('_', "buffer","Frame buffer (Akka Framing) (def: 1M)"),
         ArgLong('_', "throttle","Throttle messages in msec (def: 0)"),
 
-        ArgString('t', "filter","Filter (ex: 'AN-225')"),
+        ArgString('a', "aircraft","Filter (ex: 'AN-225')"),
         
-        ArgString('d', "datastore","datastore [elastic,stdout,file] (def: stdout)"),
+        //ArgString('d', "datastore","datastore [elastic,stdout,file] (def: stdout)"),
         
         ArgCmd("ingest","Ingest pipeline"),
         
@@ -73,8 +73,8 @@ object App {
       
       feed = c.getString("feed").getOrElse(""),
       output = c.getString("output").getOrElse(""),
-      entity = c.getString("entity").getOrElse("all"),
-      format = c.getString("format").getOrElse(""),
+      entity = c.getString("entity").getOrElse("dump1090"),
+      format = c.getString("output.format").getOrElse("csv"),
 
       limit = c.getLong("limit").getOrElse(0),
       freq = c.getLong("freq").getOrElse(0),
@@ -82,9 +82,9 @@ object App {
       buffer = c.getInt("buffer").getOrElse(1024*1024),
       throttle = c.getLong("throttle").getOrElse(0L),     
     
-      filter = c.getString("filter").getOrElse("").split(",").toSeq,
+      filter = c.getListString("aircraft"),
       
-      datastore = c.getString("datastore").getOrElse("stdout"),
+      //datastore = c.getString("datastore").getOrElse("stdout"),
       
       cmd = c.getCmd().getOrElse("ingest"),
       
@@ -96,7 +96,10 @@ object App {
     config.cmd match {
       case "ingest" => {
         val pp = config.entity match {
-          case "adsb" | "all" =>
+          case "dump1090" =>
+            new PipelineDump1090(config.feed,config.output)(config)
+
+          case "adsb" =>
             new PipelineADSB(config.feed,config.output)(config)
           
           case _ =>  Console.err.println(s"Uknown entity: '${config.entity}'"); sys.exit(1)
