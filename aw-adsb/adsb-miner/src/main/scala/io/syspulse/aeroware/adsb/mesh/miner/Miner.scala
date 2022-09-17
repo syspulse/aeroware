@@ -47,7 +47,7 @@ import io.syspulse.skel.crypto.wallet.WalletVaultKeyfile
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
 import io.syspulse.aeroware.adsb.core.adsb.Raw
-import io.syspulse.aeroware.adsb.ingest.old.AdsbIngest
+
 import io.syspulse.aeroware.adsb.mesh.protocol._
 import io.syspulse.aeroware.adsb.mesh.transport.{ MQTTClientPublisher, MQTTConfig}
 import scala.concurrent.ExecutionContext
@@ -62,7 +62,7 @@ object ADSB_Mined_SignedData {
   implicit val rw: RW[ADSB_Mined_SignedData] = macroRW
 }
 
-class Miner(config:Config) extends AdsbIngest {
+class Miner(config:Config) {
   // implicit val ec = ExecutionContext.global
 
   // import MSG_MinerData._

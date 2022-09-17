@@ -91,7 +91,7 @@ import io.syspulse.aeroware.adsb.mesh.transport.MqttURI
 
 import io.syspulse.skel.util.Util
 import io.syspulse.skel.crypto.Eth
-import io.syspulse.skel.crypto.wallet.WalletVaultKeyfiles
+import io.syspulse.skel.crypto.wallet.{WalletVaultKeyfiles,WalletVaultKeyfile}
 
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
@@ -118,10 +118,13 @@ case class PublishWithAddr (remoteAddr: InetSocketAddress,
                             payload: ByteString)
 
 class PipelineValidator(feed:String,output:String)(implicit config:Config,fmt:JsonFormat[MSG_MinerData])
-  extends Pipeline[PublishWithAddr,MSG_MinerData,MSG_MinerData](feed,output,config.throttle,config.delimiter,config.buffer)(fmt) {
+  extends Pipeline[MSG_MinerData,MSG_MinerData,MSG_MinerData](feed,output,config.throttle,config.delimiter,config.buffer)(fmt) {
+  implicit protected val log = Logger(s"${this}")
+  //implicit val ec = system.dispatchers.lookup("default-executor") //ExecutionContext.global
+  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
   // ----- Wallet ---
-  val wallet = new skel.crypto.wallet.WalletVaultKeyfile(config.keystore, config.keystorePass)  
+  val wallet = new WalletVaultKeyfile(config.keystore, config.keystorePass)  
   val wr = wallet.load()
   log.info(s"wallet: ${wr}")
   val signerPk = wallet.signers.toList.head._2.head.pk
@@ -132,15 +135,9 @@ class PipelineValidator(feed:String,output:String)(implicit config:Config,fmt:Js
   val rewardEngine = new RewardEngineADSB()
   val fleet = new Fleet(config)
 
-
-  implicit protected val log = Logger(s"${this}")
-  implicit val ec = system.dispatchers.lookup("default-executor") //ExecutionContext.global
-
   val connectTimeout = 1000L
   val idleTimeout = 1000L
   
-  
-
   // MQTT Server (Broker)
   def asMQTT(mqttHost:String,mqttPort:Int,mqttTopic:String="adsb",clientId:String="adsb-client",protocolVer:Int = 0) = {
     
@@ -227,7 +224,11 @@ class PipelineValidator(feed:String,output:String)(implicit config:Config,fmt:Js
         mqtt match {
           case PublishWithAddr(remoteAddr,flags,topicName,packetId,payload) => {
           //case Right(Event(publish @ Publish(flags, topic, Some(packetId), payload), _)) => {
-            payload
+            
+            // inject remote address into payload
+            // EXCEPTIONALLY UNOPTIMIZED, I am just tired and want to have something working before sleep
+            log.debug(s"Payload[${Util.hex(payload.toArray)}] <- MQTT(${remoteAddr})")
+            ByteString(s"${remoteAddr.getAddress().getHostAddress()}:${remoteAddr.getPort().toString}/${Util.hex(payload.toArray)}")
           }
         }
       )
@@ -245,18 +246,31 @@ class PipelineValidator(feed:String,output:String)(implicit config:Config,fmt:Js
     }
   }
 
-  def decode(pwa:PublishWithAddr):MSG_MinerData = {
-    val wireData = pwa.payload
-    log.debug(s"mqtt: ${Util.hex(wireData.toArray)}")
-    val data = if(MSG_Options.isV1(config.protocolVer)) Util.fromHexString(wireData.utf8String) else wireData.toArray
-    val msg = upickle.default.readBinary[MSG_MinerData](data)
-    msg.copy(socket = pwa.remoteAddr.toString)
-    msg
-  }
+  // def decode(pwa:PublishWithAddr):MSG_MinerData = {
+  //   val wireData = pwa.payload
+  //   log.debug(s"mqtt: ${Util.hex(wireData.toArray)}")
+  //   val data = if(MSG_Options.isV1(config.protocolVer)) Util.fromHexString(wireData.utf8String) else wireData.toArray
+  //   val msg = upickle.default.readBinary[MSG_MinerData](data)
+  //   msg.copy(socket = pwa.remoteAddr.toString)
+  //   msg
+  // }
 
 
-  override def processing = Flow[PublishWithAddr].map( d => { 
-    val m = decode(d)
+  override def processing = Flow[MSG_MinerData].map( m => m)
+
+  def parse(data:String):Seq[MSG_MinerData] = {    
+    log.debug(s"data: ${data}")
+    val remoteAddr = data.takeWhile(_ != '/')
+    val payload = data.dropWhile(_ != '/').drop(1)
+        
+    val wireData = ByteString(Util.fromHexString(payload))
+    log.debug(s"encoded: ${Util.hex(wireData.toArray)}")
+
+    val encodedData = if(MSG_Options.isV1(config.protocolVer)) Util.fromHexString(wireData.utf8String) else wireData.toArray
+    val msg = upickle.default.readBinary[MSG_MinerData](encodedData)
+    msg.copy(socket = remoteAddr)
+    val m = msg
+
     val r1 = validationEngine.validate(m)
     
     val miner = fleet.+(m.pk)
@@ -269,7 +283,8 @@ class PipelineValidator(feed:String,output:String)(implicit config:Config,fmt:Js
     }
 
     log.info(s"\n${fleet.toString()}")
-    m
-  })
-  
+    Seq(m)
+  }
+
+  def transform(a: MSG_MinerData): Seq[MSG_MinerData] = Seq(a)  
 }

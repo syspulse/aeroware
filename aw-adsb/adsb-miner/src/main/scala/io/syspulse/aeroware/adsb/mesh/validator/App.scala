@@ -74,7 +74,7 @@ object App extends skel.Server {
         
         ArgString('d', "datastore","datastore [elastic,stdout,file] (def: stdout)"),
         
-        ArgCmd("ingest","Ingest pipeline"),
+        ArgCmd("validator","Validator pipeline"),
         
         ArgParam("<params>","")
       ).withExit(1)
@@ -83,15 +83,15 @@ object App extends skel.Server {
     Console.err.println(s"${c}")
 
     implicit val config = Config(
-      keystore = c.getString("keystore").getOrElse("./keystore/"),
+      keystore = c.getString("keystore").getOrElse("./keystore/validator-1.json"),
       keystorePass = c.getString("keystore.pass").getOrElse("abcd1234"),
       batchSize = c.getInt("batch.size").getOrElse(10),
       batchWindow = c.getLong("batch.window").getOrElse(1000L),
       protocolVer = c.getInt("protocol.ver").getOrElse(MSG_Options.V_1 | MSG_Options.O_EC),
       
-      feed = c.getString("feed").getOrElse(""),
+      feed = c.getString("feed").getOrElse("mqtt://localhost:1883"),
       output = c.getString("output").getOrElse(""),
-      entity = c.getString("entity").getOrElse("all"),
+      entity = c.getString("entity").getOrElse("validator"),
       format = c.getString("format").getOrElse(""),
 
       limit = c.getLong("limit").getOrElse(0),
@@ -101,7 +101,7 @@ object App extends skel.Server {
       throttle = c.getLong("throttle").getOrElse(0L),
     
       filter = c.getString("filter").getOrElse("").split(",").toSeq,
-      cmd = c.getCmd().getOrElse("ingest"),
+      cmd = c.getCmd().getOrElse("validator"),
       params = c.getParams(),
     )
 

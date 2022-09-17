@@ -56,7 +56,7 @@ class PipelineADSB(feed:String,output:String)(implicit config:Config) extends Pi
   def parse(data:String):Seq[ADSB] = {
     if(data.isEmpty()) return Seq()
     try {
-      //val coin = data.toJson
+
       val a = data.trim.split("\\s+").toList match {
         case ts :: a :: Nil => decode(a,ts.toLong)
         case _ => {

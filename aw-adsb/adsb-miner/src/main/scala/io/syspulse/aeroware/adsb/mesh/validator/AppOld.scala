@@ -11,7 +11,6 @@ import io.syspulse.skel.util.Util
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import io.syspulse.aeroware.adsb.core.ADSB
-import io.syspulse.aeroware.adsb.ADSB_Event
 
 import io.syspulse.aeroware.adsb.mesh
 

@@ -13,7 +13,7 @@ import io.syspulse.skel.config._
 import io.syspulse.skel.util.Util
 
 import io.syspulse.aeroware.adsb.core.ADSB
-import io.syspulse.aeroware.adsb.ADSB_Event
+
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Options
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
 
@@ -76,7 +76,7 @@ object App extends skel.Server {
         
         ArgString('d', "datastore","datastore [elastic,stdout,file] (def: stdout)"),
         
-        ArgCmd("ingest","Ingest pipeline"),
+        ArgCmd("miner","Miner pipeline"),
         
         ArgParam("<params>","")
       ).withExit(1)
@@ -85,14 +85,14 @@ object App extends skel.Server {
     Console.err.println(s"${c}")
 
     implicit val config = Config(
-      keystore = c.getString("keystore").getOrElse("./keystore/"),
-      keystorePass = c.getString("keystore.pass").getOrElse("abcd1234"),
+      keystore = c.getString("keystore").getOrElse("./keystore/miner-1.json"),
+      keystorePass = c.getString("keystore.pass").getOrElse("test123"),
       batchSize = c.getInt("batch.size").getOrElse(10),
       batchWindow = c.getLong("batch.window").getOrElse(1000L),
       protocolVer = c.getInt("protocol.ver").getOrElse(MSG_Options.V_1 | MSG_Options.O_EC),
       
       feed = c.getString("feed").getOrElse(""),
-      output = c.getString("output").getOrElse(""),
+      output = c.getString("output").getOrElse("mqtt://localhost:1883"),
       entity = c.getString("entity").getOrElse("all"),
       format = c.getString("format").getOrElse(""),
 
@@ -103,23 +103,25 @@ object App extends skel.Server {
       throttle = c.getLong("throttle").getOrElse(0L),
     
       filter = c.getString("filter").getOrElse("").split(",").toSeq,
-      cmd = c.getCmd().getOrElse("ingest"),
+      cmd = c.getCmd().getOrElse("miner"),
       params = c.getParams(),
     )
 
     Console.err.println(s"Config: ${config}")
 
     config.cmd match {
-      case "validator" => {
+      case "miner" => {
         val pp = new PipelineMiner(config.feed,config.output)
         val r = pp.run()
-        println(s"r=${r}")
+        Console.err.println(s"r=${r}")
         r match {
           case a:Awaitable[_] => {
             val rr = Await.result(a,FiniteDuration(30,TimeUnit.MINUTES))
             Console.err.println(s"result: ${rr}")
           }
           case akka.NotUsed => 
+            Thread.sleep(Long.MaxValue)
+            
         }
 
         Console.err.println(s"Events: ${pp.countObj}")

@@ -15,6 +15,7 @@ import spray.json.JsNumber
 import spray.json.JsArray
 import spray.json._
 import DefaultJsonProtocol._ 
+import io.syspulse.skel.Ingestable
 
 
 case class MinerSig(r: Array[Byte], s: Array[Byte]) {
@@ -33,7 +34,7 @@ object MinerSig {
   }
 }
 
-case class MSG_MinerData(ts: Long, pk:Array[Byte], adsbs: Array[MSG_MinerADSB], sig:MinerSig,ops:Int = MSG_Options.V_1 | MSG_Options.O_EC,socket:String="") extends MSG_Miner {
+case class MSG_MinerData(ts: Long, pk:Array[Byte], adsbs: Array[MSG_MinerADSB], sig:MinerSig,ops:Int = MSG_Options.V_1 | MSG_Options.O_EC,socket:String="") extends MSG_Miner with Ingestable {
   override def toString = s"${this.getClass.getSimpleName}(0x${ops.toHexString},${ts},${Util.hex(pk)},${adsbs.toSeq},${sig})"
 }
 

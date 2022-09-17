@@ -3,6 +3,7 @@ package io.syspulse.aeroware.adsb.mesh.miner
 import scala.util.Random
 import scala.jdk.CollectionConverters._
 import scala.concurrent.duration.{Duration,FiniteDuration}
+import scala.util.{ Success,Failure}
 import com.typesafe.scalalogging.Logger
 
 import akka.util.ByteString
@@ -81,7 +82,15 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config,fmt:JsonFo
   extends Pipeline[ADSB,MSG_MinerData,MSG_MinerData](feed,output,config.throttle,config.delimiter,config.buffer)(fmt) {
 
   implicit protected val log = Logger(s"${this}")
-  implicit val ec = system.dispatchers.lookup("default-executor") //ExecutionContext.global
+  //implicit val ec = system.dispatchers.lookup("default-executor") //ExecutionContext.global
+  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+
+  val wallet = new skel.crypto.wallet.WalletVaultKeyfile(config.keystore, config.keystorePass)  
+  val wr = wallet.load()
+  log.info(s"wallet: ${wr}")
+  val signerPk = wallet.signers.toList.head._2.head.pk
+  val signerAddr = wallet.signers.toList.head._2.head.addr
+  
 
   val connectTimeout = 1000L
   val idleTimeout = 1000L
@@ -102,9 +111,11 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config,fmt:JsonFo
     val mqttPublisher = Flow[MSG_MinerData].map( md => {
       
       val mqttData = upickle.default.writeBinary(md)
+      log.debug(s"encoded = ${Util.hex(mqttData)}")
+
       val wireData = if(MSG_Options.isV1(protocolVer)) Util.hex(mqttData).getBytes else mqttData
 
-      log.debug(s"(${Util.hex(mqttData)}) -> MQTT(${mqttHost}:${mqttPort})")
+      log.debug(s"Payload[${Util.hex(wireData)}] -> MQTT(${mqttHost}:${mqttPort})")
       MqttMessage(mqttTopic,ByteString(wireData))  
     })
 
@@ -146,21 +157,15 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config,fmt:JsonFo
   }
 
   override def sink() = {
-    feed.split("://").toList match {
+    output.split("://").toList match {
       case "mqtt" :: _ => {
-        val uri = MqttURI(feed)
+        val uri = MqttURI(output)
         toMQTT(uri.host,uri.port.toInt)
       }
       case _ => super.sink()
     }
   }
 
-  val wallet = new skel.crypto.wallet.WalletVaultKeyfile(config.keystore, config.keystorePass)  
-  val wr = wallet.load()
-  log.info(s"wallet: ${wr}")
-  val signerPk = wallet.signers.toList.head._2.head.pk
-  val signerAddr = wallet.signers.toList.head._2.head.addr
-  
   val signer = Flow[Seq[ADSB]].map( aa => { 
     val adsbData = aa.map(a => MSG_MinerADSB(a.ts,a.raw)).toArray
     val sigData = upickle.default.writeBinary(adsbData)
@@ -195,5 +200,38 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config,fmt:JsonFo
       .groupedWithin(config.batchSize, FiniteDuration(config.batchWindow,TimeUnit.MILLISECONDS))
       .via(signer)
       .via(checksum)
+  
+  
+  def decode(data:String,ts:Long):Option[ADSB] = {
+    Decoder.decode(data,ts) match {
+      case Success(a) => Some(a)
+      case Failure(e) => None
+    }
+  }
+
+  def parse(data:String):Seq[ADSB] = {
+    if(data.isEmpty()) return Seq()
+    try {
+      val a = data.trim.split("\\s+").toList match {
+        case ts :: a :: Nil => decode(a,ts.toLong)
+        case a :: Nil => decode(a,System.currentTimeMillis())
+        case _ => {
+          log.error(s"failed to parse: invalid format: ${data}")
+          return Seq.empty
+          None
+        }
+      }
+      
+      log.debug(s"adsb=${a}")
+      a.toSeq
+
+    } catch {
+      case e:Exception => 
+        log.error(s"failed to parse: '${data}'",e)
+        Seq()
+    }
+  }
+
+  def transform(a: MSG_MinerData): Seq[MSG_MinerData] = Seq(a)
   
 }
