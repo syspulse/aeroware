@@ -6,7 +6,22 @@ Miner prototype
 2. Signs (can multisign) batches
 3. Verifies batch signature internally
 
-### MQTT
+
+## Validator
+
+```
+./run-validator.sh validator -f mqtt://localhost:1883
+
+```
+
+## Miner
+
+```
+./run-miner.sh -f data/flight-1000.dump1090 -o mqtt://localhost:1883
+
+```
+
+### MQTT Broker nodtes
 
 __MQTT Broker__
 
