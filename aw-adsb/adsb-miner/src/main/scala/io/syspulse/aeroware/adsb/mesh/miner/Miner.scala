@@ -47,7 +47,7 @@ import io.syspulse.skel.crypto.wallet.WalletVaultKeyfile
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
 import io.syspulse.aeroware.adsb.core.adsb.Raw
-import io.syspulse.aeroware.adsb.ingest.AdsbIngest
+import io.syspulse.aeroware.adsb.ingest.old.AdsbIngest
 import io.syspulse.aeroware.adsb.mesh.protocol._
 import io.syspulse.aeroware.adsb.mesh.transport.{ MQTTClientPublisher, MQTTConfig}
 import scala.concurrent.ExecutionContext
@@ -63,66 +63,66 @@ object ADSB_Mined_SignedData {
 }
 
 class Miner(config:Config) extends AdsbIngest {
-  implicit val ec = ExecutionContext.global
+  // implicit val ec = ExecutionContext.global
 
-  import MSG_MinerData._
-  import MSG_MinerADSB._
+  // import MSG_MinerData._
+  // import MSG_MinerADSB._
  
-  val wallet = new WalletVaultKeyfile(config.keystore, config.keystorePass)
+  // val wallet = new WalletVaultKeyfile(config.keystore, config.keystorePass)
   
-  val wr = wallet.load()
-  log.info(s"wallet: ${wr}")
-  val signerPk = wallet.signers.toList.head._2.head.pk
-  val signerAddr = wallet.signers.toList.head._2.head.addr
+  // val wr = wallet.load()
+  // log.info(s"wallet: ${wr}")
+  // val signerPk = wallet.signers.toList.head._2.head.pk
+  // val signerAddr = wallet.signers.toList.head._2.head.addr
 
-  val mqttClient = new MQTTClientPublisher(MQTTConfig(host=config.mqttHost,port=config.mqttPort,clientId=s"adsb-miner-${signerAddr}"))
-  val mqttSink =  { 
-    RestartSink.withBackoff(retrySettings) { 
-      log.info(s"-> MQTT(${config.mqttHost}:${config.mqttPort})")
-      () => mqttClient.sink() 
-    }
-  }
+  // val mqttClient = new MQTTClientPublisher(MQTTConfig(host=config.mqttHost,port=config.mqttPort,clientId=s"adsb-miner-${signerAddr}"))
+  // val mqttSink =  { 
+  //   RestartSink.withBackoff(retrySettings) { 
+  //     log.info(s"-> MQTT(${config.mqttHost}:${config.mqttPort})")
+  //     () => mqttClient.sink() 
+  //   }
+  // }
 
-  val signer = Flow[Seq[ADSB]].map( aa => { 
-    val adsbData = aa.map(a => MSG_MinerADSB(a.ts,a.raw)).toArray
-    val sigData = upickle.default.writeBinary(adsbData)
-    val sig = wallet.msign(sigData,None, None).head
+  // val signer = Flow[Seq[ADSB]].map( aa => { 
+  //   val adsbData = aa.map(a => MSG_MinerADSB(a.ts,a.raw)).toArray
+  //   val sigData = upickle.default.writeBinary(adsbData)
+  //   val sig = wallet.msign(sigData,None, None).head
 
-    val msgData = MSG_MinerData(
-      ts = System.currentTimeMillis(),
-      pk = signerPk,
-      adsbs = adsbData,
-      sig = MinerSig(sig)
-    )
+  //   val msgData = MSG_MinerData(
+  //     ts = System.currentTimeMillis(),
+  //     pk = signerPk,
+  //     adsbs = adsbData,
+  //     sig = MinerSig(sig)
+  //   )
 
-    msgData
-  })
+  //   msgData
+  // })
 
-  val checksum = Flow[MSG_MinerData].map( m => { 
-    val adsbData = m.adsbs
-    val sigData = upickle.default.writeBinary(adsbData)
-    val sig = Util.hex(m.sig.r) + ":" + Util.hex(m.sig.s)
+  // val checksum = Flow[MSG_MinerData].map( m => { 
+  //   val adsbData = m.adsbs
+  //   val sigData = upickle.default.writeBinary(adsbData)
+  //   val sig = Util.hex(m.sig.r) + ":" + Util.hex(m.sig.s)
 
-    val v = wallet.mverify(List(sig),sigData,None,None)
-    if(v == 0) {
-      log.error(s"Invalid signature: ${m.sig}")
-    }else
-      log.info(s"Verified: ${m.sig}")
-    m
-  })
+  //   val v = wallet.mverify(List(sig),sigData,None,None)
+  //   if(v == 0) {
+  //     log.error(s"Invalid signature: ${m.sig}")
+  //   }else
+  //     log.info(s"Verified: ${m.sig}")
+  //   m
+  // })
 
-  def run() = {
-    val adsbSource = flow(config.ingest)
+  // def run() = {
+  //   val adsbSource = flow(config.ingest)
     
-    val minerFlow = adsbSource
-      .groupedWithin(config.batchSize, FiniteDuration(config.batchWindow,TimeUnit.MILLISECONDS))
-      .via(signer)
-      .via(checksum)
-      .via(mqttClient.flow())
-      .toMat(mqttSink)(Keep.both)
-      .run()
+  //   val minerFlow = adsbSource
+  //     .groupedWithin(config.batchSize, FiniteDuration(config.batchWindow,TimeUnit.MILLISECONDS))
+  //     .via(signer)
+  //     .via(checksum)
+  //     .via(mqttClient.flow())
+  //     .toMat(mqttSink)(Keep.both)
+  //     .run()
 
-    minerFlow
-  }
+  //   minerFlow
+  // }
     
 }
