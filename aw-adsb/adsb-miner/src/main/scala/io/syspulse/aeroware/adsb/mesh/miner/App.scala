@@ -23,7 +23,7 @@ case class Config (
 
   keystore:String = "",
   keystorePass:String = "",
-  batchSize: Int = 3,
+  batchSize: Int = 2,
   batchWindow: Long = 1000L,
   protocolOptions:Int = MSG_Options.V_1 | MSG_Options.O_EC,
 
@@ -57,7 +57,7 @@ object App extends skel.Server {
         ArgString('_', "keystore.file","Keystore file (def: ./keystore/)"),
         ArgString('_', "keystore.pass","Keystore password"),        
         ArgInt('_', "batch.size","ADSB Batch max size"),
-        ArgInt('_', "batch.window","ADSB Batch time window (msec)"),
+        ArgLong('_', "batch.window","ADSB Batch time window (msec)"),
         ArgString('_', "proto.options",s"Protocol options (def: ${MSG_Options.defaultArg})"),
         
         ArgString('f', "feed","Input Feed (def: )"),
@@ -87,7 +87,7 @@ object App extends skel.Server {
     implicit val config = Config(
       keystore = c.getString("keystore").getOrElse("./keystore/miner-1.json"),
       keystorePass = c.getString("keystore.pass").getOrElse("test123"),
-      batchSize = c.getInt("batch.size").getOrElse(10),
+      batchSize = c.getInt("batch.size").getOrElse(2),
       batchWindow = c.getLong("batch.window").getOrElse(1000L),
       protocolOptions = MSG_Options.fromArg(c.getString("proto.options").getOrElse(MSG_Options.defaultArg)),
       

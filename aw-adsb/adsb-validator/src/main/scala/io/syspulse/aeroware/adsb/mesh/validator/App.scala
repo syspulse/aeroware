@@ -55,7 +55,7 @@ object App extends skel.Server {
         ArgString('_', "keystore.file","Keystore file (def: ./keystore/)"),
         ArgString('_', "keystore.pass","Keystore password"),        
         ArgInt('_', "batch.size","ADSB Batch max size"),
-        ArgInt('_', "batch.window","ADSB Batch time window (msec)"),
+        ArgLong('_', "batch.window","ADSB Batch time window (msec)"),
         ArgString('_', "proto.options",s"Protocol options (def: ${MSG_Options.defaultArg})"),
         
         ArgString('f', "feed","Input Feed (def: )"),
