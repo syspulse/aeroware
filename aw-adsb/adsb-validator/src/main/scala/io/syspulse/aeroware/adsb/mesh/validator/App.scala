@@ -1,7 +1,5 @@
 package io.syspulse.aeroware.adsb.mesh.validator
 
-import java.time.Duration
-
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Awaitable
@@ -14,6 +12,7 @@ import io.syspulse.skel.config._
 import io.syspulse.skel.util.Util
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Options
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
+import scala.concurrent.duration.Duration
 
 case class Config (
   feed:String = "",
@@ -114,7 +113,7 @@ object App extends skel.Server {
         println(s"r=${r}")
         r match {
           case a:Awaitable[_] => {
-            val rr = Await.result(a,FiniteDuration(30,TimeUnit.MINUTES))
+            val rr = Await.result(a,Duration.Inf)
             Console.err.println(s"result: ${rr}")
           }
           case akka.NotUsed => 

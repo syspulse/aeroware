@@ -135,7 +135,7 @@ class PipelineValidator(feed:String,output:String)(implicit config:Config,fmt:Js
   val fleet = new Fleet(config)
 
   val connectTimeout = 1000L
-  val idleTimeout = 1000L
+  val idleTimeout = 15000L
   
   // MQTT Server (Broker)
   def asMQTT(mqttHost:String,mqttPort:Int,mqttTopic:String="adsb",clientId:String="adsb-client",protocolVer:Int = 0) = {
@@ -143,31 +143,34 @@ class PipelineValidator(feed:String,output:String)(implicit config:Config,fmt:Js
     val mqttSettings = MqttSessionSettings().withMaxPacketSize(8192)
     val mqttSession = ActorMqttServerSession(mqttSettings)
     val mqttConnectionId = s"${clientId}- ${math.abs(Random.nextLong())}"
-    val mqttMaxConnections = 2
+    
+    // max connections are cumulative (not simultaneous). Disconnects do not decrement !
+    val mqttMaxConnections = Int.MaxValue
     
     val bindSource = //: Source[Either[MqttCodec.DecodeError, Event[Nothing]], Future[Tcp.ServerBinding]] =
       Tcp()
-      .bind(mqttHost, mqttPort, halfClose = false, idleTimeout = Duration("10 seconds"))
-      .flatMapMerge(
-        mqttMaxConnections, { connection:Tcp.IncomingConnection =>
+      .bind(mqttHost, mqttPort, halfClose = true, idleTimeout = FiniteDuration(idleTimeout,TimeUnit.MILLISECONDS))
+      //.idleTimeout(FiniteDuration(idleTimeout,TimeUnit.MILLISECONDS)) // <- This completes the Server binding ! (no client can connect)
+      .flatMapMerge( mqttMaxConnections, { connection:Tcp.IncomingConnection =>
       // .map( connection => {
           log.info(s"Miner(${connection.remoteAddress}) ---> MQTT(${mqttHost}:${mqttPort})")
           val mqttConnectionFlow: Flow[Command[Nothing], Either[MqttCodec.DecodeError, Event[Nothing]], NotUsed] =
               Mqtt
-                .serverSessionFlow(mqttSession, ByteString(connection.remoteAddress.getAddress.getAddress))
+                .serverSessionFlow(mqttSession, ByteString(connection.remoteAddress.getAddress.getAddress))                
                 .join(
-                  connection.flow.log(s"Miner(${connection.remoteAddress}) ? -> MQTT(${mqttHost}:${mqttPort})")
+                  connection.flow.log(s"Miner(${connection.remoteAddress}) -> MQTT(${mqttHost}:${mqttPort})")
                   .watchTermination()( (v, f) => 
                     f.onComplete {
-                      case Failure(err) => log.error(s"connection flow failed: $err")
-                      case Success(_) => log.warn(s"connection terminated: client: ${connection.remoteAddress}")
+                      case Failure(err) => log.error(s"connection flow failed",err)
+                      case Success(_) => log.warn(s"connection terminated: ${connection.remoteAddress}")
                   })
-                )      
+                )
+                .idleTimeout(FiniteDuration(idleTimeout,TimeUnit.MILLISECONDS))  // disconnect idle client (emualted with telnet 127.0.0.1 1883)
             
           val (queue, source) = Source
             .queue[Command[Nothing]](3, OverflowStrategy.dropHead)
-            .via(mqttConnectionFlow)
             .log(s"MQTT Command Queue")
+            .via(mqttConnectionFlow)            
             .toMat(BroadcastHub.sink)(Keep.both)
             .run()
           
@@ -244,16 +247,6 @@ class PipelineValidator(feed:String,output:String)(implicit config:Config,fmt:Js
       case _ => super.source()
     }
   }
-
-  // def decode(pwa:PublishWithAddr):MSG_MinerData = {
-  //   val wireData = pwa.payload
-  //   log.debug(s"mqtt: ${Util.hex(wireData.toArray)}")
-  //   val data = if(MSG_Options.isV1(config.protocolVer)) Util.fromHexString(wireData.utf8String) else wireData.toArray
-  //   val msg = upickle.default.readBinary[MSG_MinerData](data)
-  //   msg.copy(socket = pwa.remoteAddr.toString)
-  //   msg
-  // }
-
 
   override def processing = Flow[MSG_MinerData].map( m => m)
 

@@ -1,6 +1,5 @@
 package io.syspulse.aeroware.adsb.mesh.miner
 
-import java.time.Duration
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Awaitable
