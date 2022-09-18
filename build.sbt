@@ -266,9 +266,7 @@ lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
       //libAlpakkaMQTT,
       libAlpakkaPaho
     ),
-
-    assembly / packageOptions += sbt.Package.ManifestAttributes("Multi-Release" -> "true")
-    
+    assembly / packageOptions += sbt.Package.ManifestAttributes("Multi-Release" -> "true")    
   )
 
 lazy val adsb_validator = (project in file("aw-adsb/adsb-validator"))
@@ -294,6 +292,7 @@ lazy val adsb_validator = (project in file("aw-adsb/adsb-validator"))
       //libAlpakkaMQTT,
       libAlpakkaPaho
     ),
+    assembly / packageOptions += sbt.Package.ManifestAttributes("Multi-Release" -> "true")
   )
 
 

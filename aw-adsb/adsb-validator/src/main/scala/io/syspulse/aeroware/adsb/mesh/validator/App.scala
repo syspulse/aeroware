@@ -23,7 +23,7 @@ case class Config (
   keystorePass:String = "",
   batchSize: Int = 3,
   batchWindow: Long = 1000L,
-  protocolVer:Int = MSG_Options.V_1 | MSG_Options.O_EC,
+  protocolOptions:Int = MSG_Options.V_1 | MSG_Options.O_EC,
 
   entity:String = "",
   format:String = "",
@@ -56,7 +56,7 @@ object App extends skel.Server {
         ArgString('_', "keystore.pass","Keystore password"),        
         ArgInt('_', "batch.size","ADSB Batch max size"),
         ArgInt('_', "batch.window","ADSB Batch time window (msec)"),
-        ArgInt('_', "protocol.ver",s"Protocol versions (def: ${MSG_Options.V_1 | MSG_Options.O_EC})"),
+        ArgString('_', "proto.options",s"Protocol options (def: ${MSG_Options.defaultArg})"),
         
         ArgString('f', "feed","Input Feed (def: )"),
         ArgString('o', "output","Output file (pattern is supported: data-{yyyy-MM-dd-HH-mm}.log)"),
@@ -87,7 +87,7 @@ object App extends skel.Server {
       keystorePass = c.getString("keystore.pass").getOrElse("abcd1234"),
       batchSize = c.getInt("batch.size").getOrElse(10),
       batchWindow = c.getLong("batch.window").getOrElse(1000L),
-      protocolVer = c.getInt("protocol.ver").getOrElse(MSG_Options.V_1 | MSG_Options.O_EC),
+      protocolOptions = MSG_Options.fromArg(c.getString("proto.options").getOrElse(MSG_Options.defaultArg)),
       
       feed = c.getString("feed").getOrElse("mqtt://localhost:1883"),
       output = c.getString("output").getOrElse(""),

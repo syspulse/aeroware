@@ -97,7 +97,6 @@ import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
 import io.syspulse.aeroware.adsb.core.adsb.Raw
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
-import io.syspulse.aeroware.adsb.mesh.miner
 
 import scala.concurrent.ExecutionContext
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Options
@@ -266,7 +265,7 @@ class PipelineValidator(feed:String,output:String)(implicit config:Config,fmt:Js
     val wireData = ByteString(Util.fromHexString(payload))
     log.debug(s"encoded: ${Util.hex(wireData.toArray)}")
 
-    val encodedData = if(MSG_Options.isV1(config.protocolVer)) Util.fromHexString(wireData.utf8String) else wireData.toArray
+    val encodedData = if(MSG_Options.isV1(config.protocolOptions)) Util.fromHexString(wireData.utf8String) else wireData.toArray
     val msg = upickle.default.readBinary[MSG_MinerData](encodedData)
     msg.copy(socket = remoteAddr)
     val m = msg
