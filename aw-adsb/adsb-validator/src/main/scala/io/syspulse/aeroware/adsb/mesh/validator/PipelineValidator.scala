@@ -3,6 +3,8 @@ package io.syspulse.aeroware.adsb.mesh.validator
 import scala.util.Random
 import scala.jdk.CollectionConverters._
 import scala.concurrent.duration.{Duration,FiniteDuration}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Promise
 import com.typesafe.scalalogging.Logger
 
 import akka.util.ByteString
@@ -28,6 +30,7 @@ import scala.util.Random
 import scala.util.Failure
 import scala.util.Success
 import akka.stream.scaladsl.BroadcastHub
+
 
 import java.net.InetSocketAddress
 import akka.stream.alpakka.mqtt.streaming.{MqttSessionSettings}
@@ -61,9 +64,9 @@ import akka.stream.scaladsl.Keep
 import akka.stream.scaladsl.RestartSink
 import akka.stream.alpakka.mqtt.MqttConnectionSettings
 
-import io.swagger.v3.oas.models.security.SecurityScheme.In
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 
-import io.syspulse.aeroware.adsb.mesh.protocol._
+import io.swagger.v3.oas.models.security.SecurityScheme.In
 
 
 import upickle._
@@ -80,33 +83,28 @@ import io.syspulse.skel.ingest.flow.Pipeline
 
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
+import io.syspulse.aeroware.adsb.core.adsb.Raw
 
 import io.syspulse.aeroware.adsb.ingest.Dump1090URI
 import io.syspulse.aeroware.adsb.ingest.ADSB_Ingested
 
-import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
-//import io.syspulse.aeroware.adsb.mesh.transport.MQTTClientPublisher
-//import io.syspulse.aeroware.adsb.mesh.transport.MQTTConfig
+import io.syspulse.aeroware.adsb.mesh.protocol._
 import io.syspulse.aeroware.adsb.mesh.transport.MqttURI
 
 import io.syspulse.skel.util.Util
 import io.syspulse.skel.crypto.Eth
 import io.syspulse.skel.crypto.wallet.{WalletVaultKeyfiles,WalletVaultKeyfile}
 
-import io.syspulse.aeroware.adsb._
-import io.syspulse.aeroware.adsb.core._
-import io.syspulse.aeroware.adsb.core.adsb.Raw
-import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
-
-import scala.concurrent.ExecutionContext
-import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Options
-
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerADSB
 import io.syspulse.aeroware.adsb.mesh.protocol.MinerSig
 import io.syspulse.aeroware.adsb.mesh.transport.MQTTServerFlow
 import io.syspulse.aeroware.adsb.mesh.transport.MQTTConfig
-import scala.concurrent.Promise
+
+import io.syspulse.aeroware.adsb.mesh.store._
+import io.syspulse.aeroware.adsb.mesh.rewards._
+import io.syspulse.aeroware.adsb.mesh.validator._
+import io.syspulse.aeroware.adsb.mesh.validation._
+import io.syspulse.aeroware.adsb.mesh._
 
 import akka.NotUsed
 
@@ -116,7 +114,7 @@ case class PublishWithAddr (remoteAddr: InetSocketAddress,
                             packetId: Option[PacketId],
                             payload: ByteString)
 
-class PipelineValidator(feed:String,output:String)(implicit config:Config,fmt:JsonFormat[MSG_MinerData])
+class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit config:Config,fmt:JsonFormat[MSG_MinerData])
   extends Pipeline[MSG_MinerData,MSG_MinerData,MSG_MinerData](feed,output,config.throttle,config.delimiter,config.buffer)(fmt) {
   implicit protected val log = Logger(s"${this}")
   //implicit val ec = system.dispatchers.lookup("default-executor") //ExecutionContext.global
@@ -130,14 +128,12 @@ class PipelineValidator(feed:String,output:String)(implicit config:Config,fmt:Js
   val signerAddr = wallet.signers.toList.head._2.head.addr
 
   // ----- Validation ---
-  val validationEngine = new ValidationEngineADSB()
-  val rewardEngine = new RewardEngineADSB()
-  val fleet = new Fleet(config)
-
+  val validationEngine = new ValidationADSB()
+   
+  // MQTT Server (Broker)
   val connectTimeout = 1000L
   val idleTimeout = 15000L
-  
-  // MQTT Server (Broker)
+
   def asMQTT(mqttHost:String,mqttPort:Int,mqttTopic:String="adsb",clientId:String="adsb-client",protocolVer:Int = 0) = {
     
     val mqttSettings = MqttSessionSettings().withMaxPacketSize(8192)
@@ -263,18 +259,12 @@ class PipelineValidator(feed:String,output:String)(implicit config:Config,fmt:Js
     msg.copy(socket = remoteAddr)
     val m = msg
 
+    // fast validation path to prevent Spam
     val r1 = validationEngine.validate(m)
-    
-    val miner = fleet.+(m.pk)
-    if(r1 >= 0.0) {
-      val reward = rewardEngine.calculate(m) + r1
-      miner.rewards.+(reward)
-    } else {
-      // penalty 
-      miner.rewards.+(r1)
-    }
 
-    log.info(s"\n${fleet.toString()}")
+    if(r1 > 0.0)
+      datastore.+(m)
+  
     Seq(m)
   }
 

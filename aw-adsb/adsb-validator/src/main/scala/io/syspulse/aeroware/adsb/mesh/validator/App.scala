@@ -2,9 +2,11 @@ package io.syspulse.aeroware.adsb.mesh.validator
 
 import com.typesafe.scalalogging.Logger
 
+import java.time.Instant
 import scala.concurrent.Awaitable
 import scala.concurrent.Await
 import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
 
 import io.syspulse.skel
@@ -12,7 +14,10 @@ import io.syspulse.skel.config._
 import io.syspulse.skel.util.Util
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Options
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
-import scala.concurrent.duration.Duration
+
+import io.syspulse.aeroware.adsb.mesh.rewards._
+import io.syspulse.aeroware.adsb.mesh.store._
+
 
 case class Config (
   feed:String = "",
@@ -33,6 +38,8 @@ case class Config (
   throttle:Long = 0L,
 
   filter:Seq[String] = Seq.empty,
+
+  datastore:String = "mem",
 
   cmd:String = "",
   params: Seq[String] = Seq(),
@@ -71,9 +78,10 @@ object App extends skel.Server {
 
         ArgString('t', "filter","Filter (ex: 'AN-225')"),
         
-        ArgString('d', "datastore","datastore [elastic,stdout,file] (def: stdout)"),
+        ArgString('d', "datastore","datastore [mem,file] (def: file)"),
         
         ArgCmd("validator","Validator pipeline"),
+        ArgCmd("rewards","Rewards calculations"),
         
         ArgParam("<params>","")
       ).withExit(1)
@@ -106,9 +114,11 @@ object App extends skel.Server {
 
     Console.err.println(s"Config: ${config}")
 
+    val datastore = new DataStoreMem()
+
     config.cmd match {
       case "validator" => {
-        val pp = new PipelineValidator(config.feed,config.output)
+        val pp = new PipelineValidator(config.feed,config.output,datastore)
         val r = pp.run()
         println(s"r=${r}")
         r match {
@@ -123,6 +133,12 @@ object App extends skel.Server {
         sys.exit(0)
       }
 
+      case "rewards" => {
+        val rewards = new RewardADSB()
+        val datastore = new DataStoreMem()
+        val r = rewards.calculate(Instant.now.toEpochMilli(),Instant.now.toEpochMilli(),datastore)
+        Console.println(s"${r}")
+      }
     }
   }
 }
