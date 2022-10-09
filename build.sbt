@@ -170,11 +170,11 @@ lazy val core = (project in file("aw-core"))
       libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(),
 )
 
-lazy val data = (project in file("aw-data"))
+lazy val aircraft = (project in file("aw-aircraft"))
   .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,
-      name := "aw-data",
+      name := "aw-aircraft",
       libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(),
 )
 
@@ -192,7 +192,7 @@ lazy val gamet = (project in file("aw-gamet"))
 )
 
 lazy val adsb_core = (project in file("aw-adsb/adsb-core"))
-  .dependsOn(core,data)
+  .dependsOn(core,aircraft)
   .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,
@@ -220,7 +220,7 @@ lazy val adsb_mesh = (project in file("aw-adsb/adsb-mesh"))
 )
 
 lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
-  .dependsOn(core,data,adsb_core)
+  .dependsOn(core,aircraft,adsb_core)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .settings (    
@@ -244,7 +244,7 @@ lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
   )
 
 lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
-  .dependsOn(core,data,adsb_core,adsb_ingest,adsb_mesh)
+  .dependsOn(core,aircraft,adsb_core,adsb_ingest,adsb_mesh)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .settings (
@@ -270,7 +270,7 @@ lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
   )
 
 lazy val adsb_validator = (project in file("aw-adsb/adsb-validator"))
-  .dependsOn(core,data,adsb_core,adsb_ingest,adsb_mesh)
+  .dependsOn(core,aircraft,adsb_core,adsb_ingest,adsb_mesh)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .settings (
@@ -297,7 +297,7 @@ lazy val adsb_validator = (project in file("aw-adsb/adsb-validator"))
 
 
 lazy val adsb_tools = (project in file("aw-adsb/adsb-tools"))
-  .dependsOn(core, data,adsb_core)
+  .dependsOn(core, aircraft,adsb_core)
   .enablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,
@@ -311,7 +311,7 @@ lazy val adsb_tools = (project in file("aw-adsb/adsb-tools"))
   )
 
 lazy val adsb_live = (project in file("aw-adsb/adsb-live"))
-  .dependsOn(core, data, adsb_core)
+  .dependsOn(core, aircraft, adsb_core)
   .enablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,

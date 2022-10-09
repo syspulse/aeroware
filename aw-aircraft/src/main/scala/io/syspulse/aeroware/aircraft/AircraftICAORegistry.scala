@@ -1,4 +1,4 @@
-package io.syspulse.aeroware.data
+package io.syspulse.aeroware.aircraft.icao
 
 import io.jvm.uuid._
 import com.typesafe.scalalogging.Logger
