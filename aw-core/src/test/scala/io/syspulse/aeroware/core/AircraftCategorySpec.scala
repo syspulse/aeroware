@@ -1,4 +1,4 @@
-package io.syspulse.aeroware.data
+package io.syspulse.aeroware.core
 
 import scala.util._
 
