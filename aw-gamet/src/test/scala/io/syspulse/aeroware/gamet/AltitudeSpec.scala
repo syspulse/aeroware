@@ -16,8 +16,10 @@ import scala.util._
 import scala.io.Source
 
 import fastparse._, NoWhitespace._
+import org.scalactic.TolerantNumerics
 
 class AltitudeSpec extends AnyWordSpec with Matchers {
+  implicit val doubleEquality = TolerantNumerics.tolerantDoubleEquality(0.0001)
   
   val EXAMPLES_DIR = os.Path(this.getClass.getClassLoader.getResource(".").getPath + "/data")
 

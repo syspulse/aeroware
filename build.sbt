@@ -153,8 +153,31 @@ def appAssemblyConfig(appName:String,appMainClass:String) =
 
 // ======================================================================================================================
 lazy val root = (project in file("."))
-  .aggregate(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core, adsb_mesh, adsb_miner, adsb_validator)
-  .dependsOn(core, gamet, adsb_core, adsb_ingest, adsb_tools, adsb_live, gpx_core, adsb_mesh, adsb_miner, adsb_validator)
+  .aggregate(
+    core, 
+    gamet, 
+    metar,
+    adsb_core, 
+    adsb_ingest, 
+    adsb_tools, 
+    adsb_live, 
+    gpx_core, 
+    adsb_mesh, 
+    adsb_miner, 
+    adsb_validator,    
+  )
+  .dependsOn(
+    core, 
+    gamet,
+    metar, 
+    adsb_core, 
+    adsb_ingest, 
+    adsb_tools, 
+    adsb_live, 
+    gpx_core, 
+    adsb_mesh,
+    adsb_miner, 
+    adsb_validator)
   .disablePlugins(sbtassembly.AssemblyPlugin) // this is needed to prevent generating useless assembly and merge error
   .settings(
     
@@ -340,3 +363,16 @@ lazy val gpx_core = (project in file("aw-gpx/gpx-core"))
       libraryDependencies ++= libCommon ++ libTest ++ libXML ++ Seq(        
       ),
   )
+
+lazy val metar = (project in file("aw-metar"))
+  .dependsOn(core)
+  .settings (
+    sharedConfig,
+    sharedConfigAssembly,
+
+    name := "aw-metar",
+    libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
+      libEnumeratum,
+      libFastparseLib 
+    )
+)
