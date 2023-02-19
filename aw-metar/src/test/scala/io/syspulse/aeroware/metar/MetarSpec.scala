@@ -41,6 +41,8 @@ class MetarSpec extends AnyWordSpec with Matchers {
           Metar.Wind(240,7,"KT"),
           None,
           Metar.Visibility(10.0,"SM"),
+          Seq(),
+          Seq(),
           Seq(Metar.Sky("BKN",250)),
           Metar.Temperature(1),
           Metar.Temperature(-4),
@@ -51,17 +53,37 @@ class MetarSpec extends AnyWordSpec with Matchers {
 
     s"decode ICAO METAR:'${METAR_6}" in {
       val g = Metar.decode(METAR_6)
-      g should === (Success(
-        METAR(MetarData("LBBG", ZonedDateTime.parse(s"${Util.tsToStringYearMonth()}-04T16:00:00Z[UTC]"),false,
-          Metar.Wind(120,12,"MPS"),
-          None,
-          Metar.Visibility(1400.0,""),
-          Seq(Metar.Sky("BKN",22)),
-          Metar.Temperature(-4),
-          Metar.Temperature(-7),
-          Metar.Altimiter(1020,"Q"),
-          List("NOSIG 8849//91=")))
-      ))
+      // g should === (Success(
+      //   METAR(MetarData(
+      //     "LBBG", 
+      //     ZonedDateTime.parse(s"${Util.tsToStringYearMonth()}-04T16:00Z[UTC]"),
+      //     false,
+      //     Metar.Wind(120,12,"MPS",Some(90),Some(150)),
+      //     None,
+      //     Metar.Visibility(1400.0,""),
+      //     Seq(Metar.RVR(4,1500,"N"),Metar.RVR(22,1500,"U")),
+      //     Seq(Metar.Weather("+SN")),
+      //     Seq(Metar.Sky("BKN",22),Metar.Sky("OVC",50)),
+      //     Metar.Temperature(-4),
+      //     Metar.Temperature(-7),
+      //     Metar.Altimiter(1020,"Q"),
+      //     List("NOSIG","8849//91=")))
+      // ))
+      val m = g.get.data
+      m.stationId should === ("LBBG")
+      m.ts should === (ZonedDateTime.parse(s"${Util.tsToStringYearMonth()}-04T16:00Z[UTC]"))
+      m.auto should === (false)
+      m.wind should === (Metar.Wind(120,12,"MPS",Some(90),Some(150)))
+      m.windGust should === (None)
+      m.visibility should === (Metar.Visibility(1400.0,""))
+      m.rvr should === (Seq(Metar.RVR(4,1500,"N"),Metar.RVR(22,1500,"U")))
+      m.weather should === (Seq(Metar.Weather("+SN")))
+      m.sky should === (Seq(Metar.Sky("BKN",22),Metar.Sky("OVC",50)))
+      m.temp should === (Metar.Temperature(-4))
+      m.dew should === (Metar.Temperature(-7))
+      m.alt should === (Metar.Altimiter(1020,"Q"))
+      m.data should === (List("NOSIG","8849//91="))
+   
     }
     
   }

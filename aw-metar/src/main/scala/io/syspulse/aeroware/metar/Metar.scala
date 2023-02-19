@@ -35,6 +35,8 @@ case class MetarData(
   wind:Metar.Wind,
   windGust:Option[Metar.Wind],
   visibility:Metar.Visibility,
+  rvr:Seq[Metar.RVR],
+  weather:Seq[Metar.Weather],
   sky:Seq[Metar.Sky],
   temp:Metar.Temperature,
   dew:Metar.Temperature,
@@ -54,7 +56,8 @@ object Metar {
   case class Sky(cloud:String,alt:Int)
   case class Temperature(v:Int)
   case class Altimiter(v:Int,unit:String)
-
+  case class RVR(runway:Int,range:Int,unit:String)
+  case class Weather(w:String)
 
   object Wind {
     def apply(dir:String,speed:String,unit:String,dirVar:Option[(String,String)]):Metar.Wind = 
@@ -122,11 +125,20 @@ object Metar {
   def metarWind[_: P] = metarWindDir ~ metarWindSpeedGust.? ~ metarWindSpeed ~ P("KT" | "MPS").!
   def metarWindVariable[_: P] = metarWindDir ~ "V" ~ metarWindDir
   
-  def metarVisDist[_: P] = P( ("M1/4" | CharIn("0-9").rep(exactly=2)) ).!.map(_.toString)
+  def metarVisDist[_: P] = P( ("M1/4" | CharIn("0-9").rep(min=2,max=5)) ).!.map(_.toString)
   def metarVisibility[_: P] = metarVisDist ~ P("SM" | "").!
 
-  def metarWeatherPhenomenon[_: P] = P( ("+" | "-").? | ("RA" | "SN" | "UP" | "FG" | "FZFG" | "BR" | "HZ" | "SQ" | "FC" | "TS" | "GR" | "GS" | "FZRA" | "VA") ).!.map(_.toString)
-  def metarWeather[_: P] = (metarWeatherPhenomenon).rep(sep = ws, min = 0)
+  // Runway visual Range
+  // R04/P1500N 
+  // R22/P1500U
+  def metarRunway[_: P] = "R" ~ P(CharIn("0-9").rep(exactly=2)).!.map(_.toInt)
+  def metarRunwayRange[_: P] = "P" ~ P(CharIn("0-9").rep(exactly=4)).!.map(_.toInt) ~ P("N" | "U" | "FT").!
+  def metarRVR[_: P] = metarRunway ~ "/" ~ metarRunwayRange
+
+  // +SN
+  def metarWeatherPhenomenon[_: P] = P( ("+" | "-").? ~ ("RA" | "SN" | "UP" | "FG" | "FZFG" | "BR" | "HZ" | "SQ" | "FC" | "TS" | "GR" | "GS" | "FZRA" | "VA") ).!.map(_.toString)
+  //def metarWeather[_: P] = (metarWeatherPhenomenon).rep(sep = ws, min = 0)
+  def metarWeather[_: P] = metarWeatherPhenomenon
 
   //def metarSkyCondition[_: P] = P( (("CLR" | "FEW" | "SCT" | "BKN" | "OVC") ~ CharIn("0-9").rep(exactly=3)) | ("VV") ~ CharIn("0-9").rep(min=1,max=6)).!.map(_.toString)
   def metarSkyConditionCloud[_: P] = P("CLR" | "FEW" | "SCT" | "BKN" | "OVC").!.map(_.toString)
@@ -157,6 +169,8 @@ object Metar {
     ~ (ws ~ metarWindVariable).?
     ~ ws 
     ~ metarVisibility 
+    ~ (ws ~ metarRVR).rep().?
+    ~ (ws ~ metarWeather).rep().?
     ~ ws 
     ~ metarSky
     ~ ws
@@ -175,11 +189,13 @@ object Metar {
         wind = Wind(p._5._1,p._5._3,p._5._4,p._6),
         windGust = p._5._2.map(w => Wind(p._5._1,w,p._5._4,None)),
         visibility = Visibility(p._7._1,p._7._2),
-        sky = p._8.map(sk => Sky(sk._1,sk._2)),
-        temp = Temperature(p._9._1),
-        dew = Temperature(p._9._2),
-        alt = Altimiter(p._10._2,p._10._1),
-        data = p._11.split("\\s+").toList  
+        rvr = p._8.map(_.map(r => RVR(r._1,r._2._1,r._2._2))).getOrElse(Seq()),
+        weather = p._9.map(_.map(w => Weather(w))).getOrElse(Seq()),
+        sky = p._10.map(sk => Sky(sk._1,sk._2)),
+        temp = Temperature(p._11._1),
+        dew = Temperature(p._11._2),
+        alt = Altimiter(p._12._2,p._12._1),
+        data = p._13.split("\\s+").toList  
       )
       p._1 match {
         case "METAR" => METAR(md)
