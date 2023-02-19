@@ -77,7 +77,7 @@ class MetarSpec extends AnyWordSpec with Matchers {
       m.windGust should === (None)
       m.visibility should === (Metar.Visibility(1400.0,""))
       m.rvr should === (Seq(Metar.RVR(4,1500,"N"),Metar.RVR(22,1500,"U")))
-      m.weather should === (Seq(Metar.Weather("+SN")))
+      m.weather should === (Seq(Metar.Weather("SN",Some("+"))))
       m.sky should === (Seq(Metar.Sky("BKN",Some(22)),Metar.Sky("OVC",Some(50))))
       m.temp should === (Metar.Temperature(-4))
       m.dew should === (Metar.Temperature(-7))

@@ -53,11 +53,76 @@ object Metar {
 
   case class Wind(dir:Int,speed:Int,unit:String,dirVar1:Option[Int] = None,dirVar2:Option[Int] = None)
   case class Visibility(dist:Double,unit:String)
-  case class Sky(cloud:String,alt:Option[Int])
+  case class Sky(cloud:String,alt:Option[Int]) {
+    def toText() =  {
+      val intensity = cloud.headOption
+      cloud match {
+        case "SKC" => "No cloud/Sky clear"
+        case "NCD" => "Nil Cloud detected"
+        case "NSC" => "No (nil) significant cloud (none below 5,000 ft (1,500 m) and no TCU or CB)"
+        case "CLR" => "no clouds detected below 12000 feet"
+        case "FEW" => "few"
+        case "SCT" => "scattered"
+        case "BKN" => "broken"
+        case "OVC" => "overcast"
+        case "TCU" => "Towering cumulus cloud"
+        case "CB" => "Cumulonimbus cloud"
+        case "VV" => "vertical visibility"
+        case _ => cloud
+      }
+      cloud
+    }
+  }
   case class Temperature(v:Int)
   case class Altimiter(v:Int,unit:String)
   case class RVR(runway:Int,range:Int,unit:String)
-  case class Weather(w:String)
+  case class Weather(w:String,intensity:Option[String] = None) {
+    def toText() =  {      
+      val itxt = intensity match {
+        case Some("+") => "Heavy intensity"
+        case Some("-") => "Light intensity"
+        case _ => "Moderate intensity"
+      }
+      val wtxt = w match {
+        case "RA" => "rain"
+        case "SN" => "snow" 
+        case "UP" => "precipitation of unknown type"
+        case "FG" => "fog"
+        case "FZFG" => "freezing fog (temperature below 0°C)"
+        case "BR" => "mist"
+        case "HZ" => "haze"
+        case "SQ" => "squall"
+        case "FC" => "funnel cloud/tornado/waterspout)"
+        case "TS" => "thunderstorm"
+        case "GR" =>  "hail"
+        case "GS" => "small hail; <1/4 inch (graupel)"
+        case "FZRA" => "freezing rain"
+        case "VA" => "volcanic ash"
+
+        case "PR" => "partial (fog)"
+        case "BC" => "patches"
+        case "DZ" => "drizzle"
+        case "DR" => "low drifting below eye level"
+        case "BL" => "blowing at or above eye level;"
+        case "SH" => "showers"
+        case "SG" => "snow grains"
+        case "PL" => "ice pellets"
+        case "IC" => "ice crystals"
+        case "DU" => "widespread dust"
+        case "FU" => "smoke"
+        case "SA" => "sand"
+        case "PY" => "spray"
+        case "PO" => "dust"
+        case "DS" => "dust storm"
+        case "SS" => "sand strom"
+        case "FC" => "funnel storm"
+
+        case _ => w
+      }
+
+      s"${itxt} ${wtxt}"
+    }
+  }
 
   object Wind {
     def apply(dir:String,speed:String,unit:String,dirVar:Option[(String,String)]):Metar.Wind = 
@@ -136,7 +201,9 @@ object Metar {
   def metarRVR[_: P] = metarRunway ~ "/" ~ metarRunwayRange
 
   // +SN
-  def metarWeatherPhenomenon[_: P] = P( ("+" | "-").? ~ ("RA" | "SN" | "UP" | "FG" | "FZFG" | "BR" | "HZ" | "SQ" | "FC" | "TS" | "GR" | "GS" | "FZRA" | "VA") ).!.map(_.toString)
+  //def metarWeatherPhenomenon[_: P] = P( ("+" | "-").? ~ ("RA" | "SN" | "UP" | "FG" | "FZFG" | "BR" | "HZ" | "SQ" | "FC" | "TS" | "GR" | "GS" | "FZRA" | "VA") ).!.map(_.toString)
+  def metarWeatherPhenomenonIntensity[_: P] = ("+" | "-").!
+  def metarWeatherPhenomenon[_: P] = metarWeatherPhenomenonIntensity.? ~ P( ("RA" | "SN" | "UP" | "FG" | "FZFG" | "BR" | "HZ" | "SQ" | "FC" | "TS" | "GR" | "GS" | "FZRA" | "VA") ).!.map(_.toString)  
   //def metarWeather[_: P] = (metarWeatherPhenomenon).rep(sep = ws, min = 0)
   def metarWeather[_: P] = metarWeatherPhenomenon
 
@@ -190,7 +257,7 @@ object Metar {
         windGust = p._5._2.map(w => Wind(p._5._1,w,p._5._4,None)),
         visibility = Visibility(p._7._1,p._7._2),
         rvr = p._8.map(_.map(r => RVR(r._1,r._2._1,r._2._2))).getOrElse(Seq()),
-        weather = p._9.map(_.map(w => Weather(w))).getOrElse(Seq()),
+        weather = p._9.map(_.map(w => Weather(w._2,w._1))).getOrElse(Seq()),
         sky = p._10.map(sk => Sky(sk._1,sk._2)),
         temp = Temperature(p._11._1),
         dew = Temperature(p._11._2),
