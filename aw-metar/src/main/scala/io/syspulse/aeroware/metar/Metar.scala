@@ -92,7 +92,7 @@ object Metar {
         case "BR" => "mist"
         case "HZ" => "haze"
         case "SQ" => "squall"
-        case "FC" => "funnel cloud/tornado/waterspout)"
+        case "FC" => "funnel cloud/tornado/waterspout"
         case "TS" => "thunderstorm"
         case "GR" =>  "hail"
         case "GS" => "small hail; <1/4 inch (graupel)"
@@ -115,8 +115,7 @@ object Metar {
         case "PO" => "dust"
         case "DS" => "dust storm"
         case "SS" => "sand strom"
-        case "FC" => "funnel storm"
-
+        
         case _ => w
       }
 
@@ -213,7 +212,8 @@ object Metar {
   def metarSkyConditionVV[_: P] = P("VV").!.map(_.toString)
   def metarSkyConditionVVAlt[_: P] = P(CharIn("0-9").rep(min=1,max=6)).!.map(_.toInt)
   def metarSkyCondition[_: P] = (metarSkyConditionCloud ~ metarSkyConditionCloudAlt.?) | (metarSkyConditionVV ~ metarSkyConditionVVAlt.?)
-  def metarSky[_: P] = (metarSkyCondition).rep(sep = ws, min = 0)
+  //def metarSky[_: P] = (metarSkyCondition).rep(sep = ws, min = 0)
+  def metarSky[_: P] = metarSkyCondition
 
   def metarTempMinus[_: P] = "M".!.map(_ => -1)
   def metarTempValue[_: P] = P(CharIn("0-9").rep(exactly=2)).!.map(_.toInt)
@@ -238,8 +238,7 @@ object Metar {
     ~ metarVisibility 
     ~ (ws ~ metarRVR).rep().?
     ~ (ws ~ metarWeather).rep().?
-    ~ ws 
-    ~ metarSky
+    ~ (ws ~ metarSky).rep().?
     ~ ws
     ~ metarTemperatureDew
     ~ ws
@@ -258,7 +257,7 @@ object Metar {
         visibility = Visibility(p._7._1,p._7._2),
         rvr = p._8.map(_.map(r => RVR(r._1,r._2._1,r._2._2))).getOrElse(Seq()),
         weather = p._9.map(_.map(w => Weather(w._2,w._1))).getOrElse(Seq()),
-        sky = p._10.map(sk => Sky(sk._1,sk._2)),
+        sky = p._10.map(_.map(sk => Sky(sk._1,sk._2))).getOrElse(Seq()),
         temp = Temperature(p._11._1),
         dew = Temperature(p._11._2),
         alt = Altimiter(p._12._2,p._12._1),
@@ -270,9 +269,16 @@ object Metar {
       }          
   })
 
+  def clean(data:String) =  
+    data
+      .replaceAll(" (//)+"," ")
+      .replaceAll("\\s+"," ")
+
   def decode(data:String): Try[METAR] = {
     log.debug(s"data='${data}'")
-    val metar = parse(data, Metar.metarParser(_))
+    val data1 = clean(data)
+    println(s"data1='${data1}")
+    val metar = parse(data1, Metar.metarParser(_))
     metar match {
       case Parsed.Success(v, index) => 
         Success(v.asInstanceOf[METAR])

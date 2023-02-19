@@ -31,7 +31,9 @@ class MetarSpec extends AnyWordSpec with Matchers {
   // US
   val METAR_1 = "METAR KJFK 190851Z 24007KT          10SM                           BKN250 01/M04         A3038 RMK AO2 SLP288 T00111039 50000"
   // ICAO
-  val METAR_6 = "METAR LBBG 041600Z 12012MPS 090V150 1400 R04/P1500N R22/P1500U +SN BKN022 OVC050 M04/M07 Q1020 NOSIG 8849//91="
+   val METAR_6 = "METAR LBBG 041600Z 12012MPS 090V150 1400 R04/P1500N R22/P1500U +SN BKN022 OVC050 M04/M07 Q1020 NOSIG 8849//91="
+// val METAR_7 = "METAR ETSI 191720Z AUTO 28015KT     3700 //         //         //  //            09/03   Q1025 ///"
+  val METAR_7 = "METAR ETSI 191720Z AUTO 28015KT 3700 // ////// 09/03 Q1025 ///"
 
   "Metar" should {
     s"decode US METAR:'${METAR_1}" in {
@@ -105,6 +107,12 @@ class MetarSpec extends AnyWordSpec with Matchers {
 
     s"decode US METAR:'${METAR_5}" in {
       val g = Metar.decode(METAR_5)
+      g shouldBe a[Success[_]]
+      info(s"${g}")      
+    }
+
+    s"decode Europe METAR:'${METAR_7}" in {
+      val g = Metar.decode(METAR_7)
       g shouldBe a[Success[_]]
       info(s"${g}")      
     }
