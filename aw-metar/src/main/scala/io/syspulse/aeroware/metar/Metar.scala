@@ -53,7 +53,7 @@ object Metar {
 
   case class Wind(dir:Int,speed:Int,unit:String,dirVar1:Option[Int] = None,dirVar2:Option[Int] = None)
   case class Visibility(dist:Double,unit:String)
-  case class Sky(cloud:String,alt:Int)
+  case class Sky(cloud:String,alt:Option[Int])
   case class Temperature(v:Int)
   case class Altimiter(v:Int,unit:String)
   case class RVR(runway:Int,range:Int,unit:String)
@@ -69,11 +69,11 @@ object Metar {
   }
 
   object Sky {
-    def apply(code:String):Metar.Sky = code match {
+    def apply(code:String,alt:Option[Int]):Metar.Sky = code match {
       case c if c.startsWith("BKN") =>
-        new Metar.Sky(c,0)
+        new Metar.Sky(c,alt)
       case _ => 
-        new Metar.Sky(code,0)
+        new Metar.Sky(code,alt)
     }      
   }
 
@@ -125,7 +125,7 @@ object Metar {
   def metarWind[_: P] = metarWindDir ~ metarWindSpeedGust.? ~ metarWindSpeed ~ P("KT" | "MPS").!
   def metarWindVariable[_: P] = metarWindDir ~ "V" ~ metarWindDir
   
-  def metarVisDist[_: P] = P( ("M1/4" | CharIn("0-9").rep(min=2,max=5)) ).!.map(_.toString)
+  def metarVisDist[_: P] = P( ("M1/4" | CharIn("0-9").rep(min=1,max=6)) ).!.map(_.toString)
   def metarVisibility[_: P] = metarVisDist ~ P("SM" | "").!
 
   // Runway visual Range
@@ -145,7 +145,7 @@ object Metar {
   def metarSkyConditionCloudAlt[_: P] = P(CharIn("0-9").rep(exactly=3)).!.map(_.toInt)
   def metarSkyConditionVV[_: P] = P("VV").!.map(_.toString)
   def metarSkyConditionVVAlt[_: P] = P(CharIn("0-9").rep(min=1,max=6)).!.map(_.toInt)
-  def metarSkyCondition[_: P] = (metarSkyConditionCloud ~ metarSkyConditionCloudAlt) | (metarSkyConditionVV ~ metarSkyConditionVVAlt)
+  def metarSkyCondition[_: P] = (metarSkyConditionCloud ~ metarSkyConditionCloudAlt.?) | (metarSkyConditionVV ~ metarSkyConditionVVAlt.?)
   def metarSky[_: P] = (metarSkyCondition).rep(sep = ws, min = 0)
 
   def metarTempMinus[_: P] = "M".!.map(_ => -1)

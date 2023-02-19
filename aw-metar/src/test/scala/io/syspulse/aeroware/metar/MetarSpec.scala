@@ -43,7 +43,7 @@ class MetarSpec extends AnyWordSpec with Matchers {
           Metar.Visibility(10.0,"SM"),
           Seq(),
           Seq(),
-          Seq(Metar.Sky("BKN",250)),
+          Seq(Metar.Sky("BKN",Some(250))),
           Metar.Temperature(1),
           Metar.Temperature(-4),
           Metar.Altimiter(3038,"A"),
@@ -78,12 +78,35 @@ class MetarSpec extends AnyWordSpec with Matchers {
       m.visibility should === (Metar.Visibility(1400.0,""))
       m.rvr should === (Seq(Metar.RVR(4,1500,"N"),Metar.RVR(22,1500,"U")))
       m.weather should === (Seq(Metar.Weather("+SN")))
-      m.sky should === (Seq(Metar.Sky("BKN",22),Metar.Sky("OVC",50)))
+      m.sky should === (Seq(Metar.Sky("BKN",Some(22)),Metar.Sky("OVC",Some(50))))
       m.temp should === (Metar.Temperature(-4))
       m.dew should === (Metar.Temperature(-7))
       m.alt should === (Metar.Altimiter(1020,"Q"))
       m.data should === (List("NOSIG","8849//91="))
    
+    }
+
+    s"decode US METAR:'${METAR_2}" in {
+      val g = Metar.decode(METAR_2)
+      info(s"${g}")      
+    }
+
+    s"decode US METAR:'${METAR_3}" in {
+      val g = Metar.decode(METAR_3)
+      g shouldBe a[Success[_]]
+      info(s"${g}")      
+    }
+
+    s"decode US METAR:'${METAR_4}" in {
+      val g = Metar.decode(METAR_4)
+      g shouldBe a[Success[_]]
+      info(s"${g}")      
+    }
+
+    s"decode US METAR:'${METAR_5}" in {
+      val g = Metar.decode(METAR_5)
+      g shouldBe a[Success[_]]
+      info(s"${g}")      
     }
     
   }
