@@ -2,13 +2,15 @@ package io.syspulse.aeroware.core
 
 import scala.util._
 
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.wordspec.{ AnyWordSpec}
+import org.scalatest.matchers.should.{ Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
 
 import java.time._
 import io.jvm.uuid._
 import io.syspulse.skel.util.Util
 
-class AircraftCategorySpec extends WordSpec with Matchers {
+class AircraftCategorySpec extends AnyWordSpec with Matchers {
 
   val id1 = "4840d6"
     

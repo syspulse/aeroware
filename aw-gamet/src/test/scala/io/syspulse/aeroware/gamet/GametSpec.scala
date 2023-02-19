@@ -1,6 +1,8 @@
 package io.syspulse.aeroware.gamet
 
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.wordspec.{ AnyWordSpec}
+import org.scalatest.matchers.should.{ Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
 
 import java.time._
 import java.time.format._
@@ -17,7 +19,7 @@ import scala.io.Source
 
 import fastparse._, NoWhitespace._
 
-class GametSpec extends WordSpec with Matchers {
+class GametSpec extends AnyWordSpec with Matchers {
   
   val GAMET_EXAMPLES_DIR = os.Path(this.getClass.getClassLoader.getResource(".").getPath + "/data")
 
@@ -134,37 +136,37 @@ CHECK GAFOR (VIS AND CLD BASE), AIRMET AND SIGMET-INFORMATION="""
     }
   }
 
-  // "Line2" should {
-  //   val gamet1 = "EDMM MUNCHEN FIR BLW FL150"
-  //   s"parse '${gamet1}'" in {
-  //     val p = parse(gamet1, Gamet.line2Parser(_))
-  //     p should === (Parsed.Success(Gamet.Line2(Some("EDMM"),FIR("MUNCHEN",None),Some(FL(150))), gamet1.size))
-  //   }
+  "Line2" should {
+    val gamet1 = "EDMM MUNCHEN FIR BLW FL150"
+    s"decode '${gamet1}'" in {
+      val p = Gamet.decodeLine2(gamet1)
+      p should === (Success(Gamet.Line2(Some("EDMM"),FIR("MUNCHEN",None),Some(FL(150)))))
+    }
 
-  //   val gamet2 = "UKBV KYIV FIR"
-  //   s"parse '${gamet2}'" in {
-  //     val p = parse(gamet2, Gamet.line2Parser(_))
-  //     p should === (Parsed.Success(Gamet.Line2(Some("UKBV"),FIR("KYIV",None),None), gamet2.size))
-  //   }
+    val gamet2 = "UKBV KYIV FIR"
+    s"decode '${gamet2}'" in {
+      val p = Gamet.decodeLine2(gamet2)
+      p should === (Success(Gamet.Line2(Some("UKBV"),FIR("KYIV",None),None)))
+    }
 
-  //   val gamet3 = "PRAHA FIR BLW FL100"
-  //   s"parse '${gamet3}'" in {
-  //     val p = parse(gamet3, Gamet.line2Parser(_))
-  //     p should === (Parsed.Success(Gamet.Line2(None,FIR("PRAHA",None),Some(FL(100))), gamet3.size))
-  //   }
+    val gamet3 = "PRAHA FIR BLW FL100"
+    s"decode '${gamet3}'" in {
+      val p = Gamet.decodeLine2(gamet3)
+      p should === (Success(Gamet.Line2(None,FIR("PRAHA",None),Some(FL(100)))))
+    }
 
-  //   val gamet4 = "LOVV WIEN FIR / DANUBE AREA BLW FL200"
-  //   s"parse '${gamet4}'" in {
-  //     val p = parse(gamet4, Gamet.line2Parser(_))
-  //     p should === (Parsed.Success(Gamet.Line2(Some("LOVV"),FIR("WIEN",Some("DANUBE AREA")),Some(FL(200))), gamet4.size))
-  //   }
+    val gamet4 = "LOVV WIEN FIR / DANUBE AREA BLW FL200"
+    s"decode '${gamet4}'" in {
+      val p = Gamet.decodeLine2(gamet4)
+      p should === (Success(Gamet.Line2(Some("LOVV"),FIR("WIEN",Some("DANUBE AREA")),Some(FL(200)))))
+    }
 
-  //   val gamet5 = "LOVV WIEN FIR / ALPS SOUTH SIDE BLW FL200"
-  //   s"parse '${gamet5}'" in {
-  //     val p = parse(gamet5, Gamet.line2Parser(_))
-  //     p should === (Parsed.Success(Gamet.Line2(Some("LOVV"),FIR("WIEN",Some("ALPS SOUTH SIDE")),Some(FL(200))), gamet5.size))
-  //   }
-  // }
+    val gamet5 = "LOVV WIEN FIR / ALPS SOUTH SIDE BLW FL200"
+    s"decode '${gamet5}'" in {
+      val p = Gamet.decodeLine2(gamet5)
+      p should === (Success(Gamet.Line2(Some("LOVV"),FIR("WIEN",Some("ALPS SOUTH SIDE")),Some(FL(200)))))
+    }
+  }
 
   "Line2" should {
     val gamet1 = "EDMM MUNCHEN FIR BLW FL150"
@@ -199,11 +201,11 @@ CHECK GAFOR (VIS AND CLD BASE), AIRMET AND SIGMET-INFORMATION="""
   }
 
   "Gamet" should {
-    // "not parse Gamet Message 2" in {
-    //   val g = Gamet.decode(GAMET_EXAMPLE_FAIL_2)
-    //   g.isFailure should === (true)
-    //   info(g.toString)
-    // }
+    "not parse Gamet Message 2" in {
+      val g = Gamet.decode(GAMET_EXAMPLE_FAIL_2)
+      g.isFailure should === (true)
+      info(g.toString)
+    }
 
     "parse Gamet Message 1 Header, Line1, Line2" in {
       val g = Gamet.decode(GAMET_EXAMPLE_1)

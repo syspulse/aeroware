@@ -1,6 +1,8 @@
 package io.syspulse.aeroware.gamet
 
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.wordspec.{ AnyWordSpec}
+import org.scalatest.matchers.should.{ Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
 
 import java.time._
 import java.time.format._
@@ -15,7 +17,7 @@ import scala.io.Source
 
 import fastparse._, NoWhitespace._
 
-class AltitudeSpec extends WordSpec with Matchers {
+class AltitudeSpec extends AnyWordSpec with Matchers {
   
   val EXAMPLES_DIR = os.Path(this.getClass.getClassLoader.getResource(".").getPath + "/data")
 

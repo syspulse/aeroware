@@ -2,13 +2,15 @@ package io.syspulse.aeroware.core
 
 import scala.util._
 
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.wordspec.{ AnyWordSpec}
+import org.scalatest.matchers.should.{ Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
 
 import java.time._
 import io.jvm.uuid._
 import io.syspulse.skel.util.Util
 
-class VRateSpec extends WordSpec with Matchers {
+class VRateSpec extends AnyWordSpec with Matchers {
 
   val v01 = VRate(0,Units.FPM)
   val v02 = VRate(0,Units.MPS)

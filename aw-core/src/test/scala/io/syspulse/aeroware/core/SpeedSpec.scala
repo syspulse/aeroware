@@ -2,13 +2,15 @@ package io.syspulse.aeroware.core
 
 import scala.util._
 
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.wordspec.{ AnyWordSpec}
+import org.scalatest.matchers.should.{ Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
 
 import java.time._
 import io.jvm.uuid._
 import io.syspulse.skel.util.Util
 
-class SpeedSpec extends WordSpec with Matchers {
+class SpeedSpec extends AnyWordSpec with Matchers {
 
   val v01 = Speed(0,Units.KNOTS)
   val v02 = Speed(0,Units.KPH)
