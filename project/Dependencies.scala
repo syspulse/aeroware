@@ -19,8 +19,8 @@ object Dependencies {
 
     lazy val dispatchVersion = "1.2.0" //"1.1.3"
     
-    lazy val skelVersion = "0.0.5"
-    lazy val appVersion = "0.0.2"
+    lazy val skelVersion = "0.0.6"
+    lazy val awVersion = "0.0.2"
     lazy val jarPrefix = "server-"
     
     lazy val appDockerRoot = "/app"

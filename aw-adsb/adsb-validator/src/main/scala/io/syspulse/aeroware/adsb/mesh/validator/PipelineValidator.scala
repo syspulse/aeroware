@@ -180,7 +180,7 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
             .toMat(BroadcastHub.sink)(Keep.both)
             .run()
 
-          val subscribed = Promise[Done]
+          val subscribed = Promise[Done]()
           source
             .map(r => {
               log.debug(s"${r} -> MQTT(${mqttHost}:${mqttPort})")
@@ -244,7 +244,7 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
     }
   }
 
-  override def processing = Flow[MSG_MinerData].map( m => m)
+  override def process = Flow[MSG_MinerData].map( m => m)
 
   def parse(data:String):Seq[MSG_MinerData] = {    
     log.debug(s"data: ${data}")

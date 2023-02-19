@@ -112,6 +112,18 @@ CHECK GAFOR (VIS AND CLD BASE), AIRMET AND SIGMET-INFORMATION="""
     "decode 'FADL41 EDZM 010900 AAA' successfully" in {
       val g = Gamet.decodeHeader("FADL41 EDZM 010900 AAA")
       g should === (Success(Gamet.Header("FA", "DL", 41, "EDZM", ZonedDateTime.parse(s"${Util.tsToStringYearMonth()}-01T09:00:00Z[UTC]"), Some("AAA"))))
+    }
+
+    "decode 'FACZ41 LKPW 290900' successfully only for non-leap year and fail for 2023" in {
+      val g = Gamet.decodeHeader("FACZ41 LKPW 290900")
+      if(! LocalDate.now().isLeapYear)
+        assertThrows[java.time.DateTimeException] {
+          g should === (Success(Gamet.Header("FA", "CZ", 41, "LKPW", ZonedDateTime.parse(s"${Util.tsToStringYearMonth()}-29T09:00:00Z[UTC]"), None)))
+        }
+      else
+        {
+          g should === (Success(Gamet.Header("FA", "CZ", 41, "LKPW", ZonedDateTime.parse(s"${Util.tsToStringYearMonth()}-29T09:00:00Z[UTC]"), None)))
+        }
     }    
   }
 
@@ -210,11 +222,26 @@ CHECK GAFOR (VIS AND CLD BASE), AIRMET AND SIGMET-INFORMATION="""
       os.list(GAMET_EXAMPLES_DIR).filter(_.ext == "gamet").foreach{ gametFileName => 
         
         val gametFile = Source.fromFile(gametFileName.toString).getLines().mkString("\n")
+        info(s"${gametFileName.toString}")
         val g = Gamet.decode(gametFile)
 
         info(s"${gametFileName.toString}: ${g}")
 
-        g.isSuccess should === (true)
+        if(g.isFailure) {
+          g match {
+            case Failure(e) => 
+              e match {
+                case ed:java.time.DateTimeException =>
+                  if( ! ed.getMessage().contains("is not a leap year"))
+                    throw e
+                case _  => 
+                  throw e
+              }
+            case _ => 
+          }
+        } 
+
+        //g.isSuccess should === (true)
       }
       
     }

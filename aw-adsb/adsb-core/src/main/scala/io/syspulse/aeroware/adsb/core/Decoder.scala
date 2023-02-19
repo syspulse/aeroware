@@ -31,8 +31,7 @@ import io.syspulse.aeroware.adsb.util._
 import io.syspulse.aeroware.core._
 import io.syspulse.aeroware.core.Units
 import io.syspulse.aeroware.data._
-
-import javax.ws.rs.container.Suspended
+import io.syspulse.aeroware.aircraft.icao.AircraftICAORegistry
 
 case class RawALT(a1:BitVector,Q:BitVector,a2:BitVector) {
   override def toString = {

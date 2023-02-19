@@ -195,7 +195,7 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config,fmt:JsonFo
   })
 
 
-  override def processing:Flow[ADSB,MSG_MinerData,_] = 
+  override def process:Flow[ADSB,MSG_MinerData,_] = 
     Flow[ADSB]
       .groupedWithin(config.batchSize, FiniteDuration(config.batchWindow,TimeUnit.MILLISECONDS))
       .via(signer)

@@ -80,9 +80,9 @@ val sharedConfigDocker = Seq(
 val sharedConfig = Seq(
     //retrieveManaged := true,  
     organization    := "io.syspulse",
-    scalaVersion    := "2.13.6",
+    scalaVersion    := "2.13.9",
     name            := "aeroware",
-    version         := appVersion,
+    version         := awVersion,
 
     scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-language:existentials", "-language:implicitConversions", "-language:higherKinds", "-language:reflectiveCalls", "-language:postfixOps"),
     javacOptions ++= Seq("-target", "1.8", "-source", "1.8"),
@@ -134,7 +134,7 @@ def appDockerConfig(appName:String,appMainClass:String) =
     run / mainClass := Some(appMainClass),
     assembly / mainClass := Some(appMainClass),
     Compile / mainClass := Some(appMainClass), // <-- This is very important for DockerPlugin generated stage1 script!
-    assembly / assemblyJarName := jarPrefix + appName + "-" + "assembly" + "-"+  appVersion + ".jar",
+    assembly / assemblyJarName := jarPrefix + appName + "-" + "assembly" + "-"+  awVersion + ".jar",
 
     Universal / mappings += file(baseDirectory.value.getAbsolutePath+"/conf/application.conf") -> "conf/application.conf",
     Universal / mappings += file(baseDirectory.value.getAbsolutePath+"/conf/logback.xml") -> "conf/logback.xml",
@@ -148,7 +148,7 @@ def appAssemblyConfig(appName:String,appMainClass:String) =
     run / mainClass := Some(appMainClass),
     assembly / mainClass := Some(appMainClass),
     Compile / mainClass := Some(appMainClass),
-    assembly / assemblyJarName := jarPrefix + appName + "-" + "assembly" + "-"+  appVersion + ".jar",
+    assembly / assemblyJarName := jarPrefix + appName + "-" + "assembly" + "-"+  awVersion + ".jar",
   )
 
 // ======================================================================================================================
