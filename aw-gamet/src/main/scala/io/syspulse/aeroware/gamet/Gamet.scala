@@ -19,10 +19,17 @@ object Gamet {
 
   type ICAO = String
   val utc = ZoneId.of("UTC");
-  def tsz(m:Int,hh:Int,mm:Int,ss:Int=0,msec:Int=0) = { 
+
+  // parsing old messages may fail here since no Year information is preserved
+  // 290900 -> this will fail for 2023 because it does not have 29-Feb
+  def tsz(d:Int,hh:Int,mm:Int,ss:Int=0,msec:Int=0) = { 
+    log.debug(s"tsz=${d}/${hh}::${mm}::${ss}.${msec}")
     val now=OffsetDateTime.now(ZoneOffset.UTC); 
+    
     ZonedDateTime.of(
-      now.getYear, now.getMonth.getValue, m, 
+      now.getYear, 
+      now.getMonth.getValue, 
+      d, 
       hh,mm, 
       if(ss == 0) 0 else now.getSecond,
       if(msec == 0) 0 else now.getNano,
@@ -33,10 +40,12 @@ object Gamet {
   def pws[_: P] = P( " ".rep(0) )
 
   def timeMonth[_: P] = P( CharIn("0-9").rep(exactly=2)).!.map(_.toInt)
-  def timeMM[_: P] = P( CharIn("0-9").rep(exactly=2)).!.map(_.toInt)
+  def timeDay[_: P] = P( CharIn("0-9").rep(exactly=2)).!.map(_.toInt)
   def timeHH[_: P] = P( CharIn("0-9").rep(exactly=2)).!.map(_.toInt)
+  def timeMM[_: P] = P( CharIn("0-9").rep(exactly=2)).!.map(_.toInt)  
   //def time[_: P]:P[ZonedDateTime] = P( timeMonth ~ timeHH ~ timeMM ~ "Z").map( t => tsz(t._1,t._2,t._3))
-  def time[_: P]:P[ZonedDateTime] = P( timeMonth ~ timeHH ~ timeMM).map( t => tsz(t._1,t._2,t._3))
+  //def time[_: P]:P[ZonedDateTime] = P( timeMonth ~ timeHH ~ timeMM).map( t => tsz(t._1,t._2,t._3))
+  def time[_: P]:P[ZonedDateTime] = P( timeDay ~ timeHH ~ timeMM).map( t => tsz(t._1,t._2,t._3))
 
 
   case class Header(dataType:String,territory:String,number:Int,source:ICAO,ts:ZonedDateTime,correction:Option[String])
@@ -172,15 +181,23 @@ object Gamet {
   )
 
   def decodeHeader(data:String): Try[Header] = {
-    log.debug(s"data: '${data}'")
-    val header = parse(data.trim, headerParser(_))
-    header.fold( (s,i,extra)=>Failure(new Exception(s"${s}: pos=${i}: ${extra.input}")), (h,i) => Success(h))
+    log.debug(s"header: '${data}'")
+    val header = Try {
+      parse(data.trim, headerParser(_))
+    }
+    header.flatMap(header => {
+      header.fold( (s,i,extra)=>Failure(new Exception(s"${s}: pos=${i}: ${extra.input}")), (h,i) => Success(h))
+    })
   }
 
   def decodeLine1(data:String): Try[Line1] = {
-    log.debug(s"data: '${data}'")
-    val line1 = parse(data.trim, line1Parser(_))
-    line1.fold( (s,i,extra)=>Failure(new Exception(s"${s}: pos=${i}: ${extra.input}")), (h,i) => Success(h))
+    log.debug(s"line1: '${data}'")
+    val line1 = Try {
+      parse(data.trim, line1Parser(_))
+    }
+    line1.flatMap(line1 => {
+      line1.fold( (s,i,extra)=>Failure(new Exception(s"${s}: pos=${i}: ${extra.input}")), (h,i) => Success(h))
+    })
   }
 
   def decode(data:String): Try[GAMET] = {

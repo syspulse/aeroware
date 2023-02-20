@@ -2,13 +2,15 @@ package io.syspulse.aeroware.core
 
 import scala.util._
 
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.wordspec.{ AnyWordSpec}
+import org.scalatest.matchers.should.{ Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
 
 import java.time._
 import io.jvm.uuid._
 import io.syspulse.skel.util.Util
 
-class LocationSpec extends WordSpec with Matchers {
+class LocationSpec extends AnyWordSpec with Matchers {
 
   val l0 = Location(0,0,Altitude(0,Units.METERS))
 

@@ -2,11 +2,15 @@
 
 Aviation Platform Research
 
-1. [__aw-core__](aw-core)   - Core Entities and Objects
-2. [__aw-data__](aw-data)   - Datasets (ICAO Aircrafts DB,...)
-3. [__aw-gamet__](aw-gamet) - GAMET tools
-4. [__aw-adsb__](aw-adsb) - ADS-B parser and ingest
-5. [__aw-gpx__](aw-gpx) - GPX tools
+1. [__aw-core__](aw-core)               - Core Entities and Objects
+2. [__aw-aircraft__](aw-aircraft)       - Aircraft (icao spec)
+3. [__aw-gamet__](aw-gamet)             - GAMET tools
+4. [__aw-adsb__](aw-adsb)               - ADS-B parser and ingest
+5. [__aw-gpx__](aw-gpx)                 - GPX tools
+6. [__aw-nft__](aw-nft)                 - Experiments with NFT as Aeroware entity (Plane, License)
+7. [__aw-geo__](aw-geo)                 - Geo snippets
+
+8. [__aw-lake__](aw-lake)               - Datasets (ICAO Aircrafts DB,...)
 
 ----
 
