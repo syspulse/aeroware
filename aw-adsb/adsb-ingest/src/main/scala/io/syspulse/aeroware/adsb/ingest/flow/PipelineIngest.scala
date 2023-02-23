@@ -43,8 +43,8 @@ abstract class PipelineIngest[T](feed:String,output:String)(implicit config:Conf
 
   protected val log = Logger(s"${this}")
 
-  val connectTimeout = 1000L
-  val idleTimeout = 1000L
+  val connectTimeout = config.timeoutConnect//1000L
+  val idleTimeout = config.timeoutIdle //1000L
   
   def filter:Seq[String] = config.filter
 

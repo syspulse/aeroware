@@ -15,53 +15,67 @@ import io.syspulse.skel.config._
 import io.syspulse.aeroware.adsb.ingest.flow.{ PipelineADSB, PipelineDump1090}
 
 case class Config(  
+  host:String="0.0.0.0",
+  port:Int=8080,
+  uri:String = "/api/v1/adsb",
+
+  feed:String = "dump1090://rp-1:30002",
+  output:String = "stdout://",
   
-  feed:String = "",
-  output:String = "",
-  
-  limit:Long = 0L,
-  freq: Long = 0L,
+  limit:Long = -1,
   delimiter:String = "",
-  buffer:Int = 0,
+  buffer:Int = 1024*1024,
   throttle:Long = 0L,
   
-  entity:String = "",
+  entity:String = "dump1090",
   filter:Seq[String] = Seq(),
-  format:String = "",
+  format:String = "dump1090",
+
+  timeoutConnect:Long = 3000L,
+  timeoutIdle:Long = 1000 * 60 * 60 * 24L,
     
   datastore:String = "",
 
-  cmd:String = "",
-  params: Seq[String] = Seq(),
-  sinks:Seq[String] = Seq()
+  cmd:String = "ingest",
+  params: Seq[String] = Seq(),  
 )
 
 object App {
   
   def main(args:Array[String]):Unit = {
-    Console.err.println(s"args: '${args.mkString(",")}'")
+    Console.err.println(s"args: ${args.size}: ${args.toSeq}")
 
+    val d = Config()
     val c = Configuration.withPriority(Seq(
       new ConfigurationAkka,
       new ConfigurationProp,
       new ConfigurationEnv, 
       new ConfigurationArgs(args,"adsb-ingest","",
-                
-        ArgString('f', "feed","Input Feed (dump1090://host:port, file://, kafka://, (def: stdin://) )"),
-        ArgString('o', "output","Output file (pattern is supported: data-{yyyy-MM-dd-HH-mm}.log)"),
-        ArgString('e', "entity","Ingest entity format: (adsb,dump1090) (def: dump1090)"),
-        
-        ArgString('_', "output.format","Output format (json,csv,adsb) (def: csv)"),
+        ArgString('h', "http.host",s"listen host (def: ${d.host})"),
+        ArgInt('p', "http.port",s"listern port (def: ${d.port})"),
+        ArgString('u', "http.uri",s"api uri (def: ${d.uri})"),
 
-        ArgLong('_', "limit","Limit"),
-        ArgLong('_', "freq","Frequency"),
-        ArgString('_', "delimiter","""Delimiter characteds (def: ''). Usage example: --delimiter=`echo -e $"\r"` """),
-        ArgInt('_', "buffer","Frame buffer (Akka Framing) (def: 1M)"),
-        ArgLong('_', "throttle","Throttle messages in msec (def: 0)"),
+        ArgString('f', "feed",s"Input Feed (dump1090://host:port, file://, kafka://, (def: stdin://) (def=${d.feed})"),
+        ArgString('o', "output",s"Output file (pattern is supported: data-{yyyy-MM-dd-HH-mm}.log) (def=${d.output})"),
+            
+        ArgString('_', "format",s"Output format (json,csv,adsb) (def: ${d.format})"),
 
-        ArgString('a', "aircraft","Filter (ex: 'AN-225')"),
+        ArgString('_', "delimiter",s"""Delimiter characteds (def: '${d.delimiter}'). Usage example: --delimiter=`echo -e $"\r\n"`"""),
+        ArgInt('_', "buffer",s"Frame buffer (Akka Framing) (def: ${d.buffer})"),
+        ArgLong('n', s"limit",s"File Limit (def: ${d.limit})"),
+
+        // ArgLong('s', s"size",s"File Size Limit (def: ${d.size})"),
+        // ArgLong('_', "freq","Frequency"),
+        // ArgString('_', "delimiter","""Delimiter characteds (def: ''). Usage example: --delimiter=`echo -e $"\r"` """),
+        // ArgInt('_', "buffer","Frame buffer (Akka Framing) (def: 1M)"),
+        // ArgLong('_', "throttle","Throttle messages in msec (def: 0)"),
+
+        ArgString('e', "entity",s"Ingest entity: (adsb,dump1090) (def: ${d.entity})"),               
+        ArgString('a', "aircraft",s"Filter (ex: 'AN-225') (def=${d.filter})"),
+        ArgString('_', "timeout.connect",s"Connection timeout (def: ${d.timeoutConnect})"),
+        ArgString('_', "timeout.idle",s"Idle timeout (def: ${d.timeoutIdle})"),
         
-        //ArgString('d', "datastore","datastore [elastic,stdout,file] (def: stdout)"),
+        ArgString('d', "datastore",s"datastore [elastic,stdout,file] (def: ${d.datastore})"),
         
         ArgCmd("ingest","Ingest pipeline"),
         
@@ -71,23 +85,28 @@ object App {
 
     val config = Config(
       
-      feed = c.getString("feed").getOrElse(""),
-      output = c.getString("output").getOrElse(""),
-      entity = c.getString("entity").getOrElse("dump1090"),
-      format = c.getString("output.format").getOrElse("csv"),
+      host = c.getString("http.host").getOrElse(d.host),
+      port = c.getInt("http.port").getOrElse(d.port),
+      uri = c.getString("http.uri").getOrElse(d.uri),
+      
+      feed = c.getString("feed").getOrElse(d.feed),
+      output = c.getString("output").getOrElse(d.output),
+      datastore = c.getString("datastore").getOrElse(d.datastore),
 
-      limit = c.getLong("limit").getOrElse(0),
-      freq = c.getLong("freq").getOrElse(0),
-      delimiter = c.getString("delimiter").getOrElse("\n"),
-      buffer = c.getInt("buffer").getOrElse(1024*1024),
-      throttle = c.getLong("throttle").getOrElse(0L),     
-    
+      limit = c.getLong("limit").getOrElse(d.limit),
+      // size = c.getLong("size").getOrElse(d.size),
+      
+      delimiter = c.getString("delimiter").getOrElse(d.delimiter),
+      buffer = c.getInt("buffer").getOrElse(d.buffer),
+      throttle = c.getLong("throttle").getOrElse(d.throttle),
+      
+      entity = c.getString("entity").getOrElse(d.entity),
+      format = c.getString("output.format").getOrElse(d.format),
       filter = c.getListString("aircraft"),
-      
-      //datastore = c.getString("datastore").getOrElse("stdout"),
-      
-      cmd = c.getCmd().getOrElse("ingest"),
-      
+      timeoutConnect = c.getLong("timeout.connect").getOrElse(d.timeoutConnect),
+      timeoutIdle = c.getLong("timeout.idle").getOrElse(d.timeoutIdle),
+            
+      cmd = c.getCmd().getOrElse("ingest"),      
       params = c.getParams(),
     )
 
