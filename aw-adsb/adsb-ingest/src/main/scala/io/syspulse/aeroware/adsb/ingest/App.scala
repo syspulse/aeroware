@@ -29,7 +29,7 @@ case class Config(
   
   entity:String = "dump1090",
   filter:Seq[String] = Seq(),
-  format:String = "dump1090",
+  format:String = "raw",
 
   timeoutConnect:Long = 3000L,
   timeoutIdle:Long = 1000 * 60 * 60 * 24L,
@@ -58,7 +58,7 @@ object App {
         ArgString('f', "feed",s"Input Feed (dump1090://host:port, file://, kafka://, (def: stdin://) (def=${d.feed})"),
         ArgString('o', "output",s"Output file (pattern is supported: data-{yyyy-MM-dd-HH-mm}.log) (def=${d.output})"),
             
-        ArgString('_', "format",s"Output format (json,csv,adsb) (def: ${d.format})"),
+        ArgString('_', "format",s"Output format (json,csv,raw) (def: ${d.format})"),
 
         ArgString('_', "delimiter",s"""Delimiter characteds (def: '${d.delimiter}'). Usage example: --delimiter=`echo -e $"\r\n"`"""),
         ArgInt('_', "buffer",s"Frame buffer (Akka Framing) (def: ${d.buffer})"),

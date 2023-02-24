@@ -14,7 +14,7 @@ case class ADSB_Ingested(adsb:ADSB,format:String="") extends Ingestable {
     case "json" => this.toJson.compactPrint
     case "csv" => Util.toCSV(adsb.asInstanceOf[Product])
     // format used for replay with live timestamp
-    case "adsb" => s"${adsb.ts} ${adsb.raw}"
+    case "raw" => s"${adsb.ts} ${adsb.raw}"
     case _ => super.toString
   }
 }
