@@ -57,7 +57,7 @@ object Notam {
   //def NewLine[_: P] = P( "\n" )
 
   def timeYear[_: P] = P( CharIn("0-9").rep(exactly=4)).!.map(_.toInt)
-  def timeMonthWord[_: P] = P( CharIn("A-Z").rep(exactly=3)).!.map(_.toString)
+  def timeMonthWord[_: P] = P( CharIn("A-Za-z").rep(exactly=3)).!.map(_.toString)
   def timeMonth[_: P] = P( CharIn("0-9").rep(exactly=2)).!.map(_.toInt)
   def timeDay[_: P] = P( CharIn("0-9").rep(exactly=2)).!.map(_.toInt)
   def timeHH[_: P] = P( CharIn("0-9").rep(exactly=2)).!.map(_.toInt)
@@ -67,7 +67,7 @@ object Notam {
   def line_Q[_: P] = "Q)" ~ ws ~ P(CharsWhile(_ != '\n')).!.map(_.toString) ~ NewLine
   
   def line_A_Fir[_: P] = P( CharIn("A-Z").rep(exactly=4)).!.map(_.toString)
-  def line_A[_: P] = "A)" ~ ws ~ line_A_Fir.!.map(_.toString) ~ (ws ~ P(AnyChar.rep).!.map(_.toString)).? ~ NewLine
+  def line_A[_: P] = "A)" ~ ws ~ line_A_Fir.!.map(_.toString) ~ (ws ~ P(CharsWhile(_ != '\n')).!.map(_.toString)).? ~ NewLine
   
   // format: '0108122359'
   def line_BC_DateFormat1[_: P] = P(
