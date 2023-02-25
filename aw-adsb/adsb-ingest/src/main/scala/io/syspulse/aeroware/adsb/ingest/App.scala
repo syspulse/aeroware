@@ -20,10 +20,10 @@ case class Config(
   uri:String = "/api/v1/adsb",
 
   feed:String = "dump1090://rp-1:30002",
-  output:String = "stdout://",
+  output:String = "log://",
   
   limit:Long = -1,
-  delimiter:String = "",
+  delimiter:String = "\n",
   buffer:Int = 1024*1024,
   throttle:Long = 0L,
   
@@ -101,7 +101,7 @@ object App {
       throttle = c.getLong("throttle").getOrElse(d.throttle),
       
       entity = c.getString("entity").getOrElse(d.entity),
-      format = c.getString("output.format").getOrElse(d.format),
+      format = c.getString("format").getOrElse(d.format),
       filter = c.getListString("aircraft"),
       timeoutConnect = c.getLong("timeout.connect").getOrElse(d.timeoutConnect),
       timeoutIdle = c.getLong("timeout.idle").getOrElse(d.timeoutIdle),
@@ -118,17 +118,19 @@ object App {
           case "dump1090" =>
             new PipelineDump1090(config.feed,config.output)(config)
 
+          // internal format
           case "adsb" =>
             new PipelineADSB(config.feed,config.output)(config)
           
           case _ =>  Console.err.println(s"Uknown entity: '${config.entity}'"); sys.exit(1)
         } 
 
+        Console.err.println(s"pp=${pp}")
         val r = pp.run()
         println(s"r=${r}")
         r match {
           case a:Awaitable[_] => {
-            val rr = Await.result(a,FiniteDuration(30,TimeUnit.MINUTES))
+            val rr = Await.result(a,Duration.Inf) //Await.result(a,FiniteDuration(30,TimeUnit.MINUTES))
             Console.err.println(s"result: ${rr}")
           }
           case akka.NotUsed => 

@@ -12,7 +12,7 @@ import io.syspulse.skel
 import io.syspulse.skel.config._
 
 import io.syspulse.aeroware.adsb.core._
-import io.syspulse.aeroware.data.AircraftICAORegistry
+import io.syspulse.aeroware.aircraft.icao.AircraftICAORegistry
 
 case class Config (
   host: String = "0.0.0.0",

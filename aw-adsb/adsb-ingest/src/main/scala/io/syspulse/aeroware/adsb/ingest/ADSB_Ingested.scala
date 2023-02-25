@@ -7,15 +7,14 @@ import spray.json._
 import AdsbIngestedJsonProtocol._
 import io.syspulse.skel.util.Util
 
-
 case class ADSB_Ingested(adsb:ADSB,format:String="") extends Ingestable {
 
-  override def toString: String = format match {
+  override def toLog: String = format match {
     case "json" => this.toJson.compactPrint
-    case "csv" => Util.toCSV(adsb.asInstanceOf[Product])
+    case "csv" => toCSV //Util.toCSV(adsb.asInstanceOf[Product])
     // format used for replay with live timestamp
     case "raw" => s"${adsb.ts} ${adsb.raw}"
-    case _ => super.toString
+    case _ => toString
   }
 }
 

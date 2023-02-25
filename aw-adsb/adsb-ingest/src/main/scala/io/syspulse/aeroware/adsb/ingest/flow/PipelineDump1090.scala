@@ -43,19 +43,26 @@ import AdsbIngestedJsonProtocol._
 
 class PipelineDump1090(feed:String,output:String)(implicit config:Config) extends PipelineIngest[ADSB](feed,output) {
   
-  def decode(data:String):Option[ADSB] = {
+  def decodeDump1090(data:String):Option[ADSB] = {
     Decoder.decodeDump1090(data) match {
       case Success(a) => Some(a)
       case Failure(e) => None
     }
   }
 
+  def decodeDump1090(data:String,ts:Long):Option[ADSB] = {
+    Decoder.decode(data,ts) match {
+      case Success(a) => Some(a)
+      case Failure(e) => None
+    }
+  }
+
   // expect format 'timestamp adsb'
-  def parse(data:String):Seq[ADSB] = {
+  def parseDump1090(data:String):Seq[ADSB] = {
     if(data.isEmpty()) return Seq()
     try {
       //val coin = data.toJson
-      val a = decode(data)        
+      val a = decodeDump1090(data)        
       log.debug(s"adsb=${a}")
       a.toSeq
     } catch {
@@ -63,6 +70,36 @@ class PipelineDump1090(feed:String,output:String)(implicit config:Config) extend
         log.error(s"failed to parse: '${data}'",e)
         Seq()
     }
+  }
+  
+  def parseRaw(data:String):Seq[ADSB] = {
+    if(data.isEmpty()) return Seq()
+    try {
+      val a = data.trim.split("\\s+").toList match {
+        // 'timestamp adsb'  - already ingested raw with ts
+        case ts :: a :: Nil => decodeDump1090(a,ts.toLong)
+        // 'adsb' - directly from dump1090
+        case a :: Nil =>  decodeDump1090(a)         
+        case _ => {
+          log.error(s"invalid format': ${data}")
+          return Seq.empty
+          None
+        }
+      }
+      
+      log.debug(s"adsb=${a}")
+      a.toSeq
+      
+    } catch {
+      case e:Exception => 
+        log.error(s"failed to parse: '${data}'",e)
+        Seq()
+    }
+  }
+
+  override def parse(data:String):Seq[ADSB] = {
+    log.debug(s"data=${data}")
+    parseRaw(data)
   }
 
   def transform(a: ADSB): Seq[ADSB_Ingested] = {

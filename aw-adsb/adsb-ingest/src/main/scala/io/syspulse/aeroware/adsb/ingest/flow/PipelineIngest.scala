@@ -75,5 +75,5 @@ abstract class PipelineIngest[T](feed:String,output:String)(implicit config:Conf
   }
 
   override def process:Flow[T,T,_] = Flow[T].map(v => v)
-
+  
 }

@@ -48,14 +48,18 @@ object Dependencies {
     val libAlpakkaMQTT=     "com.lightbend.akka"          %% "akka-stream-alpakka-mqtt-streaming" % alpakkaVersion
     val libAlpakkaPaho=     "com.lightbend.akka"          %% "akka-stream-alpakka-mqtt" % alpakkaVersion
 
-    val libScalaLogging =   "com.typesafe.scala-logging"  %% "scala-logging"        % "3.9.2"
-    val libLogback =        "ch.qos.logback"              %  "logback-classic"      % "1.2.8"
-    val libJanino =         "org.codehaus.janino"         %  "janino"               % "3.1.6"
+    val libScalaLogging =   "com.typesafe.scala-logging"      %% "scala-logging"        % "3.9.2"
+    val libLogback =        "ch.qos.logback"                  % "logback-classic"      % "1.3.5" //"1.2.8"
+    val libJanino =         "org.codehaus.janino"             % "janino"               % janinoVersion
     // I need this rubbish slf4j to deal with old jboss dependecny which generates exception in loading logback.xml
     //val libSlf4jApi =       "org.slf4j"                   %  "slf4j-api"            % "1.8.0-beta4"
     // Supports only old XML Config file format
-    val libSlf4jApi =       "org.slf4j"                   %  "slf4j-api"            % "1.7.26"
-    
+    // val libSlf4jApi =       "org.slf4j"                       % "slf4j-api"            % "1.7.26"
+    val libSlf4jApi =       "org.slf4j"                       % "slf4j-api"            % "2.0.5"
+    // Needed for teku
+    val libLog4j2Api =      "org.apache.logging.log4j"        % "log4j-api" % "2.17.2"
+    val libLog4j2Core =     "org.apache.logging.log4j"        % "log4j-core" % "2.17.2"
+
     val libScalaTest =      "org.scalatest"               %% "scalatest"            % "3.1.2" % Test
     val libAkkaTestkit =    "com.typesafe.akka"           %% "akka-http-testkit"    % akkaHttpVersion// % Test
     val libAkkaTestkitType ="com.typesafe.akka"           %% "akka-actor-testkit-typed" % akkaVersion// % Test
@@ -102,7 +106,7 @@ object Dependencies {
 
     val libPrometheus = Seq(libPrometheusClient)
     
-    val libSkel = Seq(libSkelCore,libSkelCrypto,libSkelSerde)
+    val libSkel = Seq(libSkelCore,libSkelCrypto)
     
     val libAkka = Seq(libAkkaActor,libAkkaActorTyped,libAkkaStream)
 

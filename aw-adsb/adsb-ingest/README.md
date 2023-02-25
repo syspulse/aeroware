@@ -17,23 +17,35 @@ This reference architecture for PoC/Testing
 ./run-ingest.sh insgest -f dump1090://rp-1:30002 --aircraft='.*' 
 ```
 
-### Ingest from live dump1090 to adsb file for replays
+### Ingest from live dump1090 to raw file for replays 
+
+The file will containe `timestamp` of the event
 
 ```
-./run-ingest.sh insgest -f dump1090://rp-1:30002 -o file://flight-1.adsb --output.format=adsb
+./run-ingest.sh insgest -f dump1090://rp-1:30002 -o file://flight-1.raw --format=raw
 ```
 
-### Replay (with correct timestamps)
+### Ingest from live dump1090 and print as log (configurable with `--format`)
 
 ```
-./run-ingest.sh insgest -e adsb -f file://flight-1.adsb 
+./run-ingest.sh insgest -f dump1090://rp-1:30002 -o log:// --format=raw
+```
+```
+./run-ingest.sh insgest -f dump1090://rp-1:30002 -o log:// --format=json
+```
+
+
+### Replay ingested (with correct timestamps)
+
+```
+./run-ingest.sh insgest -e adsb -f file://flight-1.adsb
 ```
 
 
 ### Track Antonov and Airbus from live dump1090 and write to CSV file as json:
 
 ```
-./run-ingest.sh -f dump1090://rp-1:30002 --aircraft='[aA].*' -o 'file://Anoton-{yyyy-MM-dd_HH:mm:ss}.json' --output.format=json
+./run-ingest.sh -f dump1090://rp-1:30002 --aircraft='[aA].*' -o 'file://Anoton-{yyyy-MM-dd_HH:mm:ss}.json' --format=json
 ```
 
 ### Ingest pipeline: [dump1090] -> [adsb-ingest] -> [Kafka] -> [adsb-ingest] -> [Files] in CSV
