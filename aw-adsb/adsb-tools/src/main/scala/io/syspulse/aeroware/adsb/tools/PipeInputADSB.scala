@@ -9,6 +9,8 @@ import io.syspulse.aeroware.adsb.util.Dump1090
 
 
 class PipeInputADSB(inputFile:String) extends Pipe {
+  val log = Logger(this.getClass)
+
   val decoder = new Decoder()
 
   // This is a streaming file pipe, it cat read huge ADSB dumps in a streaming fashion
@@ -44,7 +46,9 @@ class PipeInputADSB(inputFile:String) extends Pipe {
     }
 
     try {
-      var a0 = decoder.decode(Dump1090.decode(data.next()._2)).get
+      val dd = data.next()._2
+      log.debug(s"data=${dd}")
+      var a0 = decoder.decode(Dump1090.decode(dd)).get
       Success(a0)
     } catch {
       case e:java.util.NoSuchElementException => Failure(e)

@@ -65,11 +65,14 @@ If the lower limit is ground level, Item F is usually omitted, but SFC or GRD ma
 
 EXAMPLE 1
 
+```
 Q) EGXX/QRDCA/IV/BO/W/000/080/5451N00456W014 FROM 07/06/18 14:00 TO 07/06/22 17:00
 D) 18 1400-1700 19 - 22 0900-1700
 E) DANGER AREA EG D402A ACTIVE ABOVE NORMAL LEVEL
 F) SFC
 G) 8000FT AMSL
+```
+
 Example 1 notifies the extension of the upper limit of a danger area to 8000 ft between certain times.
 Item Q is included but items A, B and C are not.
 Item Q is effectively a coded version of the whole NOTAM.
@@ -86,10 +89,13 @@ Items F and G show that it is active between surface and 8000 ft AMSL.
 
 EXAMPLE 2
 
+```
 A) LFAD COMPIEGNE MARGNY
 B) 2007 Jun 01 06:00
 C) 2007 Aug 29 23:59
 E) VOR/DME CPE 109.65MHZ CH33Y OUT OF SERVICE
+```
+
 Example 2 notifies that a navigation facility is being taken temporarily out of service.
 Items Q, D, F and G are omitted
 Item A states the location: Compeigne Margny aerodrome, ICAO indicator LFAD.
@@ -98,6 +104,7 @@ Item E states that during the above period, VOR/DME 'CPE', operating on frequenc
 
 EXAMPLE 3
 
+```
 Q) EGTT/QWPLW/IV/M/W/000/130/5217N00255W008 FROM 07/06/18 07:00 TO 07/06/18 23:00
 E) AUS 07-06-0531/1977/AS3 EXERCISE BLACK MOUNTAIN.
 STATIC LINE AND FREEFALL PJE WI 8NM RADIUS 5217N 00255W (BYTON).
@@ -106,17 +113,22 @@ ACFT IN DROP CONFIGURATION MAY BE UNABLE TO COMPLY WITH RULES OF THE AIR.
 CONTACT 07767 238541.
 F) SFC
 G)FL130
+```
+
 Example 3 notifies a military parachute jumping exercise.
 The important details are in plain language.
 The NOTAM includes a mobile telephone number for emergency contact.
 
 EXAMPLE 4
 
+```
 A) EGCC
 B) 0108122359
 C) 0109112359
 D) MON-FRI 0800-2359
 E) RWY 26 closed
+```
+
 Example 4 notifies the temporary closure of Runway 26 at Manchester
 Item A, EGCC is the ICAO code for Manchester
 Items B and C: the NOTAM is effective from 2359 on 12th August 2001 to 2359 on 11th September 2001.

@@ -160,6 +160,7 @@ lazy val root = (project in file("."))
     core, 
     gamet, 
     metar,
+    notam,
     adsb_core, 
     adsb_ingest, 
     adsb_tools, 
@@ -173,6 +174,7 @@ lazy val root = (project in file("."))
     core, 
     gamet,
     metar, 
+    notam, 
     adsb_core, 
     adsb_ingest, 
     adsb_tools, 
@@ -211,6 +213,19 @@ lazy val gamet = (project in file("aw-gamet"))
     sharedConfigAssembly,
 
     name := "aw-gamet",
+    libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
+      libEnumeratum,
+      libFastparseLib 
+    )
+)
+
+lazy val notam = (project in file("aw-notam"))
+  .dependsOn(core)
+  .settings (
+    sharedConfig,
+    sharedConfigAssembly,
+
+    name := "aw-notam",
     libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
       libEnumeratum,
       libFastparseLib 

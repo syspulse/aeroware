@@ -163,7 +163,7 @@ object AppPlayer {
         else 
         f.toLowerCase().split("\\.").last match {
           case "csv" => new PipeInputCSV(f)
-          case "adsb" => new PipeInputADSB(f)
+          case "adsb" | "raw" => new PipeInputADSB(f)
           case _ => {
             Console.err.println(s"format unknown: ${f}, trying as ADSB")
             //new PipeNone
