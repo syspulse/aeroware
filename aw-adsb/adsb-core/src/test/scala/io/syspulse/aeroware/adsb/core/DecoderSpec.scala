@@ -27,6 +27,8 @@ class DecoderSpec extends AnyWordSpec with Matchers with Testables {
   val msgIdent1 = "8D50809520353276CB1D6037592E"
   val msgIdent2 = "8D4840D6202CC371C32CE0576098"
 
+  val msgUnknown1 = "5DA606933B451A"
+
   "Decoder" should {
     s"decode ${msg1} DF=17" in {
       val a1 = Decoder.decode(msg1)
@@ -116,6 +118,15 @@ class DecoderSpec extends AnyWordSpec with Matchers with Testables {
     s"decode 30 (invalid) to '#'" in {
       val v = Decoder.decodeCharacter(BitVector.fromBin(30.toBinaryString).get)
       v should === ('#')
+    }
+
+  }  
+
+  "DecoderUnknown" should {    
+    s"decode dump1090 message: ${msgUnknown1} as type 11" in {
+      val a1 = Decoder.decode(msgUnknown1)
+      info(s"${a1}")
+      a1.isFailure should === (false)      
     }
   }  
 }

@@ -6,6 +6,7 @@ import enumeratum._
 import enumeratum.values._
 
 import io.syspulse.aeroware.core.{ Units, Altitude, Location, Speed, VRate}
+import io.syspulse.skel.util.Util
 
 package object adsb {
   type Raw = String
@@ -49,6 +50,27 @@ case class ADSB_Reserved(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, 
 case class ADSB_AircraftStatus(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
 case class ADSB_TargetState(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
 case class ADSB_AircraftOperationStatus(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
+
+case class ADSB_AllCall(df:Byte,capability:Byte,aircraftAddr:AircraftAddress, parity:Array[Byte], raw:Raw, ts:Long=now) extends ADSB {
+  def isAirborne() = capability == 5
+  def isGround() = capability == 4
+
+  val interrogator = {
+    Decoder.decodeParity(parity).zip(parity).map{ case(a1,a2) => (a1 ^ a2).toByte }    
+  }
+
+  val code = {
+		((interrogator(2) >> 4) & 0x7).toByte match {
+			case 0x0 =>
+			case 0x1 => (interrogator(2) &0x0f).toByte
+			case 0x2 => ((interrogator(2) &0x0f) + 16).toByte
+			case 0x3 => ((interrogator(2) &0x0f) + 32).toByte
+			case _ => ((interrogator(2) & 0x0f) + 48).toByte
+		}
+	}
+
+  override def toString = s"ADSB_AllCall(${df},${capability},${aircraftAddr},${Util.hex(parity)},${Util.hex(interrogator)},${code},${raw},${ts})"
+}
 
 object ADSB {
   def now = System.currentTimeMillis()
