@@ -92,7 +92,46 @@ object Notam {
   def line_F[_: P] = "F)" ~ ws ~ NotamAltitude.altParser ~ (NewLine | End)
   def line_G[_: P] = "G)" ~ ws ~ NotamAltitude.altParser ~ (NewLine | End)
 
+
+// The new format is SNNNN/YY where:
+// S represents the series letter (see Series usage for ICAO NOTAM format).
+// NNNN is a four-digit NOTAM number to identify the continuity number, followed by a stroke character (/).
+// Each series starts on January 1st at 0000UTC of each year with number 0001. 
+// ICAO NOTAM numbers are assigned sequentially from 0001 to 9999.
+// /YY is the two digits for the calendar year.
+// For example: N0035/19
+// NOTAM{x}  x ==  type of NOTAM:
+//   N - New
+//   R - Replace, 
+//   C - Cancel.
+// Replace:
+//  A0024/22 NOTAMR A4338/21
+// New:
+//  U0038/11 NOTAMN
+  def line_1_SerIdSeq[_: P] = P(
+    P(CharIn("A-Z").rep(exactly=1)).!.map(_.toString) ~
+    P(CharIn("0-9").rep(exactly=4)).!.map(_.toInt) ~ 
+    "/" ~
+    P(CharIn("0-9").rep(exactly=2)).!.map(_.toInt)
+  ).map( d => NotamSeq(d._1,d._2,d._3))
+
+  def line_1[_: P] = P(
+    // P(CharIn("A-Z").rep(exactly=1)).!.map(_.toString) ~
+    // P(CharIn("0-9").rep(exactly=4)).!.map(_.toInt) ~ 
+    // "/" ~
+    // P(CharIn("0-9").rep(exactly=2)).!.map(_.toInt) ~
+    line_1_SerIdSeq ~
+    ws ~
+    "NOTAM" ~
+    P(CharIn("A-Z").rep(exactly=1)).!.map(_.toString) ~
+    (ws ~ line_1_SerIdSeq).? ~
+    (NewLine | End)
+    ).map( d => NotamID(d._1,d._2,d._3) )
+  
   // -----------------------------------------------------------------------------------------------------------
+  case class NotamSeq(ser:String,id:Int,seq:Int) 
+  case class NotamID(seq1:NotamSeq,typ:String,seq2:Option[NotamSeq]) 
+
   abstract class NotamData {
     def describe:String
   }
@@ -122,19 +161,20 @@ object Notam {
     def describe = s"Upper Altitude Limit: '${alt}'"
   }
 
-  
   case class NOTAM(
-    q:Option[NOTAM_Q] = None,
-    a:Option[NOTAM_A] = None,
-    b:Option[NOTAM_B] = None,
-    c:Option[NOTAM_C] = None,
-    d:Option[NOTAM_D] = None,
-    e:Option[NOTAM_E] = None,
-    f:Option[NOTAM_F] = None,
-    g:Option[NOTAM_G] = None,
+    id: Option[NotamID] = None,
+    Q: Option[NOTAM_Q] = None,
+    A: Option[NOTAM_A] = None,
+    B: Option[NOTAM_B] = None,
+    C: Option[NOTAM_C] = None,
+    D: Option[NOTAM_D] = None,
+    E: Option[NOTAM_E] = None,
+    F: Option[NOTAM_F] = None,
+    G: Option[NOTAM_G] = None,
   )
 
   def notamParser[_: P] = P( 
+    line_1.? ~
     line_Q.? ~
     line_A.? ~
     line_B.? ~
@@ -144,8 +184,9 @@ object Notam {
     line_F.? ~
     line_G.? ~
     End)
-    .map { case(synopsis,location,startDate,endDate,active,explain,from,until) => {
+    .map { case(id,synopsis,location,startDate,endDate,active,explain,from,until) => {
       NOTAM(
+        id,
         synopsis.map(d => NOTAM_Q(d)),
         location.map(d => NOTAM_A(d._1,d._2)),
         startDate.map(d => NOTAM_B(d)),

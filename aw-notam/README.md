@@ -2,6 +2,8 @@
 
 https://www.faa.gov/about/initiatives/notam
 
+https://www.faa.gov/air_traffic/publications/atpubs/notam_html/chap8_section_1.html
+
 https://api.faa.gov/s/login/SelfRegister
 
 https://www.notams.faa.gov/dinsQueryWeb/
@@ -16,10 +18,19 @@ https://www.topcoder.com/challenges/cf1f9fda-95d5-4469-83cb-d0d16fc240f1
 
 https://github.com/fdesjardins/notams
 
-
 http://www.drorpilot.com/Notam
 
 https://www.avdelphi.com/asearch.html?scope=notam&uid=LIRR;A1043/23&cache=1676880786
+
+https://www.thinkaviation.net/notams-decoded/
+
+## NOTAM Stream
+
+https://www.theairlinepilots.com/notams-icao.php
+
+## NOTAM Archive
+
+https://notams.aim.faa.gov/notamSearch/nsapp.html#/details
 
 ### Example
 
