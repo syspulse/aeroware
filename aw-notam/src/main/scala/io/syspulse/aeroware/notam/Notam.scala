@@ -67,7 +67,20 @@ object Notam {
   def line_Q[_: P] = "Q)" ~ ws ~ P(CharsWhile(_ != '\n')).!.map(_.toString) ~ NewLine
   
   def line_A_Fir[_: P] = P( CharIn("A-Z").rep(exactly=4)).!.map(_.toString)
-  def line_A[_: P] = "A)" ~ ws ~ line_A_Fir.!.map(_.toString) ~ (ws ~ P(CharsWhile(_ != '\n')).!.map(_.toString)).? ~ NewLine
+  def line_A[_: P] = "A)" ~ ws ~ line_A_Fir.!.map(_.toString) ~ (ws ~ P(CharsWhile(_ != '\n')).!.map(_.toString)).? ~
+     (NewLine | ws)
+
+  // def line_A[_: P] = "A)" ~ ws ~ line_A_Fir.!.map(_.toString) ~ (ws ~ P(CharsWhile(_ != '\n')).!.map(_.toString)).? ~
+  //    (NewLine | ws)
+  
+  // def line_A[_: P] = "A)" ~ ws ~ 
+  //   line_A_Fir.!.map(_.toString) ~ 
+  //   (
+  //     ((NewLine | End).map(_ => None)) |
+  //     (
+  //       ws ~ (!("B)" | NewLine | End) ~ AnyChar.rep(1)).!.map(v => Some(v)) ~ &("B)" | NewLine | End)
+  //     )
+  //   )
   
   // format: '0108122359'
   def line_BC_DateFormat1[_: P] = P(
@@ -77,12 +90,20 @@ object Notam {
     P(CharIn("0-9").rep(exactly=2)).!.map(_.toInt) ~ 
     P(CharIn("0-9").rep(exactly=2)).!.map(_.toInt))
     .map( t => tsz(2000 + t._1, t._2, t._3, t._4, t._5) )
+  
   // format: '2007 Aug 29 23:59'
   def line_BC_DateFormat2[_: P] = P( timeYear ~ ws ~ timeMonthWord ~ ws ~ timeDay ~ ws ~ timeHH ~ ":" ~ timeMM)
     .map( t => tsz(t._1,t._2,t._3,t._4,t._5) )
-  
-  def line_B[_: P] = "B)" ~ ws ~ P(line_BC_DateFormat1 | line_BC_DateFormat2) ~ NewLine
-  def line_C[_: P] = "C)" ~ ws ~ P(line_BC_DateFormat1 | line_BC_DateFormat2) ~ NewLine
+
+  // format: 'PERM'
+  def line_BC_DateFormatPerm[_: P] = P( "PERM")
+    .map( _ => ZonedDateTime.of(9999,1,1,0,0,0,0,utc) )
+    
+  def line_B[_: P] = "B)" ~ ws ~ P(line_BC_DateFormat1 | line_BC_DateFormat2 | line_BC_DateFormatPerm) ~
+    (NewLine | ws)
+
+  def line_C[_: P] = "C)" ~ ws ~ P(line_BC_DateFormat1 | line_BC_DateFormat2 | line_BC_DateFormatPerm) ~
+    NewLine
 
 
   def line_D[_: P] = "D)" ~ ws ~ P(CharsWhile(_ != '\n')).!.map(_.toString) ~ NewLine
@@ -116,10 +137,6 @@ object Notam {
   ).map( d => NotamSeq(d._1,d._2,d._3))
 
   def line_1[_: P] = P(
-    // P(CharIn("A-Z").rep(exactly=1)).!.map(_.toString) ~
-    // P(CharIn("0-9").rep(exactly=4)).!.map(_.toInt) ~ 
-    // "/" ~
-    // P(CharIn("0-9").rep(exactly=2)).!.map(_.toInt) ~
     line_1_SerIdSeq ~
     ws ~
     "NOTAM" ~
@@ -130,7 +147,13 @@ object Notam {
   
   // -----------------------------------------------------------------------------------------------------------
   case class NotamSeq(ser:String,id:Int,seq:Int) 
-  case class NotamID(seq1:NotamSeq,typ:String,seq2:Option[NotamSeq]) 
+  case class NotamID(seq1:NotamSeq,typ:String,seq2:Option[NotamSeq]) {
+    def describe:String = typ match {      
+      case "N" => s"New: ${seq1.ser}:${seq1.id}/${seq1.seq}"
+      case "C" => s"Cancel: ${seq1.ser}:${seq1.id}/${seq1.seq}"
+      case "R" => s"Replace: ${seq1.ser}:${seq1.id}/${seq1.seq}: with ${seq2.get.ser}:${seq2.get.id}/${seq2.get.seq}"
+    }
+  }
 
   abstract class NotamData {
     def describe:String
@@ -199,8 +222,14 @@ object Notam {
       )
   }}
 
-  def clean(data:String) =  
-    data.trim
+  // fix FAA format (multiple A),B),C) on the same line): 'A) FIR B) ... C) ...'  
+  def clean(data:String) = {
+    data
+      .trim
+      .replaceAll(" A\\)","\nA\\)")
+      .replaceAll(" B\\)","\nB\\)")
+      .replaceAll(" C\\)","\nC\\)")
+  }
       
   def decode(data:String): Try[NOTAM] = {
     log.debug(s"data='${data}'")

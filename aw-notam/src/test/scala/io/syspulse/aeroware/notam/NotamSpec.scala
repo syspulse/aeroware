@@ -126,6 +126,7 @@ REF AIP UKKM AD 2.19, AD 2.24.12-3."""
       val n1 = Notam.decode(NOTAM_ICAO_1)
       info(s"${n1}")
       n1.isSuccess should === (true)
+      n1.get.A should === (Some(NOTAM_A(fir="EDDF",None)))
     }
   }
 
