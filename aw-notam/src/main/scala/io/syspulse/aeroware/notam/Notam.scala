@@ -21,9 +21,15 @@ object Notam {
 
   // parsing old messages may fail here since no Year information is preserved
   // 290900 -> this will fail for 2023 because it does not have 29-Feb
-  def tsz(yyyy:Int, month:String, dd:Int,hh:Int,mm:Int,ss:Int=0,msec:Int=0) = { 
+  def tsz(yyyy:Int, month:String, dd:Int,hh:Int,mm:Int,zone:Option[String]=None,ss:Int=0,msec:Int=0) = { 
     log.debug(s"tsz=${yyyy}/${month}/${dd}/${hh}::${mm}::${ss}.${msec}")
-    val now=OffsetDateTime.now(ZoneOffset.UTC); 
+    
+    val now = OffsetDateTime.now(
+      zone match {
+        case None => ZoneOffset.UTC
+        case Some(z) => ZoneId.of(z, ZoneId.SHORT_IDS)
+      }
+    )
     
     val MM = Map(
       "Jan" -> 1,
@@ -67,9 +73,12 @@ object Notam {
   def line_Q[_: P] = "Q)" ~ ws ~ P(CharsWhile(_ != '\n')).!.map(_.toString) ~ NewLine
   
   def line_A_Fir[_: P] = P( CharIn("A-Z").rep(exactly=4)).!.map(_.toString)
-  def line_A[_: P] = "A)" ~ ws ~ line_A_Fir.!.map(_.toString) ~ (ws ~ P(CharsWhile(_ != '\n')).!.map(_.toString)).? ~
-     (NewLine | ws)
-
+  def line_A[_: P] = "A)" ~  
+    (      
+      ( (ws ~ line_A_Fir.!.map(_.toString.trim)).rep().map(f => (f,None)) ~ NewLine ) |
+      ( ws ~ line_A_Fir.!.map(_.toString)).rep(exactly=1) ~ (ws ~ P(CharsWhile(_ != '\n')).!.map(_.toString)).? ~ NewLine
+    )
+    
   // def line_A[_: P] = "A)" ~ ws ~ line_A_Fir.!.map(_.toString) ~ (ws ~ P(CharsWhile(_ != '\n')).!.map(_.toString)).? ~
   //    (NewLine | ws)
   
@@ -82,28 +91,34 @@ object Notam {
   //     )
   //   )
   
-  // format: '0108122359'
-  def line_BC_DateFormat1[_: P] = P(
+  def line_DateFormat1[_: P] = 
     P(CharIn("0-9").rep(exactly=2)).!.map(_.toInt) ~  
     P(CharIn("0-9").rep(exactly=2)).!.map(_.toString) ~ 
     P(CharIn("0-9").rep(exactly=2)).!.map(_.toInt) ~ 
     P(CharIn("0-9").rep(exactly=2)).!.map(_.toInt) ~ 
-    P(CharIn("0-9").rep(exactly=2)).!.map(_.toInt))
-    .map( t => tsz(2000 + t._1, t._2, t._3, t._4, t._5) )
+    P(CharIn("0-9").rep(exactly=2)).!.map(_.toInt)
+
+  // format: '0108122359'
+  def line_BC_DateFormat1[_: P] = line_DateFormat1
+    .map( t => tsz(2000 + t._1, t._2, t._3, t._4, t._5))
   
   // format: '2007 Aug 29 23:59'
   def line_BC_DateFormat2[_: P] = P( timeYear ~ ws ~ timeMonthWord ~ ws ~ timeDay ~ ws ~ timeHH ~ ":" ~ timeMM)
     .map( t => tsz(t._1,t._2,t._3,t._4,t._5) )
 
+  // format: '2304102359 EST'
+  def line_BC_DateFormat1_Zone[_: P] = P(line_DateFormat1 ~ ws ~ CharIn("A-Z").rep.!)
+    .map( t => tsz(t._1,t._2,t._3,t._4,t._5,Some(t._6)))
+
   // format: 'PERM'
   def line_BC_DateFormatPerm[_: P] = P( "PERM")
     .map( _ => ZonedDateTime.of(9999,1,1,0,0,0,0,utc) )
     
-  def line_B[_: P] = "B)" ~ ws ~ P(line_BC_DateFormat1 | line_BC_DateFormat2 | line_BC_DateFormatPerm) ~
-    (NewLine | ws)
+  def line_B[_: P] = "B)" ~ ws ~ P(line_BC_DateFormat1_Zone | line_BC_DateFormat1 |  line_BC_DateFormat2 | line_BC_DateFormatPerm) ~
+    (NewLine)
 
-  def line_C[_: P] = "C)" ~ ws ~ P(line_BC_DateFormat1 | line_BC_DateFormat2 | line_BC_DateFormatPerm) ~
-    NewLine
+  def line_C[_: P] = "C)" ~ ws ~ P(line_BC_DateFormat1_Zone | line_BC_DateFormat1 | line_BC_DateFormat2 | line_BC_DateFormatPerm) ~
+    (NewLine)
 
 
   def line_D[_: P] = "D)" ~ ws ~ P(CharsWhile(_ != '\n')).!.map(_.toString) ~ NewLine
@@ -162,8 +177,8 @@ object Notam {
   case class NOTAM_Q(data:String) extends NotamData {
     def describe = s"Synopsis: '${data}'"
   }
-  case class NOTAM_A(fir:String, extra:Option[String]) extends NotamData {
-    def describe = s"ICAO: '${fir}' (${extra})"
+  case class NOTAM_A(firs:Seq[String], extra:Option[String]) extends NotamData {
+    def describe = s"ICAO: '${firs}' (${extra})"
   }
   case class NOTAM_B(date:ZonedDateTime) extends NotamData {
     def describe = s"Time Start: '${date}'"

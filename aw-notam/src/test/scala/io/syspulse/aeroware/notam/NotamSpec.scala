@@ -88,24 +88,28 @@ REF AIP UKKM AD 2.19, AD 2.24.12-3."""
       val n1 = Notam.decode(NOTAM_1)
       info(s"${n1}")
       n1.isSuccess should === (true)
+      n1.get.A should === (None)
     }
 
     "parse 'NOTAM_2'" in {
       val n1 = Notam.decode(NOTAM_2)
       info(s"${n1}")
       n1.isSuccess should === (true)
+      n1.get.A should === (Some(NOTAM_A(firs=Seq("LFAD"),Some("COMPIEGNE MARGNY"))))
     }
 
     "parse 'NOTAM_3'" in {
       val n1 = Notam.decode(NOTAM_3)
       info(s"${n1}")
       n1.isSuccess should === (true)
+      n1.get.A should === (None)
     }
 
     "parse 'NOTAM_4'" in {
       val n1 = Notam.decode(NOTAM_4)
       info(s"${n1}")
       n1.isSuccess should === (true)
+      n1.get.A should === (Some(NOTAM_A(firs=Seq("EGCC"),None)))
     }
 
     s"parse Line1: 'U0038/11 NOTAMN\n'" in {
@@ -126,8 +130,39 @@ REF AIP UKKM AD 2.19, AD 2.24.12-3."""
       val n1 = Notam.decode(NOTAM_ICAO_1)
       info(s"${n1}")
       n1.isSuccess should === (true)
-      n1.get.A should === (Some(NOTAM_A(fir="EDDF",None)))
+      //n1.get.id should === (NotamID(NotamSeq("A",24,22),"R",Some(NotamSeq("A",4338,21))))
+      n1.get.id should === (Some(NotamID(NotamSeq("U",38,11),"N",None)))
+      n1.get.A should === (Some(NOTAM_A(firs=Seq("EDDF"),None)))
     }
+
+    s"parse ZoneDateTime: '2304102359 EST'" in {
+      val p = parse("2304102359 EST", Notam.line_BC_DateFormat1_Zone(_))      
+      info(s"${p}")
+      p.isSuccess should === (true)      
+    }
+
+    s"parse: 'C) 2304102359 EST\n'" in {
+      val p = parse("C) 2304102359 EST\n", Notam.line_C(_))      
+      info(s"${p}")
+      p.isSuccess should === (true)
+      
+    }
+
+    s"parse: 'A) UKBV UKDV UKFV UKLV UKOV\n'" in {
+      val p = parse("A) UKBV UKDV UKFV UKLV UKOV\n", Notam.line_A(_))
+      info(s"${p}")
+      p.isSuccess should === (true)
+      p.get.value should === ((Seq("UKBV","UKDV","UKFV","UKLV","UKOV"),None))
+    }
+
+    // "parse 'NOTAM_ICAO_2'" in {
+    //   val n1 = Notam.decode(NOTAM_ICAO_2)
+    //   info(s"${n1}")
+    //   n1.isSuccess should === (true)
+    //   n1.get.id should === (Some(NotamID(NotamSeq("A",3,23),"R",Some(NotamSeq("A",640,22)))))
+    //   n1.get.A should === (Some(NOTAM_A(firs=Seq("UKBV","UKDV","UKFV","UKLV","UKOV"),None)))
+    // }
+
   }
 
 }
