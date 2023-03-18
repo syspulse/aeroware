@@ -17,13 +17,13 @@ import ADSB._
 
 case class AirbornePosition(raw:RawAirbornePosition)
 
-abstract class ADSB {
+abstract class ADSB extends Serializable {
     val ts:Long // timestamp
     val df:Byte
     val capability:Byte
     val aircraftAddr:AircraftAddress
     val raw:Raw
-}
+} 
 
 case class ADSB_Unknown(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw, ts:Long=now) extends ADSB
 

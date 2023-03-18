@@ -29,6 +29,10 @@ class DecoderSpec extends AnyWordSpec with Matchers with Testables {
 
   val msgUnknown1 = "5DA606933B451A"
 
+  val msgWar1 = "*00000000000000;"
+  val msgWar2 = """*A800080010030A80F500006E9FAD;
+*A80008002009224FDB88201E362A;"""
+
   "Decoder" should {
     s"decode ${msg1} DF=17" in {
       val a1 = Decoder.decode(msg1)
