@@ -21,37 +21,40 @@ abstract class ADSB extends Serializable {
     val ts:Long // timestamp
     val df:Byte
     val capability:Byte
-    val aircraftAddr:AircraftAddress
+    val addr:AircraftAddress
     val raw:Raw
 } 
 
-case class ADSB_Unknown(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw, ts:Long=now) extends ADSB
+// Undecoded and passed down the pipeline for investigation
+case class ADSB_DecodeFailure(df:Byte,capability:Byte, addr:AircraftAddress, err:String, raw:Raw, ts:Long=now) extends ADSB
 
-case class ADSB_AircraftIdentification(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, tc:Byte, ec:Byte, callSign:String, raw:Raw, ts:Long=now) extends ADSB
+case class ADSB_Unknown(df:Byte,capability:Byte, addr:AircraftAddress, raw:Raw, ts:Long=now) extends ADSB
 
-case class ADSB_SurfacePosition(df:Byte,capability:Byte, aircraftAddr:AircraftAddress,raw:Raw,ts:Long=now) extends ADSB
-case class ADSB_AirbornePositionBaro(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, loc:Location, isOdd:Boolean,latCPR:Double,lonCPR:Double,raw:Raw,ts:Long=now) extends ADSB {
+case class ADSB_AircraftIdentification(df:Byte,capability:Byte, addr:AircraftAddress, tc:Byte, ec:Byte, callSign:String, raw:Raw, ts:Long=now) extends ADSB
+
+case class ADSB_SurfacePosition(df:Byte,capability:Byte, addr:AircraftAddress,raw:Raw,ts:Long=now) extends ADSB
+case class ADSB_AirbornePositionBaro(df:Byte,capability:Byte, addr:AircraftAddress, loc:Location, isOdd:Boolean,latCPR:Double,lonCPR:Double,raw:Raw,ts:Long=now) extends ADSB {
   
   def getLocalPosition(ref:ADSB_AirbornePositionBaro): ADSB_AirbornePositionBaro = {
     ADSB_AirbornePositionBaro(
-      df, capability, aircraftAddr,
+      df, capability, addr,
       loc = Decoder.getLocalPosition(ref.loc, isOdd, latCPR, lonCPR, loc.alt),
       isOdd = isOdd, latCPR = latCPR, lonCPR = lonCPR, raw = raw, ts = ts
     )
   }
 }
 
-case class ADSB_AirborneVelocity(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, hSpeed:Speed, heading:Double, vRate:VRate, raw:Raw,ts:Long=now) extends ADSB
+case class ADSB_AirborneVelocity(df:Byte,capability:Byte, addr:AircraftAddress, hSpeed:Speed, heading:Double, vRate:VRate, raw:Raw,ts:Long=now) extends ADSB
 
-case class ADSB_AirbornePositionGNSS(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
+case class ADSB_AirbornePositionGNSS(df:Byte,capability:Byte, addr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
 
-case class ADSB_Reserved(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
+case class ADSB_Reserved(df:Byte,capability:Byte, addr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
 
-case class ADSB_AircraftStatus(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
-case class ADSB_TargetState(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
-case class ADSB_AircraftOperationStatus(df:Byte,capability:Byte, aircraftAddr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
+case class ADSB_AircraftStatus(df:Byte,capability:Byte, addr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
+case class ADSB_TargetState(df:Byte,capability:Byte, addr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
+case class ADSB_AircraftOperationStatus(df:Byte,capability:Byte, addr:AircraftAddress, raw:Raw,ts:Long=now) extends ADSB
 
-case class ADSB_AllCall(df:Byte,capability:Byte,aircraftAddr:AircraftAddress, parity:Array[Byte], raw:Raw, ts:Long=now) extends ADSB {
+case class ADSB_AllCall(df:Byte,capability:Byte,addr:AircraftAddress, parity:Array[Byte], raw:Raw, ts:Long=now) extends ADSB {
   def isAirborne() = capability == 5
   def isGround() = capability == 4
 
@@ -69,7 +72,7 @@ case class ADSB_AllCall(df:Byte,capability:Byte,aircraftAddr:AircraftAddress, pa
 		}
 	}
 
-  override def toString = s"ADSB_AllCall(${df},${capability},${aircraftAddr},${Util.hex(parity)},${Util.hex(interrogator)},${code},${raw},${ts})"
+  override def toString = s"ADSB_AllCall(${df},${capability},${addr},${Util.hex(parity)},${Util.hex(interrogator)},${code},${raw},${ts})"
 }
 
 object ADSB {

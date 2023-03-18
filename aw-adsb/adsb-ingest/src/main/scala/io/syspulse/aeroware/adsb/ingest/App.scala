@@ -29,7 +29,7 @@ case class Config(
   
   entity:String = "dump1090",
   filter:Seq[String] = Seq(),  
-  format:String = "raw",
+  format:String = "adsb", // decode to ADSB
   denoise:Seq[String] = Seq("00000000000000"),
 
   timeoutConnect:Long = 3000L,

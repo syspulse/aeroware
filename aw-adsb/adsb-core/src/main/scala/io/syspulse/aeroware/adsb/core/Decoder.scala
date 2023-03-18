@@ -230,31 +230,31 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
         val raw = Decoder.codecRawAllCall.decode(BitVector.fromHex(message).get).toOption.get.value
         val df = raw.DF.toByte(false)
         val capability = raw.CA.toByte(false)
-        val aircraftAddr = decodeAircraftAddr(raw.ICAO)
+        val addr = decodeAircraftAddr(raw.ICAO)
 
-        ADSB_AllCall(df,capability,aircraftAddr,raw.PI.toByteArray, raw = message,ts)
+        ADSB_AllCall(df,capability,addr,raw.PI.toByteArray, raw = message,ts)
 
       case 17 | 18 | 19 =>
         val raw = Decoder.codecRawADSB.decode(BitVector.fromHex(message).get).toOption.get.value
 
         val df = raw.DF.toByte(false)
         val capability = raw.CA.toByte(false)
-        val aircraftAddr = decodeAircraftAddr(raw.ICAO)
+        val addr = decodeAircraftAddr(raw.ICAO)
 
         val tc = raw.TC.toByte(false)
         tc match {
           case v if 1 until 5 contains v => {
             val aid = Decoder.codecRawAircraftIdentification.decode(raw.DATA).toOption.get.value
-            ADSB_AircraftIdentification(df,capability,aircraftAddr,
+            ADSB_AircraftIdentification(df,capability,addr,
               tc, aid.EC.toByte(false),
               callSign = Decoder.decodeDataAsChars(Seq(aid.C1,aid.C2,aid.C3,aid.C4,aid.C5,aid.C6,aid.C7,aid.C8)),
               raw = message, ts)
           }
-          case v if 5 until 9 contains v => ADSB_SurfacePosition(df,capability,aircraftAddr,raw = message)
+          case v if 5 until 9 contains v => ADSB_SurfacePosition(df,capability,addr,raw = message)
           case v if 9 until 19 contains v => {
             val a = Decoder.codecRawAirbornePositions.decode(raw.DATA).toOption.get.value
             val loc = a.getLocalPosition(refLoc)
-            ADSB_AirbornePositionBaro(df,capability,aircraftAddr,
+            ADSB_AirbornePositionBaro(df,capability,addr,
               loc, a.isOdd, a.latCPR, a.lonCPR, 
               raw = message, ts)
           }
@@ -266,7 +266,7 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
                 val a = Decoder.codecRawAirborneVelocityST1.decode(raw.DATA).toOption.get.value
                 val (hSpeed,heading) = a.getSpeedHeading
                 val vRate = a.getVRate
-                ADSB_AirborneVelocity(df,capability,aircraftAddr,
+                ADSB_AirborneVelocity(df,capability,addr,
                   hSpeed = hSpeed, heading = heading,
                   vRate = vRate,
                   raw = message, ts)
@@ -275,19 +275,19 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
                 val a = Decoder.codecRawAirborneVelocityST3.decode(raw.DATA).toOption.get.value
                 val (hSpeed,heading) = a.getSpeedHeading
                 val vRate = a.getVRate
-                ADSB_AirborneVelocity(df,capability,aircraftAddr,
+                ADSB_AirborneVelocity(df,capability,addr,
                   hSpeed = hSpeed, heading = heading,
                   vRate = vRate,
                   raw = message, ts)
               }
             }
           }
-          case v if 20 until 23 contains v => ADSB_AirbornePositionGNSS(df,capability,aircraftAddr,raw = message, ts)
-          case v if 23 until 28 contains v => ADSB_Reserved(df,capability,aircraftAddr,raw = message, ts)
-          case 28                          => ADSB_AircraftStatus(df,capability,aircraftAddr,raw = message, ts)
-          case 29                          => ADSB_TargetState(df,capability,aircraftAddr,raw = message,ts)
-          case 31                          => ADSB_AircraftOperationStatus(df,capability,aircraftAddr,raw = message,ts)
-          case _                           => ADSB_Unknown(df,capability,aircraftAddr,raw = message,ts)
+          case v if 20 until 23 contains v => ADSB_AirbornePositionGNSS(df,capability,addr,raw = message, ts)
+          case v if 23 until 28 contains v => ADSB_Reserved(df,capability,addr,raw = message, ts)
+          case 28                          => ADSB_AircraftStatus(df,capability,addr,raw = message, ts)
+          case 29                          => ADSB_TargetState(df,capability,addr,raw = message,ts)
+          case 31                          => ADSB_AircraftOperationStatus(df,capability,addr,raw = message,ts)
+          case _                           => ADSB_Unknown(df,capability,addr,raw = message,ts)
         }
 
       case _ => // unknown
@@ -377,8 +377,8 @@ object Decoder {
   // a0 - previous event
   // a1 - current event
   def getGloballPosition(a0:ADSB_AirbornePositionBaro,a1:ADSB_AirbornePositionBaro): Location = {
-    if(a0.aircraftAddr != a1.aircraftAddr) {
-      log.warn(s"different aircrafts: ${a0.aircraftAddr} : ${a1.aircraftAddr}")
+    if(a0.addr != a1.addr) {
+      log.warn(s"different aircrafts: ${a0.addr} : ${a1.addr}")
       return a1.loc
     }
 		
