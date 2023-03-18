@@ -28,8 +28,9 @@ case class Config(
   throttle:Long = 0L,
   
   entity:String = "dump1090",
-  filter:Seq[String] = Seq(),
+  filter:Seq[String] = Seq(),  
   format:String = "raw",
+  denoise:Seq[String] = Seq("00000000000000"),
 
   timeoutConnect:Long = 3000L,
   timeoutIdle:Long = 1000 * 60 * 60 * 24L,
@@ -55,7 +56,7 @@ object App {
         ArgInt('p', "http.port",s"listern port (def: ${d.port})"),
         ArgString('u', "http.uri",s"api uri (def: ${d.uri})"),
 
-        ArgString('f', "feed",s"Input Feed (dump1090://host:port, file://, kafka://, (def: stdin://) (def=${d.feed})"),
+        ArgString('f', "feed",s"Input Feed (dump1090://host:port, file://, kafka://) (def=${d.feed})"),
         ArgString('o', "output",s"Output file (pattern is supported: data-{yyyy-MM-dd-HH-mm}.log) (def=${d.output})"),
             
         ArgString('_', "format",s"Output format (json,csv,raw) (def: ${d.format})"),
@@ -72,6 +73,8 @@ object App {
 
         ArgString('e', "entity",s"Ingest entity: (adsb,dump1090) (def: ${d.entity})"),               
         ArgString('a', "aircraft",s"Filter (ex: 'AN-225') (def=${d.filter})"),
+        ArgString('_', "denoise",s"Filter out noise (def=${d.denoise})"),
+
         ArgString('_', "timeout.connect",s"Connection timeout (def: ${d.timeoutConnect})"),
         ArgString('_', "timeout.idle",s"Idle timeout (def: ${d.timeoutIdle})"),
         
@@ -102,7 +105,9 @@ object App {
       
       entity = c.getString("entity").getOrElse(d.entity),
       format = c.getString("format").getOrElse(d.format),
-      filter = c.getListString("aircraft"),
+      filter = c.getListString("aircraft",d.filter),
+      denoise = c.getListString("denoise",d.denoise),
+
       timeoutConnect = c.getLong("timeout.connect").getOrElse(d.timeoutConnect),
       timeoutIdle = c.getLong("timeout.idle").getOrElse(d.timeoutIdle),
             
@@ -122,7 +127,9 @@ object App {
           case "adsb" =>
             new PipelineADSB(config.feed,config.output)(config)
           
-          case _ =>  Console.err.println(s"Uknown entity: '${config.entity}'"); sys.exit(1)
+          case _ =>  
+            Console.err.println(s"Uknown entity: '${config.entity}'")
+            sys.exit(1)
         } 
 
         Console.err.println(s"pp=${pp}")
@@ -136,7 +143,7 @@ object App {
           case akka.NotUsed => 
         }
 
-        Console.err.println(s"Events: ${pp.countObj}")
+        Console.err.println(s"Events: ${pp.countObj.get()}")
         sys.exit(0)
       }
 

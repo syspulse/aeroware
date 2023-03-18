@@ -44,6 +44,7 @@ import AdsbIngestedJsonProtocol._
 class PipelineDump1090(feed:String,output:String)(implicit config:Config) extends PipelineIngest[ADSB](feed,output) {
   
   def decodeDump1090(data:String):Option[ADSB] = {
+    if(data.isEmpty() || (config.denoise.size > 0 && config.denoise.contains(data))) return None
     Decoder.decodeDump1090(data) match {
       case Success(a) => Some(a)
       case Failure(e) => None
@@ -51,27 +52,13 @@ class PipelineDump1090(feed:String,output:String)(implicit config:Config) extend
   }
 
   def decodeDump1090(data:String,ts:Long):Option[ADSB] = {
+    if(data.isEmpty() || (config.denoise.size > 0 && config.denoise.contains(data))) return None
     Decoder.decode(data,ts) match {
       case Success(a) => Some(a)
       case Failure(e) => None
     }
   }
 
-  // expect format 'timestamp adsb'
-  def parseDump1090(data:String):Seq[ADSB] = {
-    if(data.isEmpty()) return Seq()
-    try {
-      //val coin = data.toJson
-      val a = decodeDump1090(data)        
-      log.debug(s"adsb=${a}")
-      a.toSeq
-    } catch {
-      case e:Exception => 
-        log.error(s"failed to parse: '${data}'",e)
-        Seq()
-    }
-  }
-  
   def parseRaw(data:String):Seq[ADSB] = {
     if(data.isEmpty()) return Seq()
     try {
