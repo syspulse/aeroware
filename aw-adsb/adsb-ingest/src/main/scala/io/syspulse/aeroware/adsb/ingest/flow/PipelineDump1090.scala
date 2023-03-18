@@ -44,19 +44,13 @@ import AdsbIngestedJsonProtocol._
 
 class PipelineDump1090(feed:String,output:String)(implicit config:Config) extends PipelineIngest[ADSB](feed,output) {
   
-  def decodeDump1090(data:String):Option[ADSB] = {
-    if(data.isEmpty() || (config.denoise.size > 0 && config.denoise.contains(data))) return None
-    Decoder.decodeDump1090(data) match {
+  def decodeDump1090(data:String, ts:Option[Long]):Option[ADSB] = {
+    if(data.isEmpty() || (config.denoise.size > 0 && config.denoise.contains(data))) 
+      return None
+    
+    (if(ts.isDefined) Decoder.decode(data,ts.get) else Decoder.decodeDump1090(data)) match {
       case Success(a) => Some(a)
-      case Failure(e) => None
-    }
-  }
-
-  def decodeDump1090(data:String,ts:Long):Option[ADSB] = {
-    if(data.isEmpty() || (config.denoise.size > 0 && config.denoise.contains(data))) return None
-    Decoder.decode(data,ts) match {
-      case Success(a) => Some(a)
-      case Failure(e) => None
+      case Failure(e) => Some(ADSB_Failure(e.toString,data))
     }
   }
 
@@ -65,9 +59,9 @@ class PipelineDump1090(feed:String,output:String)(implicit config:Config) extend
     try {
       val a = data.trim.split("\\s+").toList match {
         // 'timestamp adsb'  - already ingested raw with ts
-        case ts :: a :: Nil => decodeDump1090(a,ts.toLong)
+        case ts :: a :: Nil => decodeDump1090(a,Some(ts.toLong))
         // 'adsb' - directly from dump1090
-        case a :: Nil =>  decodeDump1090(a)         
+        case a :: Nil =>  decodeDump1090(a,None)
         case _ => {
           log.error(s"invalid format': ${data}")
           return Seq.empty
@@ -90,7 +84,8 @@ class PipelineDump1090(feed:String,output:String)(implicit config:Config) extend
     parseRaw(data)
   }
 
-  def transform(a: ADSB): Seq[ADSB_Ingested] = {
-    Seq(ADSB_Ingested(a,config.format))
-  }
+  override def process:Flow[ADSB,ADSB,_] = Flow[ADSB].map(v => v)  
+  // def transform(a: ADSB): Seq[ADSB_Ingested] = {
+  //   Seq(ADSB_Ingested(a,config.format))
+  // }
 }

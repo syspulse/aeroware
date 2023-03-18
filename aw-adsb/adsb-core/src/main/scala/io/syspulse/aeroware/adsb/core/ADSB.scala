@@ -26,7 +26,7 @@ abstract class ADSB extends Serializable {
 } 
 
 // Undecoded and passed down the pipeline for investigation
-case class ADSB_DecodeFailure(df:Byte,capability:Byte, addr:AircraftAddress, err:String, raw:Raw, ts:Long=now) extends ADSB
+case class ADSB_Failure(err:String, raw:Raw, df:Byte = 0,capability:Byte = 0, addr:AircraftAddress = AircraftAddress("","",""), ts:Long=now) extends ADSB
 
 case class ADSB_Unknown(df:Byte,capability:Byte, addr:AircraftAddress, raw:Raw, ts:Long=now) extends ADSB
 
