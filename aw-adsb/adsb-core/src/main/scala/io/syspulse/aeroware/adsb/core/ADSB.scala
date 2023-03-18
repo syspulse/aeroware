@@ -75,6 +75,8 @@ case class ADSB_AllCall(df:Byte,capability:Byte,addr:AircraftAddress, parity:Arr
   override def toString = s"ADSB_AllCall(${df},${capability},${addr},${Util.hex(parity)},${Util.hex(interrogator)},${code},${raw},${ts})"
 }
 
+case class ADSB_CommIdentityReply(df:Byte, capability:Byte = 0, addr:AircraftAddress = AircraftAddress("","",""), raw:Raw, ts:Long=now) extends ADSB
+
 object ADSB {
   def now = System.currentTimeMillis()
 }

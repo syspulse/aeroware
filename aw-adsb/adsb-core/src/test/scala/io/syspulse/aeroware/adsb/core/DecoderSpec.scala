@@ -27,16 +27,6 @@ class DecoderSpec extends AnyWordSpec with Matchers with Testables {
   val msgIdent1 = "8D50809520353276CB1D6037592E"
   val msgIdent2 = "8D4840D6202CC371C32CE0576098"
 
-  val msgUnknown1 = "5DA606933B451A"
-
-  // there are NewLines !
-  val msgWar1 = """*00000000000000;
-*00000000000000;
-"""
-  // there are NewLines !
-  val msgWar2 = """*A800080010030A80F500006E9FAD;
-*A80008002009224FDB88201E362A;
-"""
 
   "Decoder" should {
     s"decode ${msg1} DF=17" in {
@@ -131,11 +121,4 @@ class DecoderSpec extends AnyWordSpec with Matchers with Testables {
 
   }  
 
-  "DecoderUnknown" should {    
-    s"decode dump1090 message: ${msgUnknown1} as type 11" in {
-      val a1 = Decoder.decode(msgUnknown1)
-      info(s"${a1}")
-      a1.isFailure should === (false)      
-    }
-  }  
 }

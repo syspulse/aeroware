@@ -290,6 +290,9 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
           case _                           => ADSB_Unknown(df,capability,addr,raw = message,ts)
         }
 
+      case 21 => 
+        ADSB_CommIdentityReply(df,raw = message,ts =ts)
+
       case _ => // unknown
         //log.warn(s"msg=${message}: DF=${df}: Unsupported DF")
         ADSB_Unknown(df,0,AircraftAddress("0","",""),raw = message,ts)
