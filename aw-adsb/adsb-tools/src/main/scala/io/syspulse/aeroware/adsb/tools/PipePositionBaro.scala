@@ -14,7 +14,7 @@ trait PipePositionBaro extends Pipe {
 
   def process(a0:ADSB_AirbornePositionBaro,a1:ADSB_AirbornePositionBaro):Unit
 
-  def output(a:ADSB,loc:Location) = s"${a.ts},${a.aircraftAddr.icaoId},${a.aircraftAddr.icaoCallsign},${loc.lat},${loc.lon},${loc.alt.alt}"
+  def output(a:ADSB,loc:Location) = s"${a.ts},${a.addr.icaoId},${a.addr.icaoCallsign},${loc.lat},${loc.lon},${loc.alt.alt}"
 
   def flow(a:Try[ADSB]):Try[ADSB] = {
     if(a.isSuccess && a.get.isInstanceOf[ADSB_AirbornePositionBaro]) {

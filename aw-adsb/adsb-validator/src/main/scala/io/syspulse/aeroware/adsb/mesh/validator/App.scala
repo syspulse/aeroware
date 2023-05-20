@@ -45,7 +45,6 @@ case class Config (
   params: Seq[String] = Seq(),
 )
 
-
 object App extends skel.Server {
   import MSG_MinerData._
 

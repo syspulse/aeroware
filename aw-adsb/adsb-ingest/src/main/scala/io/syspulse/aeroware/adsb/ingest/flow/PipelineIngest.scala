@@ -17,6 +17,11 @@ import akka.stream.scaladsl.Tcp
 
 import spray.json._
 import DefaultJsonProtocol._
+//import io.syspulse.skel.serde.Parq._
+import io.syspulse.skel.serde.ParqCodecTypedSerializable
+import com.github.mjakubowski84.parquet4s.{ParquetRecordEncoder,ParquetSchemaResolver}
+import io.syspulse.aeroware.adsb.ingest.AdsbIngestedJsonProtocol._
+
 import java.util.concurrent.TimeUnit
 
 import io.syspulse.skel
@@ -38,13 +43,23 @@ import java.net.InetSocketAddress
 import akka.stream.scaladsl.RestartSource
 import akka.stream.OverflowStrategy
 
-abstract class PipelineIngest[T](feed:String,output:String)(implicit config:Config,fmt:JsonFormat[ADSB_Ingested])
-  extends Pipeline[T,T,ADSB_Ingested](feed,output,config.throttle,config.delimiter,config.buffer)(fmt) {
+// abstract class PipelineIngest[T](feed:String,output:String)(implicit config:Config,fmt:JsonFormat[ADSB_Ingested],parqEncoders:ParquetRecordEncoder[T],parsResolver:ParquetSchemaResolver[T])
+//   extends Pipeline[T,T,ADSB_Ingested](feed,output,config.throttle,config.delimiter,config.buffer) {
+
+object PipelineIngestParq {
+  implicit val (parqCodecs,parqTypes) = ParqCodecTypedSerializable.forClass[ADSB]
+}
+
+import PipelineIngestParq._
+import io.syspulse.skel.serde.Parq._
+
+abstract class PipelineIngest[T](feed:String,output:String)(implicit config:Config)
+  extends Pipeline[T,ADSB,ADSB_Ingested](feed,output,config.throttle,config.delimiter,config.buffer) {
 
   protected val log = Logger(s"${this}")
 
-  val connectTimeout = 1000L
-  val idleTimeout = 1000L
+  val connectTimeout = config.timeoutConnect//1000L
+  val idleTimeout = config.timeoutIdle //1000L
   
   def filter:Seq[String] = config.filter
 
@@ -74,6 +89,9 @@ abstract class PipelineIngest[T](feed:String,output:String)(implicit config:Conf
     }
   }
 
-  override def process:Flow[T,T,_] = Flow[T].map(v => v)
-
+  //override def process:Flow[T,T,_] = Flow[T].map(v => v)
+  
+  def transform(a: ADSB): Seq[ADSB_Ingested] = {
+    Seq(ADSB_Ingested(a,config.format))
+  }
 }

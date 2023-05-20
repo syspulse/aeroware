@@ -43,7 +43,7 @@ abstract class Trackable(id:AircraftAddress, cacheSize:Int = 100) {
           p0 = Some(p)
 
           val (hSpeed:Speed,vRate:VRate,heading:Double) = { val t=tLast.getOrElse(tFirst); (t.hSpeed,t.vRate,t.heading)}
-          val t = AircraftTelemetry(a.aircraftAddr,loc,hSpeed,vRate,heading)
+          val t = AircraftTelemetry(a.addr,loc,hSpeed,vRate,heading)
           telemetry = telemetry :+ t
 
           tLast = Some(t)
@@ -58,7 +58,7 @@ abstract class Trackable(id:AircraftAddress, cacheSize:Int = 100) {
         val vRate = p.vRate
         val heading = p.heading
         val (loc:Location) = { val t=tLast.getOrElse(tFirst); (t.loc)}
-        val t = AircraftTelemetry(a.aircraftAddr,loc,hSpeed,vRate,heading)
+        val t = AircraftTelemetry(a.addr,loc,hSpeed,vRate,heading)
         telemetry = telemetry :+ t
 
         tLast = Some(t)

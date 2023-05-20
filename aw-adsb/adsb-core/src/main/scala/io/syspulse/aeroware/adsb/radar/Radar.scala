@@ -56,7 +56,7 @@ class Radar(zoneId:String = "ZONE", expiryTime:Duration = Duration("1 minutes"),
   } 
 
   def event(adsb:ADSB):Radar = {
-    val address = adsb.aircraftAddr
+    val address = adsb.addr
     aircrafts.get(address) match {
       case Some(aircraft) => {
         aircraft.event(adsb)

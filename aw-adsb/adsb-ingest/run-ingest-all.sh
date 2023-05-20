@@ -1,5 +1,7 @@
 #!/bin/bash                                                                                                                                                                                            
 CWD=`echo $(dirname $(readlink -f $0))`
 
+OUTPUT=${OUTPUT:-/mnt/share/data/adsb/raw}
+
 # use --file NONE 
-$CWD/run.sh --dump1090.host=rp-1 --dump1090.port=30002 --aircraft='.*' #--file 'ADSB-{yyyy-MM-dd'T'HH:mm:ssZ}.log'
+$CWD/run-ingest.sh -f dump1090://rp-1:30002 --aircraft='.*' -o "hive://${OUTPUT}/adsb-{yyyy}-{MM}-{dd}.raw" --format=raw

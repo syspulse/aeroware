@@ -158,6 +158,15 @@ case class RawAircraftIdentification(EC: BitVector,C1:BitVector,C2:BitVector,C3:
   }
 }
 
+
+// DF11
+case class RawAllCall(DF: BitVector,CA: BitVector, ICAO:BitVector, PI: BitVector) {  
+  override def toString = {
+    s"RawAllCall(DF=${DF.toBin},CA=${CA.toBin},ICAO=${ICAO.toHex},PI=${PI.toBin}})"
+  }
+}
+
+
 case class RawADSB(DF: BitVector, CA: BitVector, ICAO: BitVector, TC: BitVector, DATA: BitVector, PI: BitVector) {
   override def toString = {
     val tc = TC.toByte(true)
@@ -185,7 +194,6 @@ case class RawADSB(DF: BitVector, CA: BitVector, ICAO: BitVector, TC: BitVector,
 abstract class ADSB_Decoder(decoderLocation:Location) {
   val log = Logger(this.getClass().getSimpleName())
 
-  
   def decodeAircraftAddr(b:BitVector):AircraftAddress = {
     val icaoId = b.toHex.toLowerCase
     val aircraft = AircraftICAORegistry.find(icaoId)
@@ -207,28 +215,46 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
     
     log.trace(s"msg=${message}: DF=${df}")
 
+    // DF 0: Short air-air ACAS
+    // DF 4: Short altitude reply
+    // DF 5: Short identify reply
+    // DF 11: All-call reply
+    // DF 16: Long air-air ACAS
+    // DF 17/18: Extended Squitter (see ADS-B formats below)
+    // DF 19: Military Extended Squitter
+    // DF 20: Comm-B altitude reply
+    // DF 21: Comm-B identify reply
+    // DF >24: Comm-D Extended Length Message    
     val adsb = df match {
+      case 11 => 
+        val raw = Decoder.codecRawAllCall.decode(BitVector.fromHex(message).get).toOption.get.value
+        val df = raw.DF.toByte(false)
+        val capability = raw.CA.toByte(false)
+        val addr = decodeAircraftAddr(raw.ICAO)
+
+        ADSB_AllCall(df,capability,addr,raw.PI.toByteArray, raw = message,ts)
+
       case 17 | 18 | 19 =>
         val raw = Decoder.codecRawADSB.decode(BitVector.fromHex(message).get).toOption.get.value
 
         val df = raw.DF.toByte(false)
         val capability = raw.CA.toByte(false)
-        val aircraftAddr = decodeAircraftAddr(raw.ICAO)
+        val addr = decodeAircraftAddr(raw.ICAO)
 
         val tc = raw.TC.toByte(false)
         tc match {
           case v if 1 until 5 contains v => {
             val aid = Decoder.codecRawAircraftIdentification.decode(raw.DATA).toOption.get.value
-            ADSB_AircraftIdentification(df,capability,aircraftAddr,
+            ADSB_AircraftIdentification(df,capability,addr,
               tc, aid.EC.toByte(false),
               callSign = Decoder.decodeDataAsChars(Seq(aid.C1,aid.C2,aid.C3,aid.C4,aid.C5,aid.C6,aid.C7,aid.C8)),
               raw = message, ts)
           }
-          case v if 5 until 9 contains v => ADSB_SurfacePosition(df,capability,aircraftAddr,raw = message)
+          case v if 5 until 9 contains v => ADSB_SurfacePosition(df,capability,addr,raw = message)
           case v if 9 until 19 contains v => {
             val a = Decoder.codecRawAirbornePositions.decode(raw.DATA).toOption.get.value
             val loc = a.getLocalPosition(refLoc)
-            ADSB_AirbornePositionBaro(df,capability,aircraftAddr,
+            ADSB_AirbornePositionBaro(df,capability,addr,
               loc, a.isOdd, a.latCPR, a.lonCPR, 
               raw = message, ts)
           }
@@ -240,7 +266,7 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
                 val a = Decoder.codecRawAirborneVelocityST1.decode(raw.DATA).toOption.get.value
                 val (hSpeed,heading) = a.getSpeedHeading
                 val vRate = a.getVRate
-                ADSB_AirborneVelocity(df,capability,aircraftAddr,
+                ADSB_AirborneVelocity(df,capability,addr,
                   hSpeed = hSpeed, heading = heading,
                   vRate = vRate,
                   raw = message, ts)
@@ -249,23 +275,24 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
                 val a = Decoder.codecRawAirborneVelocityST3.decode(raw.DATA).toOption.get.value
                 val (hSpeed,heading) = a.getSpeedHeading
                 val vRate = a.getVRate
-                ADSB_AirborneVelocity(df,capability,aircraftAddr,
+                ADSB_AirborneVelocity(df,capability,addr,
                   hSpeed = hSpeed, heading = heading,
                   vRate = vRate,
                   raw = message, ts)
               }
             }
           }
-          case v if 20 until 23 contains v => ADSB_AirbornePositionGNSS(df,capability,aircraftAddr,raw = message, ts)
-          case v if 23 until 28 contains v => ADSB_Reserved(df,capability,aircraftAddr,raw = message, ts)
-          case 28                          => ADSB_AircraftStatus(df,capability,aircraftAddr,raw = message, ts)
-          case 29                          => ADSB_TargetState(df,capability,aircraftAddr,raw = message,ts)
-          case 31                          => ADSB_AircraftOperationStatus(df,capability,aircraftAddr,raw = message,ts)
-          case _                           => ADSB_Unknown(df,capability,aircraftAddr,raw = message,ts)
+          case v if 20 until 23 contains v => ADSB_AirbornePositionGNSS(df,capability,addr,raw = message, ts)
+          case v if 23 until 28 contains v => ADSB_Reserved(df,capability,addr,raw = message, ts)
+          case 28                          => ADSB_AircraftStatus(df,capability,addr,raw = message, ts)
+          case 29                          => ADSB_TargetState(df,capability,addr,raw = message,ts)
+          case 31                          => ADSB_AircraftOperationStatus(df,capability,addr,raw = message,ts)
+          case _                           => ADSB_Unknown(df,capability,addr,raw = message,ts)
         }
-      // case 18 => // non-interrogatable equipment
-      //   //log.warn(s"msg=${message}: DF=${df}: Unsupported DF")
-      //   ADSB_Unknown(df,0,AircraftAddress("0","",""),raw = message,ts)
+
+      case 21 => 
+        ADSB_CommIdentityReply(df,raw = message,ts =ts)
+
       case _ => // unknown
         //log.warn(s"msg=${message}: DF=${df}: Unsupported DF")
         ADSB_Unknown(df,0,AircraftAddress("0","",""),raw = message,ts)
@@ -286,6 +313,34 @@ class Decoder(val decoderLocation:Location = Location(50.4584,30.3381,Altitude(2
 
 object Decoder {
   val log = Logger(this.getClass().getSimpleName())
+
+  def decodeParity(msg:Array[Byte]) = {
+    val CRC_polynomial = Array[Byte](0xff.toByte,0xf4.toByte,0x09.toByte)
+	
+		val pi = msg.take(CRC_polynomial.size)
+
+		for (i <- Range(0, msg.size * 8)) { 
+			val invert = ((pi(0) & 0x80) != 0)
+
+			pi(0) = (pi(0) << 1).toByte
+			
+      for (b  <- Range(1, CRC_polynomial.size)) {
+				pi(b-1) = (pi(b-1) | (pi(b)>>>7) & 0x1).toByte
+				pi(b) = (pi(b) << 1).toByte
+			}
+
+			val bi = ((CRC_polynomial.size * 8 ) + i ) / 8
+			val bs = 7 - ( i % 8 )
+			
+      if (bi < msg.length)
+				pi(pi.length-1) =  (pi.last | (msg(bi) >>> bs) & 0x1).toByte
+
+			if (invert)
+				for (b <- Range(0, CRC_polynomial.size))
+					pi(b) = (pi(b) ^ CRC_polynomial(b)).toByte
+		}
+		pi
+	}
 
   def decodeCharacter(bits:BitVector):Char = {
     bits.toByte(false) match {
@@ -325,8 +380,8 @@ object Decoder {
   // a0 - previous event
   // a1 - current event
   def getGloballPosition(a0:ADSB_AirbornePositionBaro,a1:ADSB_AirbornePositionBaro): Location = {
-    if(a0.aircraftAddr != a1.aircraftAddr) {
-      log.warn(s"different aircrafts: ${a0.aircraftAddr} : ${a1.aircraftAddr}")
+    if(a0.addr != a1.addr) {
+      log.warn(s"different aircrafts: ${a0.addr} : ${a1.addr}")
       return a1.loc
     }
 		
@@ -399,6 +454,11 @@ object Decoder {
   //                                                                 ST         IC       RESV_A       NAC        S_hdg       Hdg       AS_t         AS         VrSrc      S_vr       Vr       RESV_B      S_Dif      Dif  
   val codecRawAirborneVelocityST3: Codec[RawAirborneVelocityST3] = (bits(3) :: bits(1) :: bits(1) :: bits(3) :: bits(1) :: bits(10) :: bits(1) :: bits(10) :: bits(1) :: bits(1) :: bits(9) :: bits(2) :: bits(1) :: bits(7))
     .as[RawAirborneVelocityST3]
+
+  //                                        DF         CA          ICAO       PARITY/InterrogatorID 
+  val codecRawAllCall: Codec[RawAllCall] = (bits(5) :: bits(3) :: bits(24) :: bits(24))
+    .as[RawAllCall]
+
 
   val decoder = new Decoder
   def decode(data:String, ts:Long = ADSB.now) = decoder.decode(data,ts)

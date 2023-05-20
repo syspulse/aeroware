@@ -27,6 +27,7 @@ import io.syspulse.skel.ingest.flow.Pipeline
 
 import spray.json._
 import DefaultJsonProtocol._
+
 import java.util.concurrent.TimeUnit
 
 import io.syspulse.aeroware.adsb._
@@ -43,21 +44,34 @@ import AdsbIngestedJsonProtocol._
 
 class PipelineDump1090(feed:String,output:String)(implicit config:Config) extends PipelineIngest[ADSB](feed,output) {
   
-  def decode(data:String):Option[ADSB] = {
-    Decoder.decodeDump1090(data) match {
+  def decodeDump1090(data:String, ts:Option[Long]):Option[ADSB] = {
+    if(data.isEmpty() || (config.denoise.size > 0 && config.denoise.contains(data))) 
+      return None
+    
+    (if(ts.isDefined) Decoder.decode(data,ts.get) else Decoder.decodeDump1090(data)) match {
       case Success(a) => Some(a)
-      case Failure(e) => None
+      case Failure(e) => Some(ADSB_Failure(e.toString,data))
     }
   }
 
-  // expect format 'timestamp adsb'
-  def parse(data:String):Seq[ADSB] = {
+  def parseRaw(data:String):Seq[ADSB] = {
     if(data.isEmpty()) return Seq()
     try {
-      //val coin = data.toJson
-      val a = decode(data)        
+      val a = data.trim.split("\\s+").toList match {
+        // 'timestamp adsb'  - already ingested raw with ts
+        case ts :: a :: Nil => decodeDump1090(a,Some(ts.toLong))
+        // 'adsb' - directly from dump1090
+        case a :: Nil =>  decodeDump1090(a,None)
+        case _ => {
+          log.error(s"invalid format': ${data}")
+          return Seq.empty
+          None
+        }
+      }
+      
       log.debug(s"adsb=${a}")
       a.toSeq
+      
     } catch {
       case e:Exception => 
         log.error(s"failed to parse: '${data}'",e)
@@ -65,7 +79,13 @@ class PipelineDump1090(feed:String,output:String)(implicit config:Config) extend
     }
   }
 
-  def transform(a: ADSB): Seq[ADSB_Ingested] = {
-    Seq(ADSB_Ingested(a,config.format))
+  override def parse(data:String):Seq[ADSB] = {
+    log.debug(s"data=${data}")
+    parseRaw(data)
   }
+
+  override def process:Flow[ADSB,ADSB,_] = Flow[ADSB].map(v => v)  
+  // def transform(a: ADSB): Seq[ADSB_Ingested] = {
+  //   Seq(ADSB_Ingested(a,config.format))
+  // }
 }

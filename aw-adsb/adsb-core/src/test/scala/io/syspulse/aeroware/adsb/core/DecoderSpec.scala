@@ -27,6 +27,7 @@ class DecoderSpec extends AnyWordSpec with Matchers with Testables {
   val msgIdent1 = "8D50809520353276CB1D6037592E"
   val msgIdent2 = "8D4840D6202CC371C32CE0576098"
 
+
   "Decoder" should {
     s"decode ${msg1} DF=17" in {
       val a1 = Decoder.decode(msg1)
@@ -40,7 +41,7 @@ class DecoderSpec extends AnyWordSpec with Matchers with Testables {
   
     s"decode ${msg1} ICAO Aircraft Address" in {
       val a1 = Decoder.decode(msg1)
-      a1.get.aircraftAddr should === (AircraftAddress("4840d6","Fokker 70","PH-KZD"))
+      a1.get.addr should === (AircraftAddress("4840d6","Fokker 70","PH-KZD"))
     }
   
     s"decode all ${file1} without crash" in {
@@ -117,5 +118,7 @@ class DecoderSpec extends AnyWordSpec with Matchers with Testables {
       val v = Decoder.decodeCharacter(BitVector.fromBin(30.toBinaryString).get)
       v should === ('#')
     }
+
   }  
+
 }

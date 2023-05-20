@@ -106,9 +106,9 @@ val sharedConfigAssembly = Seq(
   assembly / assemblyMergeStrategy := {
       case x if x.contains("module-info.class") => MergeStrategy.discard
       case x if x.contains("io.netty.versions.properties") => MergeStrategy.first
-      case x if x.contains("slf4j/impl/StaticMarkerBinder.class") => MergeStrategy.first
-      case x if x.contains("slf4j/impl/StaticMDCBinder.class") => MergeStrategy.first
-      case x if x.contains("slf4j/impl/StaticLoggerBinder.class") => MergeStrategy.first
+      case x if x.contains("slf4j/impl/StaticMarkerBinder.class") => MergeStrategy.last
+      case x if x.contains("slf4j/impl/StaticMDCBinder.class") => MergeStrategy.last
+      case x if x.contains("slf4j/impl/StaticLoggerBinder.class") => MergeStrategy.last
       case x if x.contains("google/protobuf") => MergeStrategy.first
       case x => {
         val oldStrategy = (assembly / assemblyMergeStrategy).value
@@ -119,8 +119,11 @@ val sharedConfigAssembly = Seq(
     val cp = (assembly / fullClasspath).value
     cp filter { f =>
       f.data.getName.contains("snakeyaml-1.27-android.jar") || 
-      f.data.getName.contains("jakarta.activation-api-1.2.1") 
-      //|| f.data.getName == "spark-core_2.11-2.0.1.jar"
+      f.data.getName.contains("jakarta.activation-api-1.2.1") || 
+      f.data.getName.contains("log4j-1.2.15.jar") ||
+      f.data.getName.contains("log4j-1.2.17.jar") ||
+      f.data.getName.contains("slf4j-api-1") ||
+      f.data.getName.contains("logback-classic-1.2")
     }
   },
   
@@ -157,6 +160,7 @@ lazy val root = (project in file("."))
     core, 
     gamet, 
     metar,
+    notam,
     adsb_core, 
     adsb_ingest, 
     adsb_tools, 
@@ -170,6 +174,7 @@ lazy val root = (project in file("."))
     core, 
     gamet,
     metar, 
+    notam, 
     adsb_core, 
     adsb_ingest, 
     adsb_tools, 
@@ -208,6 +213,19 @@ lazy val gamet = (project in file("aw-gamet"))
     sharedConfigAssembly,
 
     name := "aw-gamet",
+    libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
+      libEnumeratum,
+      libFastparseLib 
+    )
+)
+
+lazy val notam = (project in file("aw-notam"))
+  .dependsOn(core)
+  .settings (
+    sharedConfig,
+    sharedConfigAssembly,
+
+    name := "aw-notam",
     libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
       libEnumeratum,
       libFastparseLib 
@@ -258,11 +276,13 @@ lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
       libSkelIngest,
       libSkelIngestFlow,
 
-      libKebsSpray,
+      libKebsSpray, // enumerator json
       
       libAlpakkaFile,
       libUjsonLib,
-      libUpickle
+      libUpickle,
+
+      libSkelSerde
     ),
   )
 

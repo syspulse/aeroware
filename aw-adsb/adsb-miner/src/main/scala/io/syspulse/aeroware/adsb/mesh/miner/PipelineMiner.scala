@@ -19,6 +19,8 @@ import akka.stream.scaladsl.Tcp
 
 import spray.json._
 import DefaultJsonProtocol._
+import io.syspulse.skel.serde.Parq._
+
 import java.util.concurrent.TimeUnit
 import java.net.InetSocketAddress
 import akka.stream.scaladsl.RestartSource
@@ -77,9 +79,8 @@ import akka.stream.scaladsl.RestartSink
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerADSB
 import io.syspulse.aeroware.adsb.mesh.protocol.MinerSig
 
-
-class PipelineMiner(feed:String,output:String)(implicit config:Config,fmt:JsonFormat[MSG_MinerData])
-  extends Pipeline[ADSB,MSG_MinerData,MSG_MinerData](feed,output,config.throttle,config.delimiter,config.buffer)(fmt) {
+class PipelineMiner(feed:String,output:String)(implicit config:Config)
+  extends Pipeline[ADSB,MSG_MinerData,MSG_MinerData](feed,output,config.throttle,config.delimiter,config.buffer) {
 
   implicit protected val log = Logger(s"${this}")
   //implicit val ec = system.dispatchers.lookup("default-executor") //ExecutionContext.global

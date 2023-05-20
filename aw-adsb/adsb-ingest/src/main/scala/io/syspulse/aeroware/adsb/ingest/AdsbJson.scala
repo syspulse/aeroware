@@ -65,6 +65,8 @@ object AdsbIngestedJsonProtocol extends DefaultJsonProtocol with AdsbJsonProtoco
         case adsb:ADSB_TargetState => adsb.toJson
         case adsb:ADSB_AircraftOperationStatus => adsb.toJson
 
+        case adsb:ADSB_Unknown => adsb.toJson
+
         case _ => JsString(a.adsb.toString)
       }      
     }

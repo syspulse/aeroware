@@ -12,7 +12,7 @@ import io.syspulse.skel
 import io.syspulse.skel.config._
 
 import io.syspulse.aeroware.adsb.core._
-import io.syspulse.aeroware.data.AircraftICAORegistry
+import io.syspulse.aeroware.aircraft.icao.AircraftICAORegistry
 
 case class Config (
   host: String = "0.0.0.0",
@@ -163,7 +163,7 @@ object AppPlayer {
         else 
         f.toLowerCase().split("\\.").last match {
           case "csv" => new PipeInputCSV(f)
-          case "adsb" => new PipeInputADSB(f)
+          case "adsb" | "raw" => new PipeInputADSB(f)
           case _ => {
             Console.err.println(s"format unknown: ${f}, trying as ADSB")
             //new PipeNone
