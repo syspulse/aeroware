@@ -161,6 +161,7 @@ lazy val root = (project in file("."))
     gamet, 
     metar,
     notam,
+    sigmet,
     adsb_core, 
     adsb_ingest, 
     adsb_tools, 
@@ -174,7 +175,8 @@ lazy val root = (project in file("."))
     core, 
     gamet,
     metar, 
-    notam, 
+    notam,
+    sigmet,
     adsb_core, 
     adsb_ingest, 
     adsb_tools, 
@@ -204,32 +206,6 @@ lazy val aircraft = (project in file("aw-aircraft"))
       sharedConfig,
       name := "aw-aircraft",
       libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(),
-)
-
-lazy val gamet = (project in file("aw-gamet"))
-  .dependsOn(core)
-  .settings (
-    sharedConfig,
-    sharedConfigAssembly,
-
-    name := "aw-gamet",
-    libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
-      libEnumeratum,
-      libFastparseLib 
-    )
-)
-
-lazy val notam = (project in file("aw-notam"))
-  .dependsOn(core)
-  .settings (
-    sharedConfig,
-    sharedConfigAssembly,
-
-    name := "aw-notam",
-    libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
-      libEnumeratum,
-      libFastparseLib 
-    )
 )
 
 lazy val adsb_core = (project in file("aw-adsb/adsb-core"))
@@ -384,6 +360,19 @@ lazy val gpx_core = (project in file("aw-gpx/gpx-core"))
       ),
   )
 
+lazy val gamet = (project in file("aw-gamet"))
+  .dependsOn(core)
+  .settings (
+    sharedConfig,
+    sharedConfigAssembly,
+
+    name := "aw-gamet",
+    libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
+      libEnumeratum,
+      libFastparseLib 
+    )
+)
+
 lazy val metar = (project in file("aw-metar"))
   .dependsOn(core)
   .settings (
@@ -395,4 +384,30 @@ lazy val metar = (project in file("aw-metar"))
       libEnumeratum,
       libFastparseLib 
     )
+  )
+
+lazy val notam = (project in file("aw-notam"))
+  .dependsOn(core)
+  .settings (
+    sharedConfig,
+    sharedConfigAssembly,
+
+    name := "aw-notam",
+    libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
+      libEnumeratum,
+      libFastparseLib 
+    )
 )
+
+lazy val sigmet = (project in file("aw-sigmet"))
+  .dependsOn(core)
+  .settings (
+    sharedConfig,
+    sharedConfigAssembly,
+
+    name := "aw-sigmet",
+    libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
+      libEnumeratum,
+      libFastparseLib 
+    )
+  )
