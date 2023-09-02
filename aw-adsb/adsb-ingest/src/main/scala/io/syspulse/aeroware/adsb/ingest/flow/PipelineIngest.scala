@@ -42,6 +42,7 @@ import io.syspulse.aeroware.adsb.ingest.ADSB_Ingested
 import java.net.InetSocketAddress
 import akka.stream.scaladsl.RestartSource
 import akka.stream.OverflowStrategy
+import akka.stream.RestartSettings
 
 // abstract class PipelineIngest[T](feed:String,output:String)(implicit config:Config,fmt:JsonFormat[ADSB_Ingested],parqEncoders:ParquetRecordEncoder[T],parsResolver:ParquetSchemaResolver[T])
 //   extends Pipeline[T,T,ADSB_Ingested](feed,output,config.throttle,config.delimiter,config.buffer) {
@@ -63,6 +64,13 @@ abstract class PipelineIngest[T](feed:String,output:String)(implicit config:Conf
   
   def filter:Seq[String] = config.filter
 
+  val defaultRetrySetting = RestartSettings(
+    minBackoff = FiniteDuration(3000,TimeUnit.MILLISECONDS),
+    maxBackoff = FiniteDuration(10000,TimeUnit.MILLISECONDS),
+    randomFactor = 0.2
+  )
+  .withMaxRestarts(10, FiniteDuration(5,TimeUnit.MINUTES))
+
   def fromTcp(host:String,port:Int) = {
     val ip = InetSocketAddress.createUnresolved(host, port)
     val conn = Tcp().outgoingConnection(
@@ -70,7 +78,7 @@ abstract class PipelineIngest[T](feed:String,output:String)(implicit config:Conf
       connectTimeout = Duration(connectTimeout,TimeUnit.MILLISECONDS),
       idleTimeout = Duration(idleTimeout,TimeUnit.MILLISECONDS)
     )
-    val sourceRestarable = RestartSource.withBackoff(retrySettings) { () => 
+    val sourceRestarable = RestartSource.withBackoff(defaultRetrySetting) { () => 
       log.info(s"Connecting -> dump1090(${host}:${port})...")
       Source.actorRef(1, OverflowStrategy.fail)
         .via(conn)

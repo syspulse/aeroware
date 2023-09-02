@@ -78,6 +78,7 @@ import akka.stream.scaladsl.Keep
 import akka.stream.scaladsl.RestartSink
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerADSB
 import io.syspulse.aeroware.adsb.mesh.protocol.MinerSig
+import akka.stream.RestartSettings
 
 class PipelineMiner(feed:String,output:String)(implicit config:Config)
   extends Pipeline[ADSB,MSG_MinerData,MSG_MinerData](feed,output,config.throttle,config.delimiter,config.buffer) {
@@ -92,6 +93,12 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
   val signerPk = wallet.signers.toList.head._2.head.pk
   val signerAddr = wallet.signers.toList.head._2.head.addr
   
+  val defaultRetrySetting = RestartSettings(
+    minBackoff = FiniteDuration(3000,TimeUnit.MILLISECONDS),
+    maxBackoff = FiniteDuration(10000,TimeUnit.MILLISECONDS),
+    randomFactor = 0.2
+  )
+  .withMaxRestarts(10, FiniteDuration(5,TimeUnit.MINUTES))
 
   val connectTimeout = 1000L
   val idleTimeout = 1000L
@@ -122,7 +129,7 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
 
     val sink = mqttPublisher.toMat(mqttSink)(Keep.both)
              
-    RestartSink.withBackoff(retrySettings) { 
+    RestartSink.withBackoff(defaultRetrySetting) { 
       log.info(s"-> MQTT(${mqttHost}:${mqttPort})")
       () => sink
     }
@@ -138,7 +145,7 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
       connectTimeout = Duration(connectTimeout,TimeUnit.MILLISECONDS),
       idleTimeout = Duration(idleTimeout,TimeUnit.MILLISECONDS)
     )
-    val sourceRestarable = RestartSource.withBackoff(retrySettings) { () => 
+    val sourceRestarable = RestartSource.withBackoff(defaultRetrySetting) { () => 
       log.info(s"Connecting -> dump1090(${host}:${port})...")
       Source.actorRef(1, OverflowStrategy.fail)
         .via(conn)
@@ -198,7 +205,7 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
 
   override def process:Flow[ADSB,MSG_MinerData,_] = 
     Flow[ADSB]
-      .groupedWithin(config.batchSize, FiniteDuration(config.batchWindow,TimeUnit.MILLISECONDS))
+      .groupedWithin(config.blockSize, FiniteDuration(config.blockWindow,TimeUnit.MILLISECONDS))
       .via(signer)
       .via(checksum)
   

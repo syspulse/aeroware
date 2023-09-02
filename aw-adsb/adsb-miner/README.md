@@ -2,9 +2,9 @@
 
 Miner prototype
 
-1. Batches ADSB messages within configurable number/time window
-2. Signs (can multisign) batches
-3. Verifies batch signature internally
+1. Create Blocks of ADSB messages within configurable number/time window
+2. Signs (can multisign) block
+3. Verifies block signature internally
 
 
 ## Validator
@@ -21,7 +21,7 @@ Miner prototype
 
 ```
 
-### MQTT Broker nodtes
+### MQTT Broker nodes
 
 __MQTT Broker__
 

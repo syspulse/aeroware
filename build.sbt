@@ -184,7 +184,8 @@ lazy val root = (project in file("."))
     gpx_core, 
     adsb_mesh,
     adsb_miner, 
-    adsb_validator)
+    adsb_validator
+  )
   .disablePlugins(sbtassembly.AssemblyPlugin) // this is needed to prevent generating useless assembly and merge error
   .settings(
     

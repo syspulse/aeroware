@@ -22,8 +22,9 @@ case class Config (
 
   keystore:String = "",
   keystorePass:String = "",
-  batchSize: Int = 2,
-  batchWindow: Long = 1000L,
+  
+  blockSize: Int = 2,
+  blockWindow: Long = 1000L,
   protocolOptions:Int = MSG_Options.V_1 | MSG_Options.O_EC,
 
   entity:String = "",
@@ -51,12 +52,12 @@ object App extends skel.Server {
       new ConfigurationAkka,
       new ConfigurationProp,
       new ConfigurationEnv, 
-      new ConfigurationArgs(args,"adsb-validator","",
+      new ConfigurationArgs(args,"adsb-miner","",
         
         ArgString('_', "keystore.file","Keystore file (def: ./keystore/)"),
         ArgString('_', "keystore.pass","Keystore password"),        
-        ArgInt('_', "batch.size","ADSB Batch max size"),
-        ArgLong('_', "batch.window","ADSB Batch time window (msec)"),
+        ArgInt('_', "block.size","ADSB Block max size"),
+        ArgLong('_', "block.window","ADSB Block time window (msec)"),
         ArgString('_', "proto.options",s"Protocol options (def: ${MSG_Options.defaultArg})"),
         
         ArgString('f', "feed","Input Feed (def: )"),
@@ -86,8 +87,8 @@ object App extends skel.Server {
     implicit val config = Config(
       keystore = c.getString("keystore").getOrElse("./keystore/miner-1.json"),
       keystorePass = c.getString("keystore.pass").getOrElse("test123"),
-      batchSize = c.getInt("batch.size").getOrElse(2),
-      batchWindow = c.getLong("batch.window").getOrElse(1000L),
+      blockSize = c.getInt("block.size").getOrElse(2),
+      blockWindow = c.getLong("block.window").getOrElse(1000L),
       protocolOptions = MSG_Options.fromArg(c.getString("proto.options").getOrElse(MSG_Options.defaultArg)),
       
       feed = c.getString("feed").getOrElse(""),
