@@ -82,9 +82,10 @@ object App extends skel.Server {
         ArgCmd("validator","Validator pipeline"),
         ArgCmd("rewards","Rewards calculations"),
         
-        ArgParam("<params>","")
+        ArgParam("<params>",""),
+        ArgLogging()
       ).withExit(1)
-    ))
+    )).withLogging()
 
     Console.err.println(s"${c}")
 

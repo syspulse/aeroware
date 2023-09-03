@@ -209,14 +209,28 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
       }
       
       case "raw" :: _ => {
-        val sink = dataEncoder
-          .toMat(Sink.foreach{d => d.map(b => print(b.toChar))})(Keep.both)
+        val sink = 
+          dataEncoder
+          .toMat(Sink.foreach{d => {
+                        
+            if(MSG_Options.isV1(config.protocolOptions)) {
+              // Textual protocol
+              println(Util.hex(d))              
+            } else {
+              // binary protocol
+              d.foreach(b => print(b.toChar))
+            }
+              
+          }})(Keep.both)
         sink
       }
 
       case "hex" :: _ => {
-        val sink = dataEncoder
-          .toMat(Sink.foreach{d => println(Util.hex(d))})(Keep.both)
+        val sink = 
+          dataEncoder
+          .toMat(Sink.foreach{d => {
+            println(Util.hex(d))            
+          }})(Keep.both)
         sink
       }
 

@@ -1,10 +1,4 @@
-# adsb-miner
-
-Miner prototype
-
-1. Batches ADSB messages within configurable number/time window
-2. Signs (can multisign) batches
-3. Verifies batch signature internally
+# adsb-validator
 
 
 ## Validator
@@ -14,12 +8,6 @@ Miner prototype
 
 ```
 
-## Miner
-
-```
-./run-miner.sh -f data/flight-1000.dump1090 -o mqtt://localhost:1883
-
-```
 
 ### MQTT Broker nodtes
 

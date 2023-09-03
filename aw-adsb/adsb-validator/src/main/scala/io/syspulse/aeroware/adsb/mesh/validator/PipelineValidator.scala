@@ -242,7 +242,13 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
             // inject remote address into payload
             // EXCEPTIONALLY UNOPTIMIZED, I am just tired and want to have something working before sleep
             log.debug(s"Payload[${Util.hex(payload.toArray)}] <- MQTT(${remoteAddr})")
-            ByteString(s"${remoteAddr.getAddress().getHostAddress()}:${remoteAddr.getPort().toString}/${Util.hex(payload.toArray)}")
+            //ByteString(s"${remoteAddr.getAddress().getHostAddress()}:${remoteAddr.getPort().toString}/${Util.hex(payload.toArray)}")
+            
+            val remoteAddressFull = s"${remoteAddr.getAddress().getHostAddress()}:${remoteAddr.getPort().toString}"
+            val addressMarker = s"ADDR,${"%02d".format(remoteAddressFull.size)},${remoteAddressFull}/"
+            //val output = ByteString(addressMarker).++(payload)
+            val output = ByteString(addressMarker + Util.hex(payload.toArray))
+            output
           }
         }
       )
@@ -279,13 +285,28 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
   def parse(data:String):Seq[MSG_MinerData] = {    
     log.debug(s"data: ${data}")
     
-    val remoteAddr = data.takeWhile(_ != '/')
-    val payload = data.dropWhile(_ != '/').drop(1)
-        
-    val wireData = ByteString(Util.fromHexString(payload))
-    log.debug(s"encoded: ${Util.hex(wireData.toArray)}")
+    val (remoteAddr,payload) = {
+      // check if payload contains injected address
+      if(data.take(4) == "ADDR") {
+        //get size
+        val sz = data.drop(4 + 1).take(2).toInt
 
+        val remoteAddr = data.drop(4 + 1 + 2 + 1).take(sz)
+        val payload = data.drop(4 + 1 + 2 + 1 + sz + 1)
+        (remoteAddr,payload)
+      } else 
+        ("",data)
+    }
+        
+    log.debug(s"${remoteAddr}: ${payload}")
+    
+    val wireData = ByteString(Util.fromHexString(payload))
+    // log.debug(s"encoded: ${Util.hex(wireData.toArray)}")
     val encodedData = if(MSG_Options.isV1(config.protocolOptions)) Util.fromHexString(wireData.utf8String) else wireData.toArray
+    //val encodedData = if(MSG_Options.isV1(config.protocolOptions)) Util.fromHexString(payload) else payload.getBytes()
+    
+    log.debug(s"encoded: ${encodedData}")
+    
     val msg = upickle.default.readBinary[MSG_MinerData](encodedData)
     msg.copy(socket = remoteAddr)
     val m = msg
