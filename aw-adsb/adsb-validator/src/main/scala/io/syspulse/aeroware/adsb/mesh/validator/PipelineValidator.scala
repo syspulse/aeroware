@@ -107,6 +107,20 @@ import io.syspulse.aeroware.adsb.mesh.validation._
 import io.syspulse.aeroware.adsb.mesh._
 
 import akka.NotUsed
+import java.util.concurrent.atomic.AtomicLong
+
+class ValidatorStat {
+  val total = new AtomicLong()
+  val errors = new AtomicLong()
+  
+  def +(sz:Long,err:Long):Long = {
+    if(err != 0)
+      errors.addAndGet(err)
+
+    total.addAndGet(sz)
+  }
+  override def toString = s"${total},${errors}"
+}
 
 case class PublishWithAddr (remoteAddr: InetSocketAddress,
                             flags: ControlPacketFlags,
@@ -121,12 +135,13 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
   //implicit val ec = system.dispatchers.lookup("default-executor") //ExecutionContext.global
   implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
+  val validatorStat = new ValidatorStat()
+
   // ----- Wallet ---
   val wallet = new WalletVaultKeyfile(config.keystore, config.keystorePass)  
   val wr = wallet.load()
   log.info(s"wallet: ${wr}")
-  val signerPk = wallet.signers.toList.head._2.head.pk
-  val signerAddr = wallet.signers.toList.head._2.head.addr
+  val validatorAddr = wallet.signers.values.toList.head.addr
 
   // ----- Validation ---
   val validationEngine = new ValidationADSB()
@@ -245,10 +260,25 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
     }
   }
 
-  override def process = Flow[MSG_MinerData].map( m => m)
+  override def process = Flow[MSG_MinerData].map( m => {
+    // fast validation path to prevent Spam
+    val r1 = validationEngine.validate(m)
+
+    val err = if(r1 > 0.0) {
+      datastore.+(m)
+      m.data.size      
+    } else
+      0
+
+    validatorStat.+(m.data.size,err)
+    log.info(s"stat=[${m.data.size},${err},${validatorStat}]")
+
+    m
+  })
 
   def parse(data:String):Seq[MSG_MinerData] = {    
     log.debug(s"data: ${data}")
+    
     val remoteAddr = data.takeWhile(_ != '/')
     val payload = data.dropWhile(_ != '/').drop(1)
         
@@ -260,11 +290,11 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
     msg.copy(socket = remoteAddr)
     val m = msg
 
-    // fast validation path to prevent Spam
-    val r1 = validationEngine.validate(m)
+    // // fast validation path to prevent Spam
+    // val r1 = validationEngine.validate(m)
 
-    if(r1 > 0.0)
-      datastore.+(m)
+    // if(r1 > 0.0)
+    //   datastore.+(m)
   
     Seq(m)
   }

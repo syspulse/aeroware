@@ -78,9 +78,10 @@ object App extends skel.Server {
         
         ArgCmd("miner","Miner pipeline"),
         
-        ArgParam("<params>","")
+        ArgParam("<params>",""),
+        ArgLogging()
       ).withExit(1)
-    ))
+    )).withLogging()
 
     Console.err.println(s"${c}")
 
@@ -88,7 +89,7 @@ object App extends skel.Server {
       keystore = c.getString("keystore").getOrElse("./keystore/miner-1.json"),
       keystorePass = c.getString("keystore.pass").getOrElse("test123"),
       blockSize = c.getInt("block.size").getOrElse(2),
-      blockWindow = c.getLong("block.window").getOrElse(1000L),
+      blockWindow = c.getLong("block.window").getOrElse(1000L ),
       protocolOptions = MSG_Options.fromArg(c.getString("proto.options").getOrElse(MSG_Options.defaultArg)),
       
       feed = c.getString("feed").getOrElse(""),
@@ -121,7 +122,9 @@ object App extends skel.Server {
           }
           case akka.NotUsed => 
             Thread.sleep(Long.MaxValue)
-            
+          
+          case _ => 
+            Thread.sleep(Long.MaxValue)
         }
 
         Console.err.println(s"Events: ${pp.countObj}")

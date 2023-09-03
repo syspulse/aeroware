@@ -80,12 +80,25 @@ import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerADSB
 import io.syspulse.aeroware.adsb.mesh.protocol.MinerSig
 import akka.stream.RestartSettings
 
+import java.util.concurrent.atomic.AtomicLong
+import jakarta.validation.constraints.Min
+
+class MinerStat {
+  val total = new AtomicLong()
+  def +(sz:Long):Long = {
+    total.addAndGet(sz)
+  }
+  override def toString = s"${total}"
+}
+
 class PipelineMiner(feed:String,output:String)(implicit config:Config)
   extends Pipeline[ADSB,MSG_MinerData,MSG_MinerData](feed,output,config.throttle,config.delimiter,config.buffer) {
 
   implicit protected val log = Logger(s"${this}")
   //implicit val ec = system.dispatchers.lookup("default-executor") //ExecutionContext.global
   implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+
+  val minerStat = new MinerStat()
 
   val wallet = new skel.crypto.wallet.WalletVaultKeyfile(config.keystore, config.keystorePass)  
   val wr = wallet.load()
@@ -104,8 +117,20 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
   val connectTimeout = 1000L
   val idleTimeout = 1000L
   
+  val dataEncoder = Flow[MSG_MinerData].map( md => {      
+      val mqttData = upickle.default.writeBinary(md)
+      log.debug(s"encoded = ${Util.hex(mqttData)}")
+
+      val wireData = if(MSG_Options.isV1(config.protocolOptions)) Util.hex(mqttData).getBytes else mqttData
+
+      // healthcheck for decoding
+      //val decodedMsg = upickle.default.readBinary[MSG_MinerData](wireData)
+      //log.info(s"decodedMsg: ${decodedMsg}")      
+      wireData
+    })
+
   // MQTT
-  def toMQTT(mqttHost:String,mqttPort:Int,mqttTopic:String="adsb",clientId:String="adsb-client",protocolVer:Int = 0) = {
+  def toMQTT(mqttHost:String,mqttPort:Int,mqttTopic:String="adsb",clientId:String="adsb-client") = {
     val mqttConnectionSettings = MqttConnectionSettings(
       broker = s"tcp://${mqttHost}:${mqttPort}", 
       clientId = clientId, 
@@ -117,18 +142,29 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
     
     val mqttSink: Sink[MqttMessage, Future[Done]] = MqttSink(mqttConnectionSettings, MqttQoS.AtLeastOnce)
       
-    val mqttPublisher = Flow[MSG_MinerData].map( md => {
+    // val mqttPublisher = Flow[MSG_MinerData].map( md => {
       
-      val mqttData = upickle.default.writeBinary(md)
-      log.debug(s"encoded = ${Util.hex(mqttData)}")
+    //   val mqttData = upickle.default.writeBinary(md)
+    //   log.debug(s"encoded = ${Util.hex(mqttData)}")
 
-      val wireData = if(MSG_Options.isV1(protocolVer)) Util.hex(mqttData).getBytes else mqttData
+    //   val wireData = if(MSG_Options.isV1(config.protocolOptions)) Util.hex(mqttData).getBytes else mqttData
 
-      log.debug(s"Payload[${Util.hex(wireData)}] -> MQTT(${mqttHost}:${mqttPort})")
-      MqttMessage(mqttTopic,ByteString(wireData))  
+    //   // healthcheck for decoding
+    //   //val decodedMsg = upickle.default.readBinary[MSG_MinerData](wireData)
+    //   //log.info(s"decodedMsg: ${decodedMsg}")
+
+    //   log.debug(s"Payload[${Util.hex(wireData)}] -> MQTT(${mqttHost}:${mqttPort})")
+    //   MqttMessage(mqttTopic,ByteString(wireData))  
+    // })
+
+    val mqttPublisher = Flow[Array[Byte]].map( data => {
+      log.debug(s"Payload[${Util.hex(data)}] -> MQTT(${mqttHost}:${mqttPort})")
+      MqttMessage(mqttTopic,ByteString(data))  
     })
 
-    val sink = mqttPublisher.toMat(mqttSink)(Keep.both)
+    val sink = dataEncoder
+      .via(mqttPublisher)      
+      .toMat(mqttSink)(Keep.both)
              
     RestartSink.withBackoff(defaultRetrySetting) { 
       log.info(s"-> MQTT(${mqttHost}:${mqttPort})")
@@ -157,7 +193,7 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
     
   override def source() = {
     feed.split("://").toList match {
-      case "dump1090" :: _ => {
+      case "dump1090" :: _ | "tcp" :: _ => {
         val uri = Dump1090URI(feed)
         fromTcp(uri.host,uri.port.toInt)
       }
@@ -171,44 +207,74 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
         val uri = MqttURI(output)
         toMQTT(uri.host,uri.port.toInt)
       }
+      
+      case "raw" :: _ => {
+        val sink = dataEncoder
+          .toMat(Sink.foreach{d => d.map(b => print(b.toChar))})(Keep.both)
+        sink
+      }
+
+      case "hex" :: _ => {
+        val sink = dataEncoder
+          .toMat(Sink.foreach{d => println(Util.hex(d))})(Keep.both)
+        sink
+      }
+
       case _ => super.sink()
     }
   }
 
-  val signer = Flow[Seq[ADSB]].map( aa => { 
-    val adsbData = aa.map(a => MSG_MinerADSB(a.ts,a.raw)).toArray
-    val sigData = upickle.default.writeBinary(adsbData)
-    val sig = wallet.msign(sigData,None, None).head
-
-    val msgData = MSG_MinerData(
+  val encoder = Flow[Seq[ADSB]].map( aa => { 
+    val data = aa.map(a => MSG_MinerADSB(a.ts,a.raw)).toArray
+    
+    val msg = MSG_MinerData(
       ts = System.currentTimeMillis(),
       addr = signerAddrBytes,
-      data = adsbData,
-      sig = MinerSig(sig)
+      data = data,
+      sig = MinerSig.empty,
+      ops = config.protocolOptions
     )
 
-    msgData
+    msg
   })
 
-  val checksum = Flow[MSG_MinerData].map( m => { 
-    val data = m.data
+  val signer = Flow[MSG_MinerData].map( msg => { 
+    val data = upickle.default.writeBinary(msg.data)
+    val sig = wallet.msign(data,None, None).head
+
+    msg.copy(
+      sig = MinerSig(sig)
+    )    
+  })
+
+  val checksum = Flow[MSG_MinerData].map( msg => { 
+    val data = msg.data
     val sigData = upickle.default.writeBinary(data)
-    val sig = Util.hex(m.sig.r) + ":" + Util.hex(m.sig.s)
+    val sig = Util.hex(msg.sig.r) + ":" + Util.hex(msg.sig.s)
 
     val v = wallet.mverifyAddress(List(sig),sigData,Seq(signerAddr))
     if(v == 0) {
-      log.error(s"Signature: INVALID: ${m.sig}")
+      log.error(s"Signature: INVALID: ${msg.sig}")
     }else
-      log.info(s"Signature: OK: ${m.sig}")
-    m
+      log.debug(s"Signature: OK: ${msg.sig}")
+    
+    msg
   })
 
+  val stat = Flow[MSG_MinerData].map( msg => { 
+    minerStat.+(msg.data.size)
+    log.info(s"stat=[${msg.data.size},${minerStat}]")
+    msg
+  })
 
   override def process:Flow[ADSB,MSG_MinerData,_] = 
     Flow[ADSB]
       .groupedWithin(config.blockSize, FiniteDuration(config.blockWindow,TimeUnit.MILLISECONDS))
+      .via(encoder)
       .via(signer)
       .via(checksum)
+      .via(stat)
+      //.via(dataEncoder)
   
   
   def decode(data:String,ts:Long):Option[ADSB] = {

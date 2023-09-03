@@ -31,31 +31,29 @@ class ValidationADSB extends ValidationEngine[MSG_MinerData] {
   
   def validate(m:MSG_MinerData):Double = {
     // verify signature
-    val adsbData = m.adsbs
-    val pk = m.pk
-    val addr = Eth.address(pk)
+    val data = m.data
+    val addr = Util.hex(m.addr)
     
-    if(m.adsbs.size == 0) {
+    if(data.size == 0) {
       log.warn(s"No ADSB data: ${addr}")
       return RewardADSB.penaltyNoData
     }
 
-    val invalidCount = m.adsbs.filter( a => a.adsb == null || a.adsb.isBlank()).size
+    val invalidCount = data.filter( a => a.adsb == null || a.adsb.isBlank()).size
     if(invalidCount > 0) 
     {
       log.warn(s"Missing ADSB raw data: ${addr}")
       return RewardADSB.penaltyMissingSomeData
     }
 
-    val sigData = upickle.default.writeBinary(adsbData)
+    val sigData = upickle.default.writeBinary(data)
     val sig = Util.hex(m.sig.r) + ":" + Util.hex(m.sig.s)
     
-    val v = Eth.verify(sigData,sig,pk)
+    val v = Eth.verifyAddress(sigData,sig,addr)
     if(!v) {
-      log.warn(s"Invalid signature: ${addr}: ${m.sig}")
+      log.warn(s"Signature: INVALID: ${addr}: ${m.sig}")
       return RewardADSB.penaltyInvalidSig
-    }else
-      log.info(s"Verified: ${addr}: ${m.sig}")
+    }
     
     // validation does not mean reward
     return 0.0
