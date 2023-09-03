@@ -90,8 +90,9 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
   val wallet = new skel.crypto.wallet.WalletVaultKeyfile(config.keystore, config.keystorePass)  
   val wr = wallet.load()
   log.info(s"wallet: ${wr}")
-  val signerPk = wallet.signers.toList.head._2.head.pk
-  val signerAddr = wallet.signers.toList.head._2.head.addr
+  val signerPk = wallet.signers.values.head.pk
+  val signerAddr = wallet.signers.values.head.addr
+  val signerAddrBytes = Util.fromHexString(signerAddr)
   
   val defaultRetrySetting = RestartSettings(
     minBackoff = FiniteDuration(3000,TimeUnit.MILLISECONDS),
@@ -181,8 +182,8 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
 
     val msgData = MSG_MinerData(
       ts = System.currentTimeMillis(),
-      pk = signerPk,
-      adsbs = adsbData,
+      addr = signerAddrBytes,
+      data = adsbData,
       sig = MinerSig(sig)
     )
 
@@ -190,15 +191,15 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
   })
 
   val checksum = Flow[MSG_MinerData].map( m => { 
-    val adsbData = m.adsbs
-    val sigData = upickle.default.writeBinary(adsbData)
+    val data = m.data
+    val sigData = upickle.default.writeBinary(data)
     val sig = Util.hex(m.sig.r) + ":" + Util.hex(m.sig.s)
 
-    val v = wallet.mverify(List(sig),sigData,None,None)
+    val v = wallet.mverifyAddress(List(sig),sigData,Seq(signerAddr))
     if(v == 0) {
-      log.error(s"Invalid signature: ${m.sig}")
+      log.error(s"Signature: INVALID: ${m.sig}")
     }else
-      log.info(s"Verified: ${m.sig}")
+      log.info(s"Signature: OK: ${m.sig}")
     m
   })
 

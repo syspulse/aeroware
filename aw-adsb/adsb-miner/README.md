@@ -7,17 +7,17 @@ Miner prototype
 3. Verifies block signature internally
 
 
-## Validator
-
-```
-./run-validator.sh validator -f mqtt://localhost:1883
-
-```
-
 ## Miner
 
 ```
-./run-miner.sh -f data/flight-1000.dump1090 -o mqtt://localhost:1883
+./run-miner.sh -f data/flight-1000.raw -o mqtt://localhost:1883
+
+```
+
+Debug:
+
+```
+./run-miner.sh -f data/flight-1000.raw -o stdout://
 
 ```
 

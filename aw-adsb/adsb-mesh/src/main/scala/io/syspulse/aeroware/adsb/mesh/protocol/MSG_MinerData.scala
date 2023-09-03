@@ -34,8 +34,8 @@ object MinerSig {
   }
 }
 
-case class MSG_MinerData(ts: Long, pk:Array[Byte], adsbs: Array[MSG_MinerADSB], sig:MinerSig,ops:Int = MSG_Options.V_1 | MSG_Options.O_EC,socket:String="") extends MSG_Miner with Ingestable {
-  override def toString = s"${this.getClass.getSimpleName}(0x${ops.toHexString},${ts},${Util.hex(pk)},${adsbs.toSeq},${sig})"
+case class MSG_MinerData(ts: Long, addr:Array[Byte], data: Array[MSG_MinerADSB], sig:MinerSig,ops:Int = MSG_Options.V_1 | MSG_Options.O_EC,socket:String="") extends MSG_Miner with Ingestable {
+  override def toString = s"${this.getClass.getSimpleName}(0x${ops.toHexString},${ts},${Util.hex(addr)},${data.toSeq},${sig})"
 }
 
 object MSG_MinerData {
