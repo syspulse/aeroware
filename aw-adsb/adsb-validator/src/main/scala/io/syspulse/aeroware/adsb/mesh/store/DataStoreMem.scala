@@ -19,7 +19,7 @@ class DataStoreMem extends DataStore {
   var storeAddr: mutable.Map[String,mutable.Seq[ValidatorData]] = mutable.HashMap()
   var storeTs: mutable.TreeMap[Long,mutable.Seq[ValidatorData]] = mutable.TreeMap()
 
-  def all:Future[Seq[ValidatorData]] = Future{ storeAddr.values.reduce(_ ++ _).toSeq }
+  def all:Future[Try[Seq[ValidatorData]]] = Future{ Success(storeAddr.values.reduce(_ ++ _).toSeq) }
 
   def size:Long = storeAddr.values.foldLeft(0)(_ + _.size)
 
@@ -37,14 +37,14 @@ class DataStoreMem extends DataStore {
     Success(this)
   }
 
-  def ?(ts0:Long,ts1:Long):Future[Seq[ValidatorData]] = Future {
-    storeTs.range(ts0,ts1+1).values.flatten.toSeq
+  def ?(ts0:Long,ts1:Long):Future[Try[Seq[ValidatorData]]] = Future {
+    Success(storeTs.range(ts0,ts1+1).values.flatten.toSeq)
   }
 
-  def ??(addr:String):Future[Seq[ValidatorData]] = Future {
+  def ??(addr:String):Future[Try[Seq[ValidatorData]]] = Future { 
     storeAddr.get(addr) match {
-      case Some(dd) => dd.toSeq
-      case None => Seq()
+      case Some(dd) => Success(dd.toSeq)
+      case None => Failure(new Exception(s"not found: ${addr}"))
     }
   }
 

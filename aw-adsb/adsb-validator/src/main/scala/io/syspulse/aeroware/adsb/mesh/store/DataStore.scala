@@ -13,10 +13,10 @@ trait DataStore {
   
   def +(m:MSG_MinerData):Future[Try[DataStore]]
   
-  def ?(ts0:Long,ts1:Long):Future[Seq[ValidatorData]]
-  def ??(addr:String):Future[Seq[ValidatorData]]
+  def ?(ts0:Long,ts1:Long):Future[Try[Seq[ValidatorData]]]
+  def ??(addr:String):Future[Try[Seq[ValidatorData]]]
   
-  def all:Future[Seq[ValidatorData]]
+  def all:Future[Try[Seq[ValidatorData]]]
 
   def size:Long
 }

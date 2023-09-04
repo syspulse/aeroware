@@ -81,7 +81,7 @@ object App extends skel.Server {
 
         ArgString('t', "filter",s"Filter (ex: 'AN-225') (def: ${d.filter})"),
         
-        ArgString('d', "datastore",s"datastore [mem://,file://] (def: ${d.datastore})"),
+        ArgString('d', "datastore",s"datastore [mem://,file://, parq://] (def: ${d.datastore})"),
 
         ArgString('v', "validation",s"What to validated (def: ${d.validation})"),
         
@@ -115,6 +115,7 @@ object App extends skel.Server {
     
       filter = c.getListString("filter",d.filter),
 
+      datastore = c.getString("datastore").getOrElse(d.datastore),
       validation = c.getListString("validation",d.validation),
 
       cmd = c.getCmd().getOrElse("validator"),
@@ -125,6 +126,8 @@ object App extends skel.Server {
 
 
     val store = config.datastore.split("://").toList match {
+      case "parq" :: dir :: Nil => new DataStoreLake(dir)
+      case "parq" :: Nil => new DataStoreLake()
       case "mem" :: Nil | "cache" :: Nil => new DataStoreMem()
       case _ => {
         Console.err.println(s"Uknown datastore: '${config.datastore}'")
