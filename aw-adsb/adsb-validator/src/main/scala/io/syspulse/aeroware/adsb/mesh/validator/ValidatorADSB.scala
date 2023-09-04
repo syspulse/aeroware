@@ -25,10 +25,8 @@ import io.syspulse.aeroware.adsb.core.adsb.Raw
 import io.syspulse.aeroware.adsb.mesh.protocol._
 import io.syspulse.aeroware.adsb.mesh.rewards._
 
-class ValidatorADSB extends ValidatorEngine[MSG_MinerData] {
-  
-  val tsDistance = new java.util.TreeMap[Long,Double]().asScala
-  
+class ValidatorADSB(validateTs:Boolean = false,toleranceTs:Long = 1000L) extends ValidatorEngine[MSG_MinerData] {
+    
   def validate(m:MSG_MinerData):Double = {
     // verify signature
     val data = m.data
@@ -39,11 +37,20 @@ class ValidatorADSB extends ValidatorEngine[MSG_MinerData] {
       return RewardADSB.penaltyNoData
     }
 
+    // check data present
     val invalidCount = data.filter( a => a.adsb == null || a.adsb.isBlank()).size
-    if(invalidCount > 0) 
-    {
+    if(invalidCount > 0) {
       log.warn(s"Missing ADSB raw data: ${addr}")
       return RewardADSB.penaltyMissingSomeData
+    }
+
+    // check ts is not far close
+    if(validateTs) {
+      val diff = Math.abs(System.currentTimeMillis - m.ts)
+      if(diff > toleranceTs) {
+        log.warn(s"Timestamp diff above tolerance (${toleranceTs}): ${diff}")
+        return RewardADSB.penaltyMissingSomeData
+      }
     }
 
     val sigData = upickle.default.writeBinary(data)
@@ -51,7 +58,7 @@ class ValidatorADSB extends ValidatorEngine[MSG_MinerData] {
     
     val v = Eth.verifyAddress(sigData,sig,addr)
     if(!v) {
-      log.warn(s"Signature: INVALID: ${addr}: ${m.sig}")
+      log.warn(s"Signature invalid: ${addr}: ${m.sig}")
       return RewardADSB.penaltyInvalidSig
     }
     

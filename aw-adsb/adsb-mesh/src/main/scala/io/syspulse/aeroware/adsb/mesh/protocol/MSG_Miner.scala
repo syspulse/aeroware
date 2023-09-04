@@ -21,7 +21,10 @@ object MSG_Options {
 
   def getSig(ops:Int) = ops & SIG_MASK
 
-  def fromArg(op:String) = if(op.startsWith("0x")) BigInt(Util.fromHexString(op)).toInt else op.toInt
+  def fromArg(op:Option[String]) = op.map(op => {
+    if(op.startsWith("0x")) BigInt(Util.fromHexString(op)).toInt else op.toInt
+  })
+    
 
   def default = MSG_Options.V_1 | MSG_Options.O_EC
   def defaultArg = "0x" + default.toHexString

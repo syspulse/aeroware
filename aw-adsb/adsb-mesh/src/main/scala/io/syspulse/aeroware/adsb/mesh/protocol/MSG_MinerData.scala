@@ -8,15 +8,9 @@ import upickle.default.{ReadWriter => RW, macroRW}
 import io.syspulse.aeroware.adsb.core.ADSB
 import io.syspulse.aeroware.adsb.core.adsb.Raw
 
-import spray.json.{DefaultJsonProtocol, DeserializationException, JsString, JsValue, JsonFormat, deserializationError}
-import spray.json.RootJsonFormat
-import spray.json.JsObject
-import spray.json.JsNumber
-import spray.json.JsArray
 import spray.json._
 import DefaultJsonProtocol._ 
 import io.syspulse.skel.Ingestable
-
 
 case class MinerSig(r: Array[Byte], s: Array[Byte]) {
   override def toString = s"${this.getClass.getSimpleName}(${Util.hex(r)}:${Util.hex(s)})"

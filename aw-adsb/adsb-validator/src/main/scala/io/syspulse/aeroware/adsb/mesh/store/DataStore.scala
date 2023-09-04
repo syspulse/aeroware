@@ -1,17 +1,23 @@
 package io.syspulse.aeroware.adsb.mesh.store
 
 import scala.util.Try
-
+import scala.concurrent.Future
 import scala.collection.immutable
 
 import io.jvm.uuid._
+
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
 
 trait DataStore {
+  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
   
-  def +(m:MSG_MinerData):Try[DataStore]
-  def ?(ts:Long):Seq[MSG_MinerData]
-  def all:Seq[MSG_MinerData]
+  def +(m:MSG_MinerData):Future[Try[DataStore]]
+  
+  def ?(ts0:Long,ts1:Long):Future[Seq[ValidatorData]]
+  def ??(addr:String):Future[Seq[ValidatorData]]
+  
+  def all:Future[Seq[ValidatorData]]
+
   def size:Long
 }
 

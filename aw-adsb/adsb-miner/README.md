@@ -14,12 +14,22 @@ Miner prototype
 
 ```
 
-Debug:
+Debug options:
 
 ```
 ./run-miner.sh -f data/flight-1000.raw -o stdout://
+./run-miner.sh -f data/flight-1000.raw -o json://
+./run-miner.sh -f data/flight-1000.raw -o hex://
 
 ```
+
+## Version
+
+Protocol version is specified with __--proto.options__:
+
+- 0x01 - version 1, payload is converted to hex string (to debug)
+- 0x02 - version 2, payload is binary (MessagePack) and network efficient
+
 
 ### File snapshots
 

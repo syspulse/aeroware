@@ -20,11 +20,11 @@ import io.syspulse.aeroware.adsb.mesh.store._
 
 
 case class Config (
-  feed:String = "",
+  feed:String = "mqtt://localhost:1883",
   output:String = "",
 
-  keystore:String = "",
-  keystorePass:String = "",
+  keystore:String = "./keystore/validator-1.json",
+  keystorePass:String = "abcd1234",
   batchSize: Int = 3,
   batchWindow: Long = 1000L,
   protocolOptions:Int = MSG_Options.V_1 | MSG_Options.O_EC,
@@ -33,13 +33,13 @@ case class Config (
   format:String = "",
   limit:Long = 0L,
   freq: Long = 0L,
-  delimiter:String = "",
-  buffer:Int = 0,
+  delimiter:String = "\n",
+  buffer:Int = 1024*1024,
   throttle:Long = 0L,
 
   filter:Seq[String] = Seq.empty,
 
-  datastore:String = "mem",
+  datastore:String = "mem://",
 
   cmd:String = "",
   params: Seq[String] = Seq(),
@@ -51,33 +51,34 @@ object App extends skel.Server {
   def main(args: Array[String]):Unit = {
     Console.err.println(s"args: '${args.mkString(",")}'")
 
+    val d = Config()
     val c = Configuration.withPriority(Seq(
       new ConfigurationAkka,
       new ConfigurationProp,
       new ConfigurationEnv, 
       new ConfigurationArgs(args,"adsb-validator","",
         
-        ArgString('_', "keystore.file","Keystore file (def: ./keystore/)"),
-        ArgString('_', "keystore.pass","Keystore password"),        
-        ArgInt('_', "batch.size","ADSB Batch max size"),
-        ArgLong('_', "batch.window","ADSB Batch time window (msec)"),
-        ArgString('_', "proto.options",s"Protocol options (def: ${MSG_Options.defaultArg})"),
+        ArgString('_', "keystore.file",s"Keystore file (def: ${d.keystore})"),
+        ArgString('_', "keystore.pass",s"Keystore password"),        
+        ArgInt('_', "batch.size",s"ADSB Batch max size (def: ${d.batchSize})"),
+        ArgLong('_', "batch.window",s"ADSB Batch time window (msec) (def: ${d.batchWindow})"),
+        ArgString('_', "proto.options",s"Protocol options (def: ${d.protocolOptions})"),
         
-        ArgString('f', "feed","Input Feed (def: )"),
-        ArgString('o', "output","Output file (pattern is supported: data-{yyyy-MM-dd-HH-mm}.log)"),
-        ArgString('e', "entity","Ingest entity: (def: all)"),
+        ArgString('f', "feed",s"Input Feed (def: ${d.feed})"),
+        ArgString('o', "output",s"Output file (def: ${d.output})"),
+        ArgString('e', "entity",s"Ingest entity: (def: ${d.entity})"),
         
-        ArgString('_', "format","Outptu format (none,json,csv) (def: none)"),
+        ArgString('_', "format",s"Outptu format (none,json,csv) (def: ${d.format})"),
 
-        ArgLong('_', "limit","Limit"),
-        ArgLong('_', "freq","Frequency"),
-        ArgString('_', "delimiter","""Delimiter characteds (def: ''). Usage example: --delimiter=`echo -e $"\r"` """),
-        ArgInt('_', "buffer","Frame buffer (Akka Framing) (def: 1M)"),
-        ArgLong('_', "throttle","Throttle messages in msec (def: 0)"),
+        ArgLong('_', "limit",s"Limit (def: ${d.limit})"),
+        ArgLong('_', "freq",s"Frequency (def: ${d.feed})"),
+        ArgString('_', "delimiter",s"""Delimiter characteds (def: '${d.delimiter}'). Usage example: --delimiter=`echo -e $"\r"` """),
+        ArgInt('_', "buffer",s"Frame buffer (Akka Framing) (def: ${d.buffer})"),
+        ArgLong('_', "throttle",s"Throttle messages in msec (def: ${d.throttle})"),
 
-        ArgString('t', "filter","Filter (ex: 'AN-225')"),
+        ArgString('t', "filter",s"Filter (ex: 'AN-225') (def: ${d.filter})"),
         
-        ArgString('d', "datastore","datastore [mem,file] (def: file)"),
+        ArgString('d', "datastore",s"datastore [mem://,file://] (def: ${d.datastore})"),
         
         ArgCmd("validator","Validator pipeline"),
         ArgCmd("rewards","Rewards calculations"),
@@ -90,24 +91,25 @@ object App extends skel.Server {
     Console.err.println(s"${c}")
 
     implicit val config = Config(
-      keystore = c.getString("keystore").getOrElse("./keystore/validator-1.json"),
-      keystorePass = c.getString("keystore.pass").getOrElse("abcd1234"),
-      batchSize = c.getInt("batch.size").getOrElse(10),
-      batchWindow = c.getLong("batch.window").getOrElse(1000L),
-      protocolOptions = MSG_Options.fromArg(c.getString("proto.options").getOrElse(MSG_Options.defaultArg)),
+      keystore = c.getString("keystore").getOrElse(d.keystore),
+      keystorePass = c.getString("keystore.pass").getOrElse(d.keystorePass),
+      batchSize = c.getInt("batch.size").getOrElse(d.batchSize),
+      batchWindow = c.getLong("batch.window").getOrElse(d.batchWindow),
+      protocolOptions = MSG_Options.fromArg(c.getString("proto.options")).getOrElse(d.protocolOptions),
       
-      feed = c.getString("feed").getOrElse("mqtt://localhost:1883"),
-      output = c.getString("output").getOrElse(""),
+      feed = c.getString("feed").getOrElse(d.feed),
+      output = c.getString("output").getOrElse(d.output),
       entity = c.getString("entity").getOrElse("validator"),
-      format = c.getString("format").getOrElse(""),
+      format = c.getString("format").getOrElse(d.format),
 
-      limit = c.getLong("limit").getOrElse(0),
-      freq = c.getLong("freq").getOrElse(0),
-      delimiter = c.getString("delimiter").getOrElse("\n"),
-      buffer = c.getInt("buffer").getOrElse(1024*1024),
-      throttle = c.getLong("throttle").getOrElse(0L),
+      limit = c.getLong("limit").getOrElse(d.limit),
+      freq = c.getLong("freq").getOrElse(d.freq),
+      delimiter = c.getString("delimiter").getOrElse(d.delimiter),
+      buffer = c.getInt("buffer").getOrElse(d.buffer),
+      throttle = c.getLong("throttle").getOrElse(d.throttle),
     
-      filter = c.getString("filter").getOrElse("").split(",").toSeq,
+      filter = c.getListString("filter",d.filter),
+
       cmd = c.getCmd().getOrElse("validator"),
       params = c.getParams(),
     )
@@ -129,7 +131,7 @@ object App extends skel.Server {
           case akka.NotUsed => 
         }
 
-        Console.err.println(s"Events: ${pp.countObj}")
+        Console.err.println(s"Events: ${pp.countObj.get()}")
         sys.exit(0)
       }
 
