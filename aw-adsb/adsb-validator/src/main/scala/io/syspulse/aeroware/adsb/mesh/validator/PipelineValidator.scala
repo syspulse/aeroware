@@ -143,7 +143,11 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
   val validatorAddr = wallet.signers.values.toList.head.addr
 
   // ----- Validation ---
-  val validator = new ValidatorADSB()
+  val validator = new ValidatorADSB(
+    validateTs = config.validation.contains("ts"),
+    validateSig = config.validation.contains("sig"),
+    toleranceTs = config.validation.find(_ == "ts.tolernace").map(_.toLong).getOrElse(1000L),
+  )
    
   // MQTT Server (Broker)
   val connectTimeout = 1000L
@@ -269,8 +273,7 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
     // fast validation path to prevent Spam
     val r1 = validator.validate(m)
 
-    val err = if(r1 > 0.0) {
-      
+    val err = if(r1 >= 0.0) {      
       // store. must be asynchronous
       datastore.+(m)
 

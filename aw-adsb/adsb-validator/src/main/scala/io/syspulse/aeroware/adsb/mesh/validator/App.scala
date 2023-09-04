@@ -25,8 +25,8 @@ case class Config (
 
   keystore:String = "./keystore/validator-1.json",
   keystorePass:String = "abcd1234",
-  batchSize: Int = 3,
-  batchWindow: Long = 1000L,
+  blockSize: Int = 3,
+  blockWindow: Long = 1000L,
   protocolOptions:Int = MSG_Options.V_1 | MSG_Options.O_EC,
 
   entity:String = "",
@@ -40,6 +40,8 @@ case class Config (
   filter:Seq[String] = Seq.empty,
 
   datastore:String = "mem://",
+
+  validation:Seq[String] = Seq("sig"),
 
   cmd:String = "",
   params: Seq[String] = Seq(),
@@ -60,8 +62,9 @@ object App extends skel.Server {
         
         ArgString('_', "keystore.file",s"Keystore file (def: ${d.keystore})"),
         ArgString('_', "keystore.pass",s"Keystore password"),        
-        ArgInt('_', "batch.size",s"ADSB Batch max size (def: ${d.batchSize})"),
-        ArgLong('_', "batch.window",s"ADSB Batch time window (msec) (def: ${d.batchWindow})"),
+        
+        ArgInt('_', "block.size",s"ADSB Block max size (def: ${d.blockSize})"),
+        ArgLong('_', "block.window",s"ADSB Block time window (msec) (def: ${d.blockWindow})"),
         ArgString('_', "proto.options",s"Protocol options (def: ${d.protocolOptions})"),
         
         ArgString('f', "feed",s"Input Feed (def: ${d.feed})"),
@@ -79,6 +82,8 @@ object App extends skel.Server {
         ArgString('t', "filter",s"Filter (ex: 'AN-225') (def: ${d.filter})"),
         
         ArgString('d', "datastore",s"datastore [mem://,file://] (def: ${d.datastore})"),
+
+        ArgString('v', "validation",s"What to validated (def: ${d.validation})"),
         
         ArgCmd("validator","Validator pipeline"),
         ArgCmd("rewards","Rewards calculations"),
@@ -93,8 +98,8 @@ object App extends skel.Server {
     implicit val config = Config(
       keystore = c.getString("keystore").getOrElse(d.keystore),
       keystorePass = c.getString("keystore.pass").getOrElse(d.keystorePass),
-      batchSize = c.getInt("batch.size").getOrElse(d.batchSize),
-      batchWindow = c.getLong("batch.window").getOrElse(d.batchWindow),
+      blockSize = c.getInt("block.size").getOrElse(d.blockSize),
+      blockWindow = c.getLong("block.window").getOrElse(d.blockWindow),
       protocolOptions = MSG_Options.fromArg(c.getString("proto.options")).getOrElse(d.protocolOptions),
       
       feed = c.getString("feed").getOrElse(d.feed),
@@ -110,17 +115,26 @@ object App extends skel.Server {
     
       filter = c.getListString("filter",d.filter),
 
+      validation = c.getListString("validation",d.validation),
+
       cmd = c.getCmd().getOrElse("validator"),
       params = c.getParams(),
     )
 
     Console.err.println(s"Config: ${config}")
 
-    val datastore = new DataStoreMem()
+
+    val store = config.datastore.split("://").toList match {
+      case "mem" :: Nil | "cache" :: Nil => new DataStoreMem()
+      case _ => {
+        Console.err.println(s"Uknown datastore: '${config.datastore}'")
+        sys.exit(1)
+      }
+    }
 
     config.cmd match {
       case "validator" => {
-        val pp = new PipelineValidator(config.feed,config.output,datastore)
+        val pp = new PipelineValidator(config.feed,config.output,store)
         val r = pp.run()
         println(s"r=${r}")
         r match {

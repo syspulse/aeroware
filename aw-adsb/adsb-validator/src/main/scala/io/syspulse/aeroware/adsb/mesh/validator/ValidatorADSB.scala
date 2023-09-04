@@ -25,7 +25,7 @@ import io.syspulse.aeroware.adsb.core.adsb.Raw
 import io.syspulse.aeroware.adsb.mesh.protocol._
 import io.syspulse.aeroware.adsb.mesh.rewards._
 
-class ValidatorADSB(validateTs:Boolean = false,toleranceTs:Long = 1000L) extends ValidatorEngine[MSG_MinerData] {
+class ValidatorADSB(validateTs:Boolean = false,validateSig:Boolean = true,toleranceTs:Long = 1000L) extends ValidatorEngine[MSG_MinerData] {
     
   def validate(m:MSG_MinerData):Double = {
     // verify signature
@@ -53,13 +53,15 @@ class ValidatorADSB(validateTs:Boolean = false,toleranceTs:Long = 1000L) extends
       }
     }
 
-    val sigData = upickle.default.writeBinary(data)
-    val sig = Util.hex(m.sig.r) + ":" + Util.hex(m.sig.s)
-    
-    val v = Eth.verifyAddress(sigData,sig,addr)
-    if(!v) {
-      log.warn(s"Signature invalid: ${addr}: ${m.sig}")
-      return RewardADSB.penaltyInvalidSig
+    if(validateSig) {
+      val sigData = upickle.default.writeBinary(data)
+      val sig = Util.hex(m.sig.r) + ":" + Util.hex(m.sig.s)
+      
+      val v = Eth.verifyAddress(sigData,sig,addr)
+      if(!v) {
+        log.warn(s"Signature invalid: ${addr}: ${m.sig}")
+        return RewardADSB.penaltyInvalidSig
+      }
     }
     
     // validation does not mean reward
