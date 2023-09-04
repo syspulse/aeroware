@@ -16,10 +16,10 @@ import io.syspulse.skel.util.Util
 class DataStoreMem extends DataStore {
   val log = Logger(s"${this}")
   
-  var storeAddr: mutable.Map[String,mutable.Seq[ValidatorData]] = mutable.HashMap()
-  var storeTs: mutable.TreeMap[Long,mutable.Seq[ValidatorData]] = mutable.TreeMap()
+  var storeAddr: mutable.Map[String,mutable.Seq[RawData]] = mutable.HashMap()
+  var storeTs: mutable.TreeMap[Long,mutable.Seq[RawData]] = mutable.TreeMap()
 
-  def all:Future[Try[Seq[ValidatorData]]] = Future{ Success(storeAddr.values.reduce(_ ++ _).toSeq) }
+  def all:Future[Try[Seq[RawData]]] = Future{ Success(storeAddr.values.reduce(_ ++ _).toSeq) }
 
   def size:Long = storeAddr.values.foldLeft(0)(_ + _.size)
 
@@ -27,7 +27,7 @@ class DataStoreMem extends DataStore {
     val addr = Util.hex(msg.addr)
         
     msg.data.foreach{ d => 
-      val vd = ValidatorData(msg.ts,addr,d.ts,d.adsb)
+      val vd = RawData(msg.ts,addr,d.ts,d.adsb)
       log.info(s"add: ${vd}")
       
       storeAddr.getOrElseUpdate(addr, mutable.Seq()).+:(vd)
@@ -37,11 +37,11 @@ class DataStoreMem extends DataStore {
     Success(this)
   }
 
-  def ?(ts0:Long,ts1:Long):Future[Try[Seq[ValidatorData]]] = Future {
+  def ?(ts0:Long,ts1:Long):Future[Try[Seq[RawData]]] = Future {
     Success(storeTs.range(ts0,ts1+1).values.flatten.toSeq)
   }
 
-  def ??(addr:String):Future[Try[Seq[ValidatorData]]] = Future { 
+  def ??(addr:String):Future[Try[Seq[RawData]]] = Future { 
     storeAddr.get(addr) match {
       case Some(dd) => Success(dd.toSeq)
       case None => Failure(new Exception(s"not found: ${addr}"))

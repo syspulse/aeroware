@@ -22,13 +22,13 @@ class LakeFileRotator(file:String,ts0:Long = 0) {
   val log = Logger(s"${this}")
 
   var nextTs = ts0
-  var pw:Option[ParquetWriter[ValidatorData]] = None
+  var pw:Option[ParquetWriter[RawData]] = None
 
   rotate()
 
   def isRotate() = System.currentTimeMillis() >= nextTs
 
-  def rotate():Option[ParquetWriter[ValidatorData]] = {
+  def rotate():Option[ParquetWriter[RawData]] = {
     close()
 
     nextTs = Util.nextTimestampFile(file)
@@ -37,7 +37,7 @@ class LakeFileRotator(file:String,ts0:Long = 0) {
     log.info(s"writing -> ${f}")
     mkDir(f)
 
-    pw = Some(ParquetWriter.of[ValidatorData].build(Path(f)))
+    pw = Some(ParquetWriter.of[RawData].build(Path(f)))
     pw
   }
 
@@ -68,7 +68,7 @@ class DataStoreLake(dir:String = "./lake/{addr}/data-{HH}{mm}/data.parq") extend
   @volatile
   var files:Map[String,LakeFileRotator] = Map()
 
-  def all:Future[Try[Seq[ValidatorData]]] = Future{ Failure(new Exception("not supported")) }
+  def all:Future[Try[Seq[RawData]]] = Future{ Failure(new Exception("not supported")) }
 
   def size:Long = -1
 
@@ -77,7 +77,7 @@ class DataStoreLake(dir:String = "./lake/{addr}/data-{HH}{mm}/data.parq") extend
     val addr = Util.hex(msg.addr)
         
     val vdd = msg.data.map{ d => 
-      ValidatorData(msg.ts,addr,d.ts,d.adsb)
+      RawData(msg.ts,addr,d.ts,d.adsb)
     }
 
     val file = dir.replaceAll("\\{addr\\}",addr)
@@ -106,11 +106,11 @@ class DataStoreLake(dir:String = "./lake/{addr}/data-{HH}{mm}/data.parq") extend
     }
   }
 
-  def ?(ts0:Long,ts1:Long):Future[Try[Seq[ValidatorData]]] = Future {
+  def ?(ts0:Long,ts1:Long):Future[Try[Seq[RawData]]] = Future {
     Failure(new Exception("not supported"))
   }
 
-  def ??(addr:String):Future[Try[Seq[ValidatorData]]] = Future {
+  def ??(addr:String):Future[Try[Seq[RawData]]] = Future {
     Failure(new Exception("not supported"))
   }
 

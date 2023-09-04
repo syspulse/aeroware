@@ -12,7 +12,7 @@ import io.syspulse.skel.Ingestable
 
 // already validated and signature verified
 // stored into partition for further rewards calculation and feeding to extenal services
-case class ValidatorData(
+case class RawData(
   ts:Long,        // timestamp of when received to Validator
   addr:String,    // addr of miner
   ts0:Long,       // timestamp of how miner reported it
@@ -20,6 +20,6 @@ case class ValidatorData(
 ) extends Ingestable {
 }
 
-object ValidatorData {  
-  implicit val jf_v_data = jsonFormat4(ValidatorData.apply _)
+object RawData {  
+  implicit val jf_v_data = jsonFormat4(RawData.apply _)
 }
