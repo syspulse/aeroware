@@ -103,7 +103,6 @@ import io.syspulse.aeroware.adsb.mesh.transport.MQTTConfig
 import io.syspulse.aeroware.adsb.mesh.store._
 import io.syspulse.aeroware.adsb.mesh.rewards._
 import io.syspulse.aeroware.adsb.mesh.validator._
-import io.syspulse.aeroware.adsb.mesh.validation._
 import io.syspulse.aeroware.adsb.mesh._
 
 import akka.NotUsed
@@ -144,7 +143,7 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
   val validatorAddr = wallet.signers.values.toList.head.addr
 
   // ----- Validation ---
-  val validationEngine = new ValidationADSB()
+  val validator = new ValidatorADSB()
    
   // MQTT Server (Broker)
   val connectTimeout = 1000L
@@ -268,10 +267,13 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
 
   override def process = Flow[MSG_MinerData].map( m => {
     // fast validation path to prevent Spam
-    val r1 = validationEngine.validate(m)
+    val r1 = validator.validate(m)
 
     val err = if(r1 > 0.0) {
+      
+      // store. must be asynchronous
       datastore.+(m)
+
       m.data.size      
     } else
       0

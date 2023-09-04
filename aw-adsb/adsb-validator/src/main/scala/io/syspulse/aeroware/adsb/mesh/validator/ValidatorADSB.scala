@@ -1,4 +1,4 @@
-package io.syspulse.aeroware.adsb.mesh.validation
+package io.syspulse.aeroware.adsb.mesh.validator
 
 import scala.util.{Try,Failure,Success}
 
@@ -25,7 +25,7 @@ import io.syspulse.aeroware.adsb.core.adsb.Raw
 import io.syspulse.aeroware.adsb.mesh.protocol._
 import io.syspulse.aeroware.adsb.mesh.rewards._
 
-class ValidationADSB extends ValidationEngine[MSG_MinerData] {
+class ValidatorADSB extends ValidatorEngine[MSG_MinerData] {
   
   val tsDistance = new java.util.TreeMap[Long,Double]().asScala
   
