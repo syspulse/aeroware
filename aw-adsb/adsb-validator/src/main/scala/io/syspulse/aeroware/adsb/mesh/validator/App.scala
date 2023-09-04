@@ -37,8 +37,6 @@ case class Config (
   buffer:Int = 1024*1024,
   throttle:Long = 0L,
 
-  filter:Seq[String] = Seq.empty,
-
   datastore:String = "mem://",
 
   validation:Seq[String] = Seq("sig"),
@@ -78,8 +76,6 @@ object App extends skel.Server {
         ArgString('_', "delimiter",s"""Delimiter characteds (def: '${d.delimiter}'). Usage example: --delimiter=`echo -e $"\r"` """),
         ArgInt('_', "buffer",s"Frame buffer (Akka Framing) (def: ${d.buffer})"),
         ArgLong('_', "throttle",s"Throttle messages in msec (def: ${d.throttle})"),
-
-        ArgString('t', "filter",s"Filter (ex: 'AN-225') (def: ${d.filter})"),
         
         ArgString('d', "datastore",s"datastore [mem://,file://, parq://] (def: ${d.datastore})"),
 
@@ -96,7 +92,7 @@ object App extends skel.Server {
     Console.err.println(s"${c}")
 
     implicit val config = Config(
-      keystore = c.getString("keystore").getOrElse(d.keystore),
+      keystore = c.getString("keystore.file").getOrElse(d.keystore),
       keystorePass = c.getString("keystore.pass").getOrElse(d.keystorePass),
       blockSize = c.getInt("block.size").getOrElse(d.blockSize),
       blockWindow = c.getLong("block.window").getOrElse(d.blockWindow),
@@ -104,7 +100,7 @@ object App extends skel.Server {
       
       feed = c.getString("feed").getOrElse(d.feed),
       output = c.getString("output").getOrElse(d.output),
-      entity = c.getString("entity").getOrElse("validator"),
+      entity = c.getString("entity").getOrElse(d.entity),
       format = c.getString("format").getOrElse(d.format),
 
       limit = c.getLong("limit").getOrElse(d.limit),
@@ -112,9 +108,7 @@ object App extends skel.Server {
       delimiter = c.getString("delimiter").getOrElse(d.delimiter),
       buffer = c.getInt("buffer").getOrElse(d.buffer),
       throttle = c.getLong("throttle").getOrElse(d.throttle),
-    
-      filter = c.getListString("filter",d.filter),
-
+          
       datastore = c.getString("datastore").getOrElse(d.datastore),
       validation = c.getListString("validation",d.validation),
 

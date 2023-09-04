@@ -139,7 +139,7 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
   // ----- Wallet ---
   val wallet = new WalletVaultKeyfile(config.keystore, config.keystorePass)  
   val wr = wallet.load()
-  log.info(s"wallet: ${wr}")
+  
   val validatorAddr = wallet.signers.values.toList.head.addr
 
   // ----- Validation ---
@@ -157,7 +157,7 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
     
     val mqttSettings = MqttSessionSettings().withMaxPacketSize(8192)
     val mqttSession = ActorMqttServerSession(mqttSettings)
-    val mqttConnectionId = s"${clientId}- ${math.abs(Random.nextLong())}"
+    //val mqttConnectionId = s"${clientId}- ${math.abs(Random.nextLong())}"
     
     // max connections are cumulative (not simultaneous). Disconnects do not decrement !
     val mqttMaxConnections = Int.MaxValue
@@ -168,10 +168,12 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
       //.idleTimeout(FiniteDuration(idleTimeout,TimeUnit.MILLISECONDS)) // <- This completes the Server binding ! (no client can connect)
       .flatMapMerge( mqttMaxConnections, { connection:Tcp.IncomingConnection =>
       // .map( connection => {
-          log.info(s"Miner(${connection.remoteAddress}) ---> MQTT(${mqttHost}:${mqttPort})")
+          val mqttConnectionId = connection.remoteAddress.toString
+          //val mqttConnectionId = s"${clientId}-${math.abs(Random.nextLong())}"
+          log.info(s"Miner(${connection.remoteAddress}) ---> MQTT(${mqttHost}:${mqttPort})[${mqttConnectionId}]")
           val mqttConnectionFlow: Flow[Command[Nothing], Either[MqttCodec.DecodeError, Event[Nothing]], NotUsed] =
               Mqtt
-                .serverSessionFlow(mqttSession, ByteString(connection.remoteAddress.getAddress.getAddress))                
+                .serverSessionFlow(mqttSession, ByteString(mqttConnectionId))                
                 .join(
                   connection.flow.log(s"Miner(${connection.remoteAddress}) -> MQTT(${mqttHost}:${mqttPort})")
                   .watchTermination()( (v, f) => 
@@ -256,8 +258,6 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
         }
       )
   }
-  
-  def filter:Seq[String] = config.filter
     
   override def source() = {
     feed.split("://").toList match {

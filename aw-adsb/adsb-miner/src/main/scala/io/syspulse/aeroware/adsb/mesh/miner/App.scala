@@ -18,10 +18,10 @@ import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
 
 case class Config (
   feed:String = "",
-  output:String = "",
+  output:String = "mqtt://localhost:1883",
 
-  keystore:String = "",
-  keystorePass:String = "",
+  keystore:String = "./keystore/miner-1.json",
+  keystorePass:String = "test123",
   
   blockSize: Int = 2,
   blockWindow: Long = 1000L,
@@ -29,13 +29,12 @@ case class Config (
 
   entity:String = "",
   format:String = "",
+
   limit:Long = 0L,
   freq: Long = 0L,
-  delimiter:String = "",
-  buffer:Int = 0,
+  delimiter:String = "\n",
+  buffer:Int = 1024*1024,
   throttle:Long = 0L,
-
-  filter:Seq[String] = Seq.empty,
 
   cmd:String = "",
   params: Seq[String] = Seq(),
@@ -48,34 +47,32 @@ object App extends skel.Server {
   def main(args: Array[String]):Unit = { 
     Console.err.println(s"args: '${args.mkString(",")}'")
 
+    val d = Config()
     val c = Configuration.withPriority(Seq(
       new ConfigurationAkka,
       new ConfigurationProp,
       new ConfigurationEnv, 
-      new ConfigurationArgs(args,"adsb-miner","",
+      new ConfigurationArgs(args,"adsb-validator","",
         
-        ArgString('_', "keystore.file","Keystore file (def: ./keystore/)"),
-        ArgString('_', "keystore.pass","Keystore password"),        
-        ArgInt('_', "block.size","ADSB Block max size"),
-        ArgLong('_', "block.window","ADSB Block time window (msec)"),
-        ArgString('_', "proto.options",s"Protocol options (def: ${MSG_Options.defaultArg})"),
+        ArgString('_', "keystore.file",s"Keystore file (def: ${d.keystore})"),
+        ArgString('_', "keystore.pass",s"Keystore password"),        
         
-        ArgString('f', "feed","Input Feed (def: )"),
-        ArgString('o', "output","Output file (pattern is supported: data-{yyyy-MM-dd-HH-mm}.log)"),
-        ArgString('e', "entity","Ingest entity: (def: all)"),
+        ArgInt('_', "block.size",s"ADSB Block max size (def: ${d.blockSize})"),
+        ArgLong('_', "block.window",s"ADSB Block time window (msec) (def: ${d.blockWindow})"),
+        ArgString('_', "proto.options",s"Protocol options (def: ${d.protocolOptions})"),
         
-        ArgString('_', "format","Outptu format (none,json,csv) (def: none)"),
+        ArgString('f', "feed",s"Input Feed (def: ${d.feed})"),
+        ArgString('o', "output",s"Output file (def: ${d.output})"),
 
-        ArgLong('_', "limit","Limit"),
-        ArgLong('_', "freq","Frequency"),
-        ArgString('_', "delimiter","""Delimiter characteds (def: ''). Usage example: --delimiter=`echo -e $"\r"` """),
-        ArgInt('_', "buffer","Frame buffer (Akka Framing) (def: 1M)"),
-        ArgLong('_', "throttle","Throttle messages in msec (def: 0)"),
+        ArgString('e', "entity",s"Ingest entity: (def: ${d.entity})"),        
+        ArgString('_', "format",s"Format () (def: ${d.format})"),
 
-        ArgString('t', "filter","Filter (ex: 'AN-225')"),
-        
-        ArgString('d', "datastore","datastore [elastic,stdout,file] (def: stdout)"),
-        
+        ArgLong('_', "limit",s"Limit (def: ${d.limit})"),
+        ArgLong('_', "freq",s"Frequency (def: ${d.feed})"),
+        ArgString('_', "delimiter",s"""Delimiter characteds (def: '${d.delimiter}'). Usage example: --delimiter=`echo -e $"\r"` """),
+        ArgInt('_', "buffer",s"Frame buffer (Akka Framing) (def: ${d.buffer})"),
+        ArgLong('_', "throttle",s"Throttle messages in msec (def: ${d.throttle})"),
+                
         ArgCmd("miner","Miner pipeline"),
         
         ArgParam("<params>",""),
@@ -86,24 +83,23 @@ object App extends skel.Server {
     Console.err.println(s"${c}")
 
     implicit val config = Config(
-      keystore = c.getString("keystore").getOrElse("./keystore/miner-1.json"),
-      keystorePass = c.getString("keystore.pass").getOrElse("test123"),
-      blockSize = c.getInt("block.size").getOrElse(2),
-      blockWindow = c.getLong("block.window").getOrElse(1000L ),
-      protocolOptions = MSG_Options.fromArg(c.getString("proto.options").getOrElse(MSG_Options.defaultArg)),
+      keystore = c.getString("keystore.file").getOrElse(d.keystore),
+      keystorePass = c.getString("keystore.pass").getOrElse(d.keystorePass),
+      blockSize = c.getInt("block.size").getOrElse(d.blockSize),
+      blockWindow = c.getLong("block.window").getOrElse(d.blockWindow),
+      protocolOptions = MSG_Options.fromArg(c.getString("proto.options")).getOrElse(d.protocolOptions),
       
-      feed = c.getString("feed").getOrElse(""),
-      output = c.getString("output").getOrElse("mqtt://localhost:1883"),
-      entity = c.getString("entity").getOrElse("all"),
-      format = c.getString("format").getOrElse(""),
+      feed = c.getString("feed").getOrElse(d.feed),
+      output = c.getString("output").getOrElse(d.output),
+      entity = c.getString("entity").getOrElse(d.entity),
+      format = c.getString("format").getOrElse(d.format),
 
-      limit = c.getLong("limit").getOrElse(0),
-      freq = c.getLong("freq").getOrElse(0),
-      delimiter = c.getString("delimiter").getOrElse("\n"),
-      buffer = c.getInt("buffer").getOrElse(1024*1024),
-      throttle = c.getLong("throttle").getOrElse(0L),
-    
-      filter = c.getString("filter").getOrElse("").split(",").toSeq,
+      limit = c.getLong("limit").getOrElse(d.limit),
+      freq = c.getLong("freq").getOrElse(d.freq),
+      delimiter = c.getString("delimiter").getOrElse(d.delimiter),
+      buffer = c.getInt("buffer").getOrElse(d.buffer),
+      throttle = c.getLong("throttle").getOrElse(d.throttle),
+          
       cmd = c.getCmd().getOrElse("miner"),
       params = c.getParams(),
     )

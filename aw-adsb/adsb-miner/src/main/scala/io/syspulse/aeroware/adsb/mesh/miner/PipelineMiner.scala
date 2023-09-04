@@ -52,7 +52,8 @@ import upickle.default.{ReadWriter => RW, macroRW}
 import io.syspulse.skel.ingest.IngestClient
 import io.syspulse.skel.util.Util
 import io.syspulse.skel.crypto.Eth
-import io.syspulse.skel.crypto.wallet.WalletVaultKeyfiles
+import io.syspulse.skel.crypto.wallet.WalletVaultKeyfile
+import io.syspulse.skel.crypto.wallet.WalletVault
 
 import scala.concurrent.Future
 import scala.util.Random
@@ -100,9 +101,9 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
 
   val minerStat = new MinerStat()
 
-  val wallet = new skel.crypto.wallet.WalletVaultKeyfile(config.keystore, config.keystorePass)  
+  val wallet = new WalletVaultKeyfile(config.keystore, config.keystorePass)  
   val wr = wallet.load()
-  log.info(s"wallet: ${wr}")
+  
   val signerPk = wallet.signers.values.head.pk
   val signerAddr = wallet.signers.values.head.addr
   val signerAddrBytes = Util.fromHexString(signerAddr)
@@ -131,32 +132,19 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
 
   // MQTT
   def toMQTT(mqttHost:String,mqttPort:Int,mqttTopic:String="adsb",clientId:String="adsb-client") = {
+    
+    val mqttClientId = s"${clientId}"
+    //val mqttConnectionId = s"${math.abs(Random.nextLong())}"
+
     val mqttConnectionSettings = MqttConnectionSettings(
       broker = s"tcp://${mqttHost}:${mqttPort}", 
-      clientId = clientId, 
+      clientId = mqttClientId,
       persistence = new MemoryPersistence
     ).withAutomaticReconnect(true)
-
-    val mqttClientId = clientId
-    val mqttConnectionId = s"${math.abs(Random.nextLong())}"
+    
     
     val mqttSink: Sink[MqttMessage, Future[Done]] = MqttSink(mqttConnectionSettings, MqttQoS.AtLeastOnce)
-      
-    // val mqttPublisher = Flow[MSG_MinerData].map( md => {
-      
-    //   val mqttData = upickle.default.writeBinary(md)
-    //   log.debug(s"encoded = ${Util.hex(mqttData)}")
-
-    //   val wireData = if(MSG_Options.isV1(config.protocolOptions)) Util.hex(mqttData).getBytes else mqttData
-
-    //   // healthcheck for decoding
-    //   //val decodedMsg = upickle.default.readBinary[MSG_MinerData](wireData)
-    //   //log.info(s"decodedMsg: ${decodedMsg}")
-
-    //   log.debug(s"Payload[${Util.hex(wireData)}] -> MQTT(${mqttHost}:${mqttPort})")
-    //   MqttMessage(mqttTopic,ByteString(wireData))  
-    // })
-
+          
     val mqttPublisher = Flow[Array[Byte]].map( data => {
       log.debug(s"Payload[${Util.hex(data)}] -> MQTT(${mqttHost}:${mqttPort})")
       MqttMessage(mqttTopic,ByteString(data))  
@@ -169,12 +157,9 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
     RestartSink.withBackoff(defaultRetrySetting) { 
       log.info(s"-> MQTT(${mqttHost}:${mqttPort})")
       () => sink
-    }
-  
+    }  
   }
-  
-  def filter:Seq[String] = config.filter
-
+    
   def fromTcp(host:String,port:Int) = {
     val ip = InetSocketAddress.createUnresolved(host, port)
     val conn = Tcp().outgoingConnection(
@@ -205,7 +190,7 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
     output.split("://").toList match {
       case "mqtt" :: _ => {
         val uri = MqttURI(output)
-        toMQTT(uri.host,uri.port.toInt)
+        toMQTT(uri.host,uri.port.toInt, clientId = signerAddr)
       }
       
       case "raw" :: _ => {
