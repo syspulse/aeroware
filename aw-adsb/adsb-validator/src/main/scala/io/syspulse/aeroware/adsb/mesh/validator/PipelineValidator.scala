@@ -128,7 +128,7 @@ case class PublishWithAddr (remoteAddr: InetSocketAddress,
                             payload: ByteString)
 
 class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit config:Config)
-  extends Pipeline[MSG_MinerData,MSG_MinerData,MSG_MinerData](feed,output,config.throttle,config.delimiter,config.buffer) {
+  extends Pipeline[MSG_MinerData,FanoutData,FanoutData](feed,output,config.throttle,config.delimiter,config.buffer) {
   
   implicit protected val log = Logger(s"${this}")
   //implicit val ec = system.dispatchers.lookup("default-executor") //ExecutionContext.global
@@ -296,6 +296,23 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
 
     m
   })
+  .mapConcat( m => {
+    // transform into raw ADSB messages
+    m.data.map(a => 
+      FanoutData(
+        ts = a.ts,
+        data = a.adsb
+    )).toSeq
+  })
+  .groupedWithin(Int.MaxValue,FiniteDuration(config.fanoutWindow,TimeUnit.MILLISECONDS))
+  .mapConcat( group => {
+    // sort by timestamp and remove duplicates
+    // there is always a possibility that duplicate can be in another window at the window edge
+    // |         A(10,"MSG") | A(11,"MSG")         |
+    group
+      .sortBy(_.ts)
+      .distinctBy( f => f.data)
+  })
 
   def parse(data:String):Seq[MSG_MinerData] = {    
     log.debug(s"data: ${data}")
@@ -336,5 +353,5 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
     msgs
   }
 
-  def transform(a: MSG_MinerData): Seq[MSG_MinerData] = Seq(a)  
+  def transform(d: FanoutData): Seq[FanoutData] = Seq(d)  
 }

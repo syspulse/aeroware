@@ -28,6 +28,8 @@ case class Config (
   blockSize: Int = 3,
   blockWindow: Long = 1000L,
   protocolOptions:Int = MSG_Options.V_1 | MSG_Options.O_EC,
+  
+  fanoutWindow: Long = 3000L,
 
   entity:String = "",
   format:String = "",
@@ -85,6 +87,8 @@ object App extends skel.Server {
 
         ArgString('_', "blacklist.addr",s"Address blacklist (def: ${d.blacklistAddr})"),
         ArgString('_', "blacklist.ip",s"IP blacklist (def: ${d.blacklistIp})"),
+
+        ArgLong('_', "fanout.window",s"Window to group output data (msec) (def: ${d.fanoutWindow})"),
         
         ArgCmd("validator","Validator pipeline"),
         ArgCmd("rewards","Rewards calculations"),
@@ -102,6 +106,8 @@ object App extends skel.Server {
       blockSize = c.getInt("block.size").getOrElse(d.blockSize),
       blockWindow = c.getLong("block.window").getOrElse(d.blockWindow),
       protocolOptions = MSG_Options.fromArg(c.getString("proto.options")).getOrElse(d.protocolOptions),
+
+      fanoutWindow = c.getLong("fanout.window").getOrElse(d.fanoutWindow),
       
       feed = c.getString("feed").getOrElse(d.feed),
       output = c.getString("output").getOrElse(d.output),

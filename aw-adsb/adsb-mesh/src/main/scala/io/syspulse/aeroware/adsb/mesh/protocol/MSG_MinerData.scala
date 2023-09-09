@@ -29,7 +29,14 @@ object MinerSig {
   def empty:MinerSig = new MinerSig(Array.emptyByteArray,Array.emptyByteArray)
 }
 
-case class MSG_MinerData(ts: Long, addr:Array[Byte], data: Array[MSG_MinerADSB], sig:MinerSig, ops:Int, socket:String="") extends MSG_Miner with Ingestable {
+case class MSG_MinerData(
+  ts: Long, 
+  addr:Array[Byte], 
+  data: Array[MSG_MinerADSB], 
+  sig:MinerSig, 
+  ops:Int, 
+  socket:String=""
+) extends MSG_Miner with Ingestable {
   override def toString = s"${this.getClass.getSimpleName}(0x${ops.toHexString},${ts},${Util.hex(addr)},${data.toSeq},${sig})"
 }
 

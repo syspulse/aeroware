@@ -60,7 +60,7 @@ class ValidatorADSB(ops:ValidatorConfig) extends ValidatorEngine[MSG_MinerData] 
       }
     }
 
-    // check ts is not far close
+    // check ts is not far into the past
     if(ops.validateTs) {
       val diff = Math.abs(System.currentTimeMillis - m.ts)
       if(diff > ops.toleranceTs) {
