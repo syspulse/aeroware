@@ -33,6 +33,8 @@ object RewardADSB {
   val penaltyMissingSomeData = -0.02    // missingsome ADSB data
   val penaltyInvalidData = -0.045       // Non-parsable ADSB data
   val penaltyTimeDiff = -0.001          // time difference too high
+
+  val penaltyNotPermitted = -0.0001     // Not permitted
 }
 
 class RewardADSB extends RewardEngine {

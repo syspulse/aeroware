@@ -25,8 +25,16 @@ import io.syspulse.aeroware.adsb.core.adsb.Raw
 import io.syspulse.aeroware.adsb.mesh.protocol._
 import io.syspulse.aeroware.adsb.mesh.rewards._
 
-trait ValidatorEngine[T] {
-  val log = Logger(s"${this.getClass().getSimpleName()}")
-  // account for possible reward adjustment (to prevent Spam)
-  def validate(t:T):Double
-}
+case class ValidatorConfig(
+  validateTs:Boolean = false,
+  validateSig:Boolean = true,
+  validateData:Boolean = true,    // data is valid (parsing, heavy operation)
+  validatePayload:Boolean = true, // data is present
+  
+  toleranceTs:Long = 1000L,
+
+  validateAddrBlacklist:Boolean = true,   // validate permit on Address Blacklist
+  blacklistAddr:Seq[String] = Seq(),
+  validateIpBlacklist:Boolean = true,     // validate permit on IP Blacklist
+  blacklistIp:Seq[String] = Seq(),
+)

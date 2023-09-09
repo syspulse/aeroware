@@ -39,7 +39,9 @@ case class Config (
 
   datastore:String = "mem://",
 
-  validation:Seq[String] = Seq("sig,data,sig,payload"),
+  validation:Seq[String] = Seq("sig,data,sig,payload,blacklist,blacklist.ip"),
+  blacklistAddr:Seq[String] = Seq(),
+  blacklistIp:Seq[String] = Seq(),
 
   cmd:String = "",
   params: Seq[String] = Seq(),
@@ -61,8 +63,8 @@ object App extends skel.Server {
         ArgString('_', "keystore.file",s"Keystore file (def: ${d.keystore})"),
         ArgString('_', "keystore.pass",s"Keystore password"),        
         
-        ArgInt('_', "block.size",s"ADSB Block max size (def: ${d.blockSize})"),
-        ArgLong('_', "block.window",s"ADSB Block time window (msec) (def: ${d.blockWindow})"),
+        // ArgInt('_', "block.size",s"ADSB Block max size (def: ${d.blockSize})"),
+        // ArgLong('_', "block.window",s"ADSB Block time window (msec) (def: ${d.blockWindow})"),
         ArgString('_', "proto.options",s"Protocol options (def: ${d.protocolOptions})"),
         
         ArgString('f', "feed",s"Input Feed (def: ${d.feed})"),
@@ -80,6 +82,9 @@ object App extends skel.Server {
         ArgString('d', "datastore",s"datastore [mem://,file://, parq://] (def: ${d.datastore})"),
 
         ArgString('v', "validation",s"What to validated (def: ${d.validation})"),
+
+        ArgString('_', "blacklist.addr",s"Address blacklist (def: ${d.blacklistAddr})"),
+        ArgString('_', "blacklist.ip",s"IP blacklist (def: ${d.blacklistIp})"),
         
         ArgCmd("validator","Validator pipeline"),
         ArgCmd("rewards","Rewards calculations"),
@@ -112,12 +117,14 @@ object App extends skel.Server {
       datastore = c.getString("datastore").getOrElse(d.datastore),
       validation = c.getListString("validation",d.validation),
 
+      blacklistAddr = c.getListString("blacklist.addr",d.blacklistAddr),
+      blacklistIp = c.getListString("blacklist.ip",d.blacklistIp),
+
       cmd = c.getCmd().getOrElse("validator"),
       params = c.getParams(),
     )
 
     Console.err.println(s"Config: ${config}")
-
 
     val store = config.datastore.split("://").toList match {
       case "parq" :: dir :: Nil => new DataStoreLake(dir)

@@ -150,6 +150,11 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
       validateData = config.validation.contains("data"),
       validatePayload = config.validation.contains("payload"),
       toleranceTs = config.validation.find(_ == "ts.tolernace").map(_.toLong).getOrElse(1000L),
+
+      validateAddrBlacklist = config.validation.contains("blacklist") || config.validation.contains("blacklist.addr"),
+      validateIpBlacklist = config.validation.contains("blacklist.ip"),
+      blacklistAddr = config.blacklistAddr,
+      blacklistIp = config.blacklistIp,
   ))
    
   // MQTT Server (Broker)
