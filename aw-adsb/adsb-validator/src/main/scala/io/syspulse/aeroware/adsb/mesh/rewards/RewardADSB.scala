@@ -28,9 +28,11 @@ import io.syspulse.skel.crypto.key.PK
 import io.syspulse.aeroware.adsb.mesh.store.DataStore
 
 object RewardADSB {
-  val penaltyInvalidSig = -0.001
-  val penaltyNoData = -0.002            // no ADSB Data
-  val penaltyMissingSomeData = -0.0005  // some ADSB data
+  val penaltyInvalidSig = -0.5
+  val penaltyNoData = -0.025            // no ADSB Data
+  val penaltyMissingSomeData = -0.02    // missingsome ADSB data
+  val penaltyInvalidData = -0.045       // Non-parsable ADSB data
+  val penaltyTimeDiff = -0.001          // time difference too high
 }
 
 class RewardADSB extends RewardEngine {

@@ -25,35 +25,38 @@ import io.syspulse.aeroware.adsb.core.adsb.Raw
 import io.syspulse.aeroware.adsb.mesh.protocol._
 import io.syspulse.aeroware.adsb.mesh.rewards._
 
-class ValidatorADSB(validateTs:Boolean = false,validateSig:Boolean = true,toleranceTs:Long = 1000L) extends ValidatorEngine[MSG_MinerData] {
+class ValidatorADSB(ops:ValidatorConfig) extends ValidatorEngine[MSG_MinerData] {
     
   def validate(m:MSG_MinerData):Double = {
     // verify signature
     val data = m.data
     val addr = Util.hex(m.addr)
     
-    if(data.size == 0) {
-      log.warn(s"No ADSB data: ${addr}")
-      return RewardADSB.penaltyNoData
-    }
+    // check data is present 
+    if(ops.validatePayload) {
+      if(data.size == 0) {
+        log.warn(s"Missing data: ${addr}")
+        return RewardADSB.penaltyNoData
+      }
 
-    // check data present
-    val invalidCount = data.filter( a => a.adsb == null || a.adsb.isBlank()).size
-    if(invalidCount > 0) {
-      log.warn(s"Missing ADSB raw data: ${addr}")
-      return RewardADSB.penaltyMissingSomeData
-    }
-
-    // check ts is not far close
-    if(validateTs) {
-      val diff = Math.abs(System.currentTimeMillis - m.ts)
-      if(diff > toleranceTs) {
-        log.warn(s"Timestamp diff above tolerance (${toleranceTs}): ${diff}")
+      val invalidCount = data.filter( a => a.adsb == null || a.adsb.isBlank()).size
+      
+      if(invalidCount > 0) {
+        log.warn(s"Missing ADSB raw data: ${addr}")
         return RewardADSB.penaltyMissingSomeData
       }
     }
 
-    if(validateSig) {
+    // check ts is not far close
+    if(ops.validateTs) {
+      val diff = Math.abs(System.currentTimeMillis - m.ts)
+      if(diff > ops.toleranceTs) {
+        log.warn(s"Timestamp diff above tolerance (${ops.toleranceTs}): ${diff}")
+        return RewardADSB.penaltyTimeDiff
+      }
+    }
+
+    if(ops.validateSig) {
       val sigData = upickle.default.writeBinary(data)
       val sig = Util.hex(m.sig.r) + ":" + Util.hex(m.sig.s)
       
@@ -63,8 +66,20 @@ class ValidatorADSB(validateTs:Boolean = false,validateSig:Boolean = true,tolera
         return RewardADSB.penaltyInvalidSig
       }
     }
+
+    // validate the data is in ADSB format
+    if(ops.validateData) {
+      val penalty = 0.0
+      m.data.foldLeft(0.0)( (r,d) => {
+        val a = Decoder.decode(d.adsb,d.ts)
+        a match {
+          case Success(a) => 0.0
+          case Failure(e) => RewardADSB.penaltyInvalidData
+        }        
+      }) 
+    }
     
-    // validation does not mean reward
+    // no penalties
     return 0.0
   }
 }

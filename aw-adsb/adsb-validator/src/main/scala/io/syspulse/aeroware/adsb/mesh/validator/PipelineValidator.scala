@@ -144,10 +144,13 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
 
   // ----- Validation ---
   val validator = new ValidatorADSB(
-    validateTs = config.validation.contains("ts"),
-    validateSig = config.validation.contains("sig"),
-    toleranceTs = config.validation.find(_ == "ts.tolernace").map(_.toLong).getOrElse(1000L),
-  )
+    ValidatorConfig (
+      validateTs = config.validation.contains("ts"),
+      validateSig = config.validation.contains("sig"),
+      validateData = config.validation.contains("data"),
+      validatePayload = config.validation.contains("payload"),
+      toleranceTs = config.validation.find(_ == "ts.tolernace").map(_.toLong).getOrElse(1000L),
+  ))
    
   // MQTT Server (Broker)
   val connectTimeout = 1000L
@@ -271,17 +274,19 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
 
   override def process = Flow[MSG_MinerData].map( m => {
     // fast validation path to prevent Spam
-    val r1 = validator.validate(m)
-
-    val err = if(r1 >= 0.0) {      
+    val p1 = validator.validate(m)
+    
+    val err = if(p1 == 0.0) {      
       // store. must be asynchronous
       datastore.+(m)
-
-      m.data.size      
-    } else
-      0
+      0      
+    } else {
+      log.warn(s"penalty: ${p1}: ${m}")
+      m.data.size  
+    }
 
     validatorStat.+(m.data.size,err)
+
     log.info(s"stat=[${m.data.size},${err},${validatorStat}]")
 
     m
@@ -312,17 +317,18 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
     
     log.debug(s"encoded: ${encodedData}")
     
-    val msg = upickle.default.readBinary[MSG_MinerData](encodedData)
-    msg.copy(socket = remoteAddr)
-    val m = msg
-
-    // // fast validation path to prevent Spam
-    // val r1 = validationEngine.validate(m)
-
-    // if(r1 > 0.0)
-    //   datastore.+(m)
-  
-    Seq(m)
+    val msgs = try {
+      val msg = upickle.default.readBinary[MSG_MinerData](encodedData)
+      Seq(
+        msg.copy(socket = remoteAddr)
+      )
+    } catch {
+      case e:Exception => 
+        log.warn(s"failed to parse: ${Util.hex(encodedData)}: ${e.getMessage()}")
+        Seq()
+    }
+    
+    msgs
   }
 
   def transform(a: MSG_MinerData): Seq[MSG_MinerData] = Seq(a)  

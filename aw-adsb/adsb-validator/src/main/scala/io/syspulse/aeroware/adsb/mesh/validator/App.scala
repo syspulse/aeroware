@@ -39,7 +39,7 @@ case class Config (
 
   datastore:String = "mem://",
 
-  validation:Seq[String] = Seq("sig"),
+  validation:Seq[String] = Seq("sig,data,sig,payload"),
 
   cmd:String = "",
   params: Seq[String] = Seq(),

@@ -18,7 +18,7 @@ import io.syspulse.skel.serde.Parq._
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 import org.apache.parquet.hadoop.ParquetFileWriter.Mode
 
-class LakeFileRotator(file:String,ts0:Long = 0) {
+class LakeFileRotator(file:String,ts0:Long = 0) extends AutoCloseable {
   val log = Logger(s"${this}")
 
   var nextTs = ts0
@@ -48,7 +48,7 @@ class LakeFileRotator(file:String,ts0:Long = 0) {
 
   def getWriter() = pw
 
-  protected def close() = {
+  def close() = {
     pw.map(pw => {
       pw.close()
     })
@@ -67,6 +67,13 @@ class DataStoreLake(dir:String = "./lake/{addr}/data-{HH}{mm}/data.parq") extend
 
   @volatile
   var files:Map[String,LakeFileRotator] = Map()
+
+  // shutdown hook to close unfinished files
+  Runtime.getRuntime().addShutdownHook(new Thread(){
+    override def run() = {
+      files.values.foreach(_.close())
+    }
+  })
 
   def all:Future[Try[Seq[RawData]]] = Future{ Failure(new Exception("not supported")) }
 
