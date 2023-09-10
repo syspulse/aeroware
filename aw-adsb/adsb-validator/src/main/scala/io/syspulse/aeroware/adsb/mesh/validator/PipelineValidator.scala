@@ -283,11 +283,11 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
 
     datastore.+(m,pentaly)
 
-    val err = if(pentaly == 0.0) {      
-      0
-    } else {
+    val err = if(pentaly != 0.0) {      
       log.warn(s"penalty: ${pentaly}: ${m}")      
       m.data.size
+    } else {
+      0
     }
     
     validatorStat.+(m.data.size,err)

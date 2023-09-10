@@ -26,12 +26,13 @@ import io.syspulse.aeroware.adsb.mesh.protocol._
 import io.syspulse.aeroware.adsb.mesh.rewards._
 import io.syspulse.aeroware.adsb.mesh.guard.GuardEngine
 import io.syspulse.aeroware.adsb.mesh.guard.GuardBlacklistAddr
+import io.syspulse.aeroware.adsb.mesh.guard.GuardBlacklistIp
 
 class ValidatorADSB(ops:ValidatorConfig) extends ValidatorEngine[MSG_MinerData] {
     
   val guard = new GuardEngine(List()
     ++ { if(ops.validateAddrBlacklist) Seq(GuardBlacklistAddr(ops.blacklistAddr)) else Seq() }
-    //++ { if(ops.validateIpBlacklist) Seq(GuardBlacklistIp(ops.blacklistIp)) else Seq() }
+    ++ { if(ops.validateIpBlacklist) Seq(GuardBlacklistIp(ops.blacklistIp)) else Seq() }
   )
 
   def validate(m:MSG_MinerData):Double = {

@@ -41,7 +41,7 @@ case class Config (
 
   datastore:String = "mem://",
 
-  validation:Seq[String] = Seq("sig,data,sig,payload,blacklist,blacklist.ip"),
+  validation:Seq[String] = Seq("sig,data,payload,blacklist,blacklist.ip"),
   blacklistAddr:Seq[String] = Seq(),
   blacklistIp:Seq[String] = Seq(),
 

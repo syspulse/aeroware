@@ -17,7 +17,6 @@ trait Guard {
   def permit(m:MSG_MinerData):Boolean
 }
 
-
 class GuardEngine(guards0:List[Guard] = List()) {
 
   var guards:List[Guard] = guards0

@@ -28,3 +28,26 @@ case class GuardBlacklistAddr(bb:Seq[String]) extends Guard {
     ! b
   }
 }
+
+// ip address blacklist
+case class GuardBlacklistIp(bb:Seq[String]) extends Guard {
+  val log = Logger(this.getClass())
+
+  val blacklist:Map[String,Boolean] = bb.map(ip => {
+    val ipResolved = ip match {
+      case "localhost" => "127.0.0.1"
+      case _ => ip
+    }
+    ipResolved -> true
+  }).toMap
+  
+  def permit(m:MSG_MinerData):Boolean = {
+    val ip = m.socket.split(":").head
+    val b = blacklist.get(ip).isDefined
+    if(b) {
+      log.debug(s"Blacklist: ${m.socket}")
+    }
+    ! b
+  }
+}
+
