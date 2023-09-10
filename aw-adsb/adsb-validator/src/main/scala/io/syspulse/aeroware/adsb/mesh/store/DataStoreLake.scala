@@ -7,16 +7,19 @@ import scala.collection
 import com.typesafe.scalalogging.Logger
 
 import io.jvm.uuid._
-import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
+
 //import scala.collection.mutable.TreeMap
 import scala.collection.mutable
 import scala.concurrent.Future
-import io.syspulse.skel.util.Util
 
 import com.github.mjakubowski84.parquet4s.{ParquetReader, ParquetWriter, Path}
 import io.syspulse.skel.serde.Parq._
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 import org.apache.parquet.hadoop.ParquetFileWriter.Mode
+
+import io.syspulse.skel.util.Util
+import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
+import io.syspulse.aeroware.adsb.mesh.validator.Config
 
 class LakeFileRotator(file:String,ts0:Long = 0) extends AutoCloseable {
   val log = Logger(s"${this}")
@@ -56,7 +59,7 @@ class LakeFileRotator(file:String,ts0:Long = 0) extends AutoCloseable {
   }
 }
 
-class DataStoreLake(dir:String = "./lake/{addr}/data-{HH}{mm}/data.parq") extends DataStore {
+class DataStoreLake(dir:String = "./lake/{addr}/data-{HH}{mm}/data-{id}.parq")(implicit config:Config) extends DataStore {
   val log = Logger(s"${this}")
 
   val writerOptions = ParquetWriter.Options(
@@ -87,7 +90,7 @@ class DataStoreLake(dir:String = "./lake/{addr}/data-{HH}{mm}/data.parq") extend
       RawData(msg.ts,addr,d.ts,d.adsb,penalty)
     }
 
-    val file = dir.replaceAll("\\{addr\\}",addr)
+    val file = dir.replaceAll("\\{addr\\}",addr).replaceAll("\\{id\\}",config.id)
 
     Future {
       // find file

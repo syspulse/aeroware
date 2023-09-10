@@ -45,6 +45,8 @@ case class Config (
   blacklistAddr:Seq[String] = Seq(),
   blacklistIp:Seq[String] = Seq(),
 
+  id:String = System.currentTimeMillis().toString,
+
   cmd:String = "",
   params: Seq[String] = Seq(),
 )
@@ -89,6 +91,8 @@ object App extends skel.Server {
         ArgString('_', "blacklist.ip",s"IP blacklist (def: ${d.blacklistIp})"),
 
         ArgLong('_', "fanout.window",s"Window to group output data (msec) (def: ${d.fanoutWindow})"),
+
+        ArgString('_', "id",s"Validator ID (unique over restarts) (def: ${d.id})"),
         
         ArgCmd("validator","Validator pipeline"),
         ArgCmd("rewards","Rewards calculations"),
@@ -126,6 +130,8 @@ object App extends skel.Server {
       blacklistAddr = c.getListString("blacklist.addr",d.blacklistAddr),
       blacklistIp = c.getListString("blacklist.ip",d.blacklistIp),
 
+      id = c.getString("id").getOrElse(d.id),
+
       cmd = c.getCmd().getOrElse("validator"),
       params = c.getParams(),
     )
@@ -141,6 +147,8 @@ object App extends skel.Server {
         sys.exit(1)
       }
     }
+
+    log.info(s"Datastore: ${store}")
 
     config.cmd match {
       case "validator" => {
