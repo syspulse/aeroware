@@ -16,10 +16,11 @@ case class RawData(
   ts:Long,        // timestamp of when received to Validator
   addr:String,    // addr of miner
   ts0:Long,       // timestamp of how miner reported it
-  data:Raw        // raw data
+  data:Raw,        // raw data
+  penalty:Double
 ) extends Ingestable {
 }
 
 object RawData {  
-  implicit val jf_v_data = jsonFormat4(RawData.apply _)
+  implicit val jf_v_data = jsonFormat5(RawData.apply _)
 }

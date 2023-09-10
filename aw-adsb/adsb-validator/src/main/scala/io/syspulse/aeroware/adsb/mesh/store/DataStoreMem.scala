@@ -23,11 +23,11 @@ class DataStoreMem extends DataStore {
 
   def size:Long = storeAddr.values.foldLeft(0)(_ + _.size)
 
-  def +(msg:MSG_MinerData):Future[Try[DataStore]] = Future { 
+  def +(msg:MSG_MinerData,penalty:Double):Future[Try[DataStore]] = Future { 
     val addr = Util.hex(msg.addr)
         
     msg.data.foreach{ d => 
-      val vd = RawData(msg.ts,addr,d.ts,d.adsb)
+      val vd = RawData(msg.ts,addr,d.ts,d.adsb,penalty)
       log.info(s"add: ${vd}")
       
       storeAddr.getOrElseUpdate(addr, mutable.Seq()).+:(vd)

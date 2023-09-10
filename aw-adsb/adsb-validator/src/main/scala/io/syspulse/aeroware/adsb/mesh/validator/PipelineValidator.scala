@@ -277,24 +277,24 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
     }
   }
 
-  override def process = Flow[MSG_MinerData].map( m => {
+  override def process = Flow[MSG_MinerData].filter( m => {
     // fast validation path to prevent Spam
-    val p1 = validator.validate(m)
-    
-    val err = if(p1 == 0.0) {      
-      // store. must be asynchronous
-      datastore.+(m)
-      0      
-    } else {
-      log.warn(s"penalty: ${p1}: ${m}")
-      m.data.size  
-    }
+    val pentaly = validator.validate(m)
 
+    datastore.+(m,pentaly)
+
+    val err = if(pentaly == 0.0) {      
+      0
+    } else {
+      log.warn(s"penalty: ${pentaly}: ${m}")      
+      m.data.size
+    }
+    
     validatorStat.+(m.data.size,err)
 
     log.info(s"stat=[${m.data.size},${err},${validatorStat}]")
 
-    m
+    err == 0
   })
   .mapConcat( m => {
     // transform into raw ADSB messages
