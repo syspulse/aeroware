@@ -165,7 +165,7 @@ lazy val root = (project in file("."))
     adsb_core, 
     adsb_ingest, 
     adsb_tools, 
-    adsb_live, 
+    adsb_radar, 
     gpx_core, 
     adsb_mesh, 
     adsb_miner, 
@@ -180,7 +180,7 @@ lazy val root = (project in file("."))
     adsb_core, 
     adsb_ingest, 
     adsb_tools, 
-    adsb_live, 
+    adsb_radar, 
     gpx_core, 
     adsb_mesh,
     adsb_miner, 
@@ -323,21 +323,21 @@ lazy val adsb_tools = (project in file("aw-adsb/adsb-tools"))
       sharedConfig,
       sharedConfigAssembly,
 
-      appAssemblyConfig("adsb-live","io.syspulse.aeroware.adsb.tools.AppPlayer"),
+      appAssemblyConfig("adsb-tools","io.syspulse.aeroware.adsb.tools.AppPlayer"),
 
       libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ Seq(
         libCask  
       ),
   )
 
-lazy val adsb_live = (project in file("aw-adsb/adsb-live"))
-  .dependsOn(core, aircraft, adsb_core)
+lazy val adsb_radar = (project in file("aw-adsb/adsb-radar"))
+  .dependsOn(core, aircraft, adsb_core, adsb_mesh)
   .enablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,
       sharedConfigAssembly,
       
-      appAssemblyConfig("adsb-live","io.syspulse.aeroware.adsb.live.App"),
+      appAssemblyConfig("adsb-radar","io.syspulse.aeroware.adsb.radar.App"),
 
       libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ libTest ++ Seq(
         libAkkaTestkitType % Test  

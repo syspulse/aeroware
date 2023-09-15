@@ -14,6 +14,8 @@ import scala.concurrent.Future
 import io.syspulse.skel.util.Util
 
 class DataStoreMem extends DataStore {
+  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+  
   val log = Logger(s"${this}")
   
   var storeAddr: mutable.Map[String,mutable.Seq[RawData]] = mutable.HashMap()

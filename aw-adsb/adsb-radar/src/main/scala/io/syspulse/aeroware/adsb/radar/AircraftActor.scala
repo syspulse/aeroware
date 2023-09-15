@@ -19,8 +19,8 @@ object AircraftActor {
 
     sealed trait Command
     final case class ReadTelemetry(requestId: Long, replyTo: ActorRef[RespondTelemetry]) extends Command
-    final case class RespondTelemetry(requestId: Long, value: Option[AircraftTelemetry])
-    final case class WriteTelemetry(requestId: Long, value: AircraftTelemetry, replyTo: ActorRef[TelemetryAck]) extends Command
+    final case class RespondTelemetry(requestId: Long, value: Option[TrackTelemetry])
+    final case class WriteTelemetry(requestId: Long, value: TrackTelemetry, replyTo: ActorRef[TelemetryAck]) extends Command
     final case class TelemetryAck(requestId: Long)
     case object Passivate extends Command
   }

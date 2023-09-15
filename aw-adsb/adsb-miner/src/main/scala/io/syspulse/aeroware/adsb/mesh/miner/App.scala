@@ -100,7 +100,7 @@ object App extends skel.Server {
       buffer = c.getInt("buffer").getOrElse(d.buffer),
       throttle = c.getLong("throttle").getOrElse(d.throttle),
           
-      cmd = c.getCmd().getOrElse("miner"),
+      cmd = c.getCmd().getOrElse(d.cmd),
       params = c.getParams(),
     )
 

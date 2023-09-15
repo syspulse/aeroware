@@ -60,6 +60,7 @@ class LakeFileRotator(file:String,ts0:Long = 0) extends AutoCloseable {
 }
 
 class DataStoreLake(dir:String = "./lake/{addr}/data-{HH}{mm}/data-{id}.parq")(implicit config:Config) extends DataStore {
+  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
   val log = Logger(s"${this}")
 
   val writerOptions = ParquetWriter.Options(

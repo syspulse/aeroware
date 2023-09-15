@@ -13,7 +13,6 @@ import io.syspulse.skel
 import io.syspulse.skel.config._
 import io.syspulse.skel.util.Util
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Options
-import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
 
 import io.syspulse.aeroware.adsb.mesh.rewards._
 import io.syspulse.aeroware.adsb.mesh.store._
@@ -52,7 +51,6 @@ case class Config (
 )
 
 object App extends skel.Server {
-  import MSG_MinerData._
 
   def main(args: Array[String]):Unit = {
     Console.err.println(s"args: '${args.mkString(",")}'")
@@ -132,7 +130,7 @@ object App extends skel.Server {
 
       id = c.getString("id").getOrElse(d.id),
 
-      cmd = c.getCmd().getOrElse("validator"),
+      cmd = c.getCmd().getOrElse(d.cmd),
       params = c.getParams(),
     )
 

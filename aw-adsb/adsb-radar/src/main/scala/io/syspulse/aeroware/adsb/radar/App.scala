@@ -12,62 +12,104 @@ import io.syspulse.skel
 import io.syspulse.skel.config._
 import io.syspulse.skel.util.Util
 
-import io.syspulse.aeroware.adsb.core._
+import io.syspulse.aeroware.adsb.radar.store._
 
 case class Config (
-  httpHost: String = "0.0.0.0",
-  httpPort: Int = 8080,
-  httpUri: String = "/api/v1/adsb",
+  feed:String = "mqtt://localhost:1883",
+  output:String = "",
+  
+  format:String = "",
+  limit:Long = 0L,
+  freq: Long = 0L,
+  delimiter:String = "\n",
+  buffer:Int = 1024*1024,
+  throttle:Long = 0L,
 
-  dumpHost: String = "localhost",
-  dumpPort: Int = 30002,
-  fileLimit: Long = 1000000L,
-  fileSize: Long = 1024L * 1024L * 10L,
-  filePattern: String = "ADSB-{yyyy-MM-dd'T'HH:mm:ssZ}.log",
-  connectTimeout: Long = 3000L,
-  idleTimeout: Long = 60000L,
-  dataDir:String = "/data",
-  dataFormat:String = "json",
-  trackAircraft:String = "",
-  files:Seq[String] = Seq()
+  entity:String = "",
+
+  datastore:String = "mem://",
+
+  cmd:String = "simulator",
+
+  params: Seq[String] = Seq(),
 )
+
 
 object App {
   def main(args: Array[String]):Unit = {
 
-    println(s"args: ${args.size}: ${args.toSeq}")
+        Console.err.println(s"args: '${args.mkString(",")}'")
 
-    val builder = OParser.builder[Config]
-    val parser1 = {
-      import builder._
-      OParser.sequence(programName(Util.info._1), head(Util.info._1, Util.info._2),
-      
-        opt[String]('j', "data-format").action((x, c) => c.copy(dataFormat = x)).text("Data format (json|csv) (def: json)"),
-        opt[Long]('l', "limit").action((x, c) => c.copy(fileLimit = x)).text("Limit ADSB events per file"),
+    val d = Config()
+    val c = Configuration.withPriority(Seq(
+      new ConfigurationAkka,
+      new ConfigurationProp,
+      new ConfigurationEnv, 
+      new ConfigurationArgs(args,"adsb-radar","",
+                
+        ArgString('f', "feed",s"Input Feed (def: ${d.feed})"),
+        ArgString('o', "output",s"Output file (def: ${d.output})"),
+        ArgString('e', "entity",s"Ingest entity: (def: ${d.entity})"),
+                
+        ArgLong('_', "limit",s"Limit (def: ${d.limit})"),
+        ArgLong('_', "freq",s"Frequency (def: ${d.feed})"),
+        ArgString('_', "delimiter",s"""Delimiter characteds (def: '${d.delimiter}'). Usage example: --delimiter=`echo -e $"\r"` """),
+        ArgInt('_', "buffer",s"Frame buffer (Akka Framing) (def: ${d.buffer})"),
+        ArgLong('_', "throttle",s"Throttle messages in msec (def: ${d.throttle})"),
         
-        opt[String]('a', "aircraft").action((x, c) => c.copy(trackAircraft = x)).text("Aircraft(s) tracker (icaoType,callSign,icaoId). RexExp (e.g. '[Aa][nN].*' - Track All AN"),
-        arg[String]("<file>...").unbounded().optional()
-          .action((x, c) => c.copy(files = c.files :+ x))
-          .text("ADSB log files (json/csv)"),
-          note("" + sys.props("line.separator")),
-      )
-    }
+        ArgString('d', "datastore",s"datastore [mem://,file://, parq://] (def: ${d.datastore})"),
+        
+        
+        ArgCmd("simulator","Simulator"),
+        ArgCmd("server","Sever "),
+        
+        ArgParam("<params>",""),
+        ArgLogging()
+      ).withExit(1)
+    )).withLogging()
 
-    OParser.parse(parser1, args, Config()) match {
-      case Some(config) => {
-        val confuration = Configuration.withPriority(Seq(new ConfigurationEnv,new ConfigurationAkka))
+    Console.err.println(s"${c}")
 
-        Console.err.println(s"${config}")
+    implicit val config = Config(      
+      feed = c.getString("feed").getOrElse(d.feed),
+      output = c.getString("output").getOrElse(d.output),                  
+      limit = c.getLong("limit").getOrElse(d.limit),
+      freq = c.getLong("freq").getOrElse(d.freq),
+      delimiter = c.getString("delimiter").getOrElse(d.delimiter),
+      buffer = c.getInt("buffer").getOrElse(d.buffer),
+      throttle = c.getLong("throttle").getOrElse(d.throttle),
+          
+      entity = c.getString("entity").getOrElse(d.entity),
+      datastore = c.getString("datastore").getOrElse(d.datastore),
       
+      cmd = c.getCmd().getOrElse(d.cmd),
+      params = c.getParams(),
+    )
+
+    Console.err.println(s"Config: ${config}")
+
+    val store = config.datastore.split("://").toList match {
+      case "mem" :: Nil | "cache" :: Nil => new RadarStoreMem()
+      case _ => {
+        Console.err.println(s"Unknown datastore: '${config.datastore}'")
+        sys.exit(1)
+      }
+    }
+    
+    config.cmd match {
+      case "simulator" => 
         val supervisor = AirspaceSupervisor()
-        val supervisorActor = ActorSystem[String](supervisor, "Airspace-System")
+        val root = ActorSystem[String](supervisor, "Airspace-System")
 
         // inject Aircrafts
-        supervisorActor ! "start"
-        supervisorActor ! "random"
-      }
-      case _ =>
-        System.exit(1)
+        root ! "start"
+        root ! "random"
+        
+      case _ => 
+        Console.err.println(s"Unknown command: ${config.cmd}")
+        sys.exit(0)
     }
+        
   }
+  
 }

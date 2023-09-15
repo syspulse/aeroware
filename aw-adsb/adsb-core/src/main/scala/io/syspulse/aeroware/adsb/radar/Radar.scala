@@ -9,8 +9,10 @@ import scala.collection._
 import scala.concurrent.duration.Duration
 import java.io.Closeable
 import io.syspulse.aeroware.adsb.core.adsb.Raw
+import scala.concurrent.duration.FiniteDuration
+import java.util.concurrent.TimeUnit
 
-class Expiry(expiryCheck:Long = 3, runner: ()=>Unit) extends Closeable {
+class Expiry(expiryCheck:Duration, runner: ()=>Unit) extends Closeable {
   import java.util.concurrent._
   protected val expiryScheduler = new ScheduledThreadPoolExecutor(1)
   @volatile
@@ -24,7 +26,7 @@ class Expiry(expiryCheck:Long = 3, runner: ()=>Unit) extends Closeable {
     val task = new Runnable { 
       def run() = runner()
     }
-    expiryFuture = Some(expiryScheduler.scheduleAtFixedRate(task, expiryCheck, expiryCheck, TimeUnit.SECONDS))
+    expiryFuture = Some(expiryScheduler.scheduleAtFixedRate(task, expiryCheck.toMillis, expiryCheck.toMillis, TimeUnit.MILLISECONDS))
   }
 
   override def close = {
@@ -32,11 +34,14 @@ class Expiry(expiryCheck:Long = 3, runner: ()=>Unit) extends Closeable {
   }
 }
 
-class Radar(zoneId:String = "UTC", expiryTime:Duration = Duration("1 minutes"),expiryCheck:Duration = Duration("1 minute")) extends Closeable { 
+class Radar(
+  zoneId:String = "UTC", 
+  expiryTime:Duration = FiniteDuration(1000 * 60,TimeUnit.MILLISECONDS),
+  expiryCheck:Duration = FiniteDuration(1000 * 60,TimeUnit.MILLISECONDS)) extends Closeable { 
   
   val aircrafts:mutable.Map[AircraftAddress,Craft] = mutable.HashMap()
   val expirations:mutable.TreeMap[String,AircraftAddress] = mutable.TreeMap()
-  val expiry = new Expiry(expiryCheck.toSeconds, expire)
+  val expiry = new Expiry(expiryCheck, expire)
   def expKey(a:AircraftAddress,ts:Long = now):String = s"${ts}:${a}"
   def now = System.currentTimeMillis
 
