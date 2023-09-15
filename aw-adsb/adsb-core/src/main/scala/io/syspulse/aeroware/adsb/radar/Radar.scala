@@ -8,6 +8,7 @@ import io.syspulse.aeroware.adsb.core._
 import scala.collection._
 import scala.concurrent.duration.Duration
 import java.io.Closeable
+import io.syspulse.aeroware.adsb.core.adsb.Raw
 
 class Expiry(expiryCheck:Long = 3, runner: ()=>Unit) extends Closeable {
   import java.util.concurrent._
@@ -31,9 +32,9 @@ class Expiry(expiryCheck:Long = 3, runner: ()=>Unit) extends Closeable {
   }
 }
 
-class Radar(zoneId:String = "ZONE", expiryTime:Duration = Duration("1 minutes"),expiryCheck:Duration = Duration("1 minute")) extends Closeable { 
+class Radar(zoneId:String = "UTC", expiryTime:Duration = Duration("1 minutes"),expiryCheck:Duration = Duration("1 minute")) extends Closeable { 
   
-  val aircrafts:mutable.Map[AircraftAddress,Aircraft] = mutable.HashMap()
+  val aircrafts:mutable.Map[AircraftAddress,Craft] = mutable.HashMap()
   val expirations:mutable.TreeMap[String,AircraftAddress] = mutable.TreeMap()
   val expiry = new Expiry(expiryCheck.toSeconds, expire)
   def expKey(a:AircraftAddress,ts:Long = now):String = s"${ts}:${a}"
@@ -41,11 +42,11 @@ class Radar(zoneId:String = "ZONE", expiryTime:Duration = Duration("1 minutes"),
 
   val address0 = AircraftAddress("","","")
 
-  def +(a:Aircraft):Aircraft = { aircrafts.put(a.getId,a); a}
-  def find(id:AircraftAddress):Option[Aircraft] = aircrafts.get(id)
+  def +(a:Craft):Craft = { aircrafts.put(a.getId,a); a}
+  def find(id:AircraftAddress):Option[Craft] = aircrafts.get(id)
 
   def size = aircrafts.size
-  def all:Iterable[Aircraft] = aircrafts.values
+  def all:Iterable[Craft] = aircrafts.values
 
   def expire():Unit = {
     val expired = expirations.range( expKey(address0,now - expiryTime.toMillis), expKey(address0,now) ) 
@@ -55,24 +56,37 @@ class Radar(zoneId:String = "ZONE", expiryTime:Duration = Duration("1 minutes"),
     })
   } 
 
-  def event(adsb:ADSB):Radar = {
+  def event(adsb:ADSB):Option[TrackTelemetry] = {
     val address = adsb.addr
-    aircrafts.get(address) match {
+    val t = aircrafts.get(address) match {
       case Some(aircraft) => {
-        aircraft.event(adsb)
+        val t = aircraft.event(adsb)
         // update expiration
         expirations.remove( expKey(address))
         expirations.addOne( expKey(address) -> address)
+        t
       }
       case None => {
         // not found, add new one
-        val aircraft = Aircraft(address)
-        aircraft.event(adsb)
+        val aircraft = Craft(address)
+        val t = aircraft.event(adsb)
         aircrafts.put(address,aircraft)
         expirations.addOne(expKey(address) -> address)
+        t
       }
     }
-    this
+    
+    t
+  }
+
+  def signal(ts:Long,data:Raw):Option[TrackTelemetry] = {
+    Decoder.decode(data,ts) match {
+      case Success(adsb) => 
+        event(adsb)
+
+      case Failure(e) => 
+        None
+    }
   }
 
   def stop = expiry.close

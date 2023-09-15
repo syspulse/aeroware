@@ -202,7 +202,7 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
   }
 
 
-  def decode(data: String, ts:Long = ADSB.now, refLoc:Location = decoderLocation): Try[ADSB] = {
+  def decode(data: String, ts:Long = 0L, refLoc:Location = decoderLocation): Try[ADSB] = {
     val message = data.trim
     if(message.size == 0 || message.size < 14 || message.size > 28 ) 
       return Failure(new Exception(s"invalid size: ${message.size}: ${data}"))
@@ -461,7 +461,7 @@ object Decoder {
 
 
   val decoder = new Decoder
-  def decode(data:String, ts:Long = ADSB.now) = decoder.decode(data,ts)
+  def decode(data:String, ts:Long = 0L) = decoder.decode(data,ts)
 
   def decodeDump1090(data:String) = decode(Dump1090.decode(data))
 }
