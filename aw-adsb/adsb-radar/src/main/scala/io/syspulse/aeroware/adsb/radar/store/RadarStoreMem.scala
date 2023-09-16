@@ -14,7 +14,7 @@ import scala.concurrent.Future
 import io.syspulse.skel.util.Util
 import io.syspulse.aeroware.adsb.radar.Craft
 import io.syspulse.aeroware.adsb.core.AircraftAddress
-import io.syspulse.aeroware.adsb.mesh.protocol.FanoutData
+import io.syspulse.aeroware.adsb.mesh.protocol.MeshData
 import io.syspulse.aeroware.adsb.core.ADSB
 import io.syspulse.aeroware.adsb.core.Decoder
 import io.syspulse.aeroware.adsb.core.ADSB_AirbornePositionBaro
@@ -53,7 +53,7 @@ class RadarStoreMem extends RadarStore {
     }
   }
 
-  def <--(d:FanoutData):Future[Try[RadarStoreMem]] = {
+  def <--(d:MeshData):Future[Try[RadarStoreMem]] = {
     Future {
       val t = radar.signal(d.ts,d.data)
       t match {

@@ -128,7 +128,7 @@ case class PublishWithAddr (remoteAddr: InetSocketAddress,
                             payload: ByteString)
 
 class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit config:Config)
-  extends Pipeline[MSG_MinerData,FanoutData,FanoutData](feed,output,config.throttle,config.delimiter,config.buffer) {
+  extends Pipeline[MSG_MinerData,MeshData,MeshData](feed,output,config.throttle,config.delimiter,config.buffer) {
   
   implicit protected val log = Logger(s"${this}")
   //implicit val ec = system.dispatchers.lookup("default-executor") //ExecutionContext.global
@@ -299,7 +299,7 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
   .mapConcat( m => {
     // transform into raw ADSB messages
     m.data.map(a => 
-      FanoutData(
+      MeshData(
         ts = a.ts,
         data = a.adsb
     )).toSeq
@@ -353,5 +353,5 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
     msgs
   }
 
-  def transform(d: FanoutData): Seq[FanoutData] = Seq(d)  
+  def transform(d: MeshData): Seq[MeshData] = Seq(d)  
 }
