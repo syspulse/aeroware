@@ -1,4 +1,4 @@
-package io.syspulse.aeroware.adsb.radar
+package io.syspulse.aeroware.adsb.radar.actor
 
 import akka.actor.typed.ActorRef
 import akka.actor.typed.ActorSystem

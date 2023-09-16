@@ -98,7 +98,7 @@ object App {
     
     config.cmd match {
       case "simulator" => 
-        val supervisor = AirspaceSupervisor()
+        val supervisor = actor.AirspaceSupervisor()
         val root = ActorSystem[String](supervisor, "Airspace-System")
 
         // inject Aircrafts
