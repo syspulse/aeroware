@@ -4,7 +4,7 @@ object Dependencies {
 
     // Versions
     lazy val versionScalaLogging = "3.9.2"
-    lazy val akkaVersion    = "2.6.19"
+    lazy val akkaVersion    = "2.6.20"
     lazy val alpakkaVersion = "3.0.4"  
     lazy val akkaHttpVersion = "10.2.9" //"10.2.4"
     lazy val akkaKafkaVersion = "2.0.3"
@@ -43,6 +43,7 @@ object Dependencies {
     val libAkkaHttp =       "com.typesafe.akka"           %% "akka-http"            % akkaHttpVersion
     val libAkkaHttpSpray =  "com.typesafe.akka"           %% "akka-http-spray-json" % akkaHttpVersion
     val libAkkaStream =     "com.typesafe.akka"           %% "akka-stream"          % akkaVersion
+    val libAkkaStreamTyped ="com.typesafe.akka"           %% "akka-stream-typed"    % akkaVersion
 
     val libAlpakkaFile =    "com.lightbend.akka"          %% "akka-stream-alpakka-file" % alpakkaVersion
     val libAlpakkaMQTT=     "com.lightbend.akka"          %% "akka-stream-alpakka-mqtt-streaming" % alpakkaVersion
@@ -108,7 +109,7 @@ object Dependencies {
     
     val libSkel = Seq(libSkelCore,libSkelCrypto)
     
-    val libAkka = Seq(libAkkaActor,libAkkaActorTyped,libAkkaStream)
+    val libAkka = Seq(libAkkaActor,libAkkaActorTyped,libAkkaStream,libAkkaStreamTyped)
 
     val libXML = Seq(libDispatch,libJaxbApi,libScalaXml,libScalaParser,libXs4s)
 

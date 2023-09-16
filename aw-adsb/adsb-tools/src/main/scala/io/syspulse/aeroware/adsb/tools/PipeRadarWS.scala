@@ -23,7 +23,7 @@ class PipeRadarWS(wsHost:String,wsPort:Int,interval:Long=1000L,expiryTime:Long =
           val telemetry = aircraft.last 
           if(telemetry.isDefined) {
             val t = telemetry.get
-            broadcast(s"${t.ts},${t.id.icaoId},${t.id.icaoCallsign},${t.loc.lat},${t.loc.lon},${t.loc.alt.alt},${t.hSpeed.v},${t.vRate.v},${t.heading}")
+            broadcast(s"${t.ts},${t.aid.icaoId},${t.aid.icaoCallsign},${t.loc.lat},${t.loc.lon},${t.loc.alt.alt},${t.hSpeed.v},${t.vRate.v},${t.heading}")
           }
         }
         

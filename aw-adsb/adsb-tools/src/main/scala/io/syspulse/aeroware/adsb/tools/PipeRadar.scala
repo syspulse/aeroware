@@ -24,7 +24,7 @@ class PipeRadar(interval:Long=1000L,expiryTime:Long = 60L * 1) extends Pipe {
           if(teletemery.isDefined) {
             val t = teletemery.get
             //Console.println(s"${t.get}")
-            Console.println(s"${t.ts},${t.id.icaoId},${t.id.icaoCallsign},${t.loc.lat},${t.loc.lon},${t.loc.alt.alt},${t.hSpeed.v},${t.vRate.v},${t.heading}")
+            Console.println(s"${t.ts},${t.aid.icaoId},${t.aid.icaoCallsign},${t.loc.lat},${t.loc.lon},${t.loc.alt.alt},${t.hSpeed.v},${t.vRate.v},${t.heading}")
           }
         }
         
