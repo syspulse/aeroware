@@ -46,7 +46,7 @@ case class Config (
 
   id:String = System.currentTimeMillis().toString,
 
-  cmd:String = "",
+  cmd:String = "validator",
   params: Seq[String] = Seq(),
 )
 
@@ -152,7 +152,7 @@ object App extends skel.Server {
       case "validator" => {
         val pp = new PipelineValidator(config.feed,config.output,store)
         val r = pp.run()
-        println(s"r=${r}")
+        Console.err.println(s"r=${r}")
         r match {
           case a:Awaitable[_] => {
             val rr = Await.result(a,Duration.Inf)

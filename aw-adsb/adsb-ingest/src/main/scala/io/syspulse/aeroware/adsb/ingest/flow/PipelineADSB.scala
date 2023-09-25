@@ -34,7 +34,7 @@ import io.syspulse.aeroware.adsb.core._
 
 import io.syspulse.aeroware.adsb.ingest.Config
 
-import io.syspulse.aeroware.adsb.ingest.AdsbJson
+import io.syspulse.aeroware.adsb.core.AdsbJson
 import io.syspulse.aeroware.adsb.ingest.AdsbIngestedJsonProtocol
 import io.syspulse.aeroware.adsb.ingest.ADSB_Ingested
 

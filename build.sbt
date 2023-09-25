@@ -217,7 +217,8 @@ lazy val adsb_core = (project in file("aw-adsb/adsb-core"))
       name := "adsb-core",
       libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(
         libScodec,
-        libEnumeratum
+        libEnumeratum,
+        libKebsSpray, // enumerator json
       ),
 )
 

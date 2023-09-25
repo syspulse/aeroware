@@ -67,7 +67,7 @@ case class RawAirborneVelocityST1(ST: BitVector, IC:BitVector, RESV_A:BitVector,
       if(h < 0) h + 360 else h
     }
     
-    (Speed(v,Units.KNOTS),round(heading))
+    (Speed(v,Units.KNOTS),round(heading).toDouble)
   }
 
   def getVRate:VRate = {
@@ -197,8 +197,10 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
   def decodeAircraftAddr(b:BitVector):AircraftAddress = {
     val icaoId = b.toHex.toLowerCase
     val aircraft = AircraftICAORegistry.find(icaoId)
-    val (icaoType,icaoCallsign) = if(aircraft.isDefined) (aircraft.get.icaoType,aircraft.get.regid) else ("","")
-        AircraftAddress(icaoId,icaoType,icaoCallsign)    
+    val (icaoType,icaoCallsign) = if(aircraft.isDefined) 
+      (aircraft.get.icaoType,aircraft.get.regid) 
+    else ("","")
+    AircraftAddress(icaoId,icaoType,icaoCallsign)    
   }
 
 

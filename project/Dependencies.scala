@@ -96,8 +96,9 @@ object Dependencies {
     val libKebsSpray =      "pl.iterators"                  %% "kebs-spray-json"            % "1.9.3"
 
     val libSkelCore =       "io.syspulse"                 %% "skel-core"            % skelVersion
+    val libSkelAuth =       "io.syspulse"                 %% "skel-auth-core"       % skelVersion
     val libSkelIngest =     "io.syspulse"                 %% "skel-ingest"          % skelVersion
-    val libSkelIngestFlow =   "io.syspulse"               %% "ingest-flow"          % skelVersion
+    val libSkelIngestFlow = "io.syspulse"                 %% "ingest-flow"          % skelVersion
     val libSkelCrypto =     "io.syspulse"                 %% "skel-crypto"          % skelVersion
     val libSkelSerde =      "io.syspulse"                 %% "skel-serde"           % skelVersion
     
@@ -107,7 +108,7 @@ object Dependencies {
 
     val libPrometheus = Seq(libPrometheusClient)
     
-    val libSkel = Seq(libSkelCore,libSkelCrypto)
+    val libSkel = Seq(libSkelCore,libSkelCrypto,libSkelAuth)
     
     val libAkka = Seq(libAkkaActor,libAkkaActorTyped,libAkkaStream,libAkkaStreamTyped)
 

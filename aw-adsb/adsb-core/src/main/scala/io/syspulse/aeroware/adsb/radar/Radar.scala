@@ -89,7 +89,7 @@ class Radar(
       case Success(adsb) => 
         event(adsb)
 
-      case Failure(e) => 
+      case Failure(e) =>
         None
     }
   }

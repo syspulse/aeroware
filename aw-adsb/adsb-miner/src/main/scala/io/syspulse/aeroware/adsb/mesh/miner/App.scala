@@ -36,7 +36,7 @@ case class Config (
   buffer:Int = 1024*1024,
   throttle:Long = 0L,
 
-  cmd:String = "",
+  cmd:String = "miner",
   params: Seq[String] = Seq(),
 )
 

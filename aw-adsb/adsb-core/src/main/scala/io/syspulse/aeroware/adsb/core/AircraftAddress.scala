@@ -4,7 +4,7 @@ import enumeratum._
 import enumeratum.values._
 
 case class AircraftAddress(icaoId:String,icaoType:String,icaoCallsign:String) {
-  def getKey() = s"${icaoId}/${icaoType}/${icaoCallsign}"
+  def getKey() = icaoId
 }
 
 object AircraftAddress {

@@ -1,4 +1,4 @@
-package io.syspulse.aeroware.adsb.ingest
+package io.syspulse.aeroware.adsb.core
 
 import io.syspulse.skel.service.JsonCommon
 
@@ -17,7 +17,6 @@ import DefaultJsonProtocol._
 import pl.iterators.kebs.json.KebsSpray
 import pl.iterators.kebs.json.KebsEnumFormats
 import pl.iterators.kebs.json.SprayJsonValueEnum
-
 
 trait AdsbJsonProtocol extends DefaultJsonProtocol with SprayJsonValueEnum
 
@@ -45,34 +44,4 @@ object AdsbJson extends AdsbJsonProtocol {
   implicit val jf_r = jsonFormat5(ADSB_Reserved)
   implicit val jf_ts = jsonFormat5(ADSB_TargetState)
   implicit val jf_aos = jsonFormat5(ADSB_AircraftOperationStatus)
-}
-
-object AdsbIngestedJsonProtocol extends DefaultJsonProtocol with AdsbJsonProtocol { 
-  
-  implicit object AdsbIngestedJsonFormat extends JsonFormat[ADSB_Ingested] {
-    import AdsbJson._
-        
-    def write(a: ADSB_Ingested):JsValue = {      
-      a.adsb match {
-        case adsb:ADSB_AircraftIdentification => adsb.toJson
-        case adsb:ADSB_AirbornePositionBaro => adsb.toJson
-        case adsb:ADSB_AirborneVelocity => adsb.toJson
-        case adsb:ADSB_AircraftStatus => adsb.toJson
-        
-        case adsb:ADSB_SurfacePosition => adsb.toJson
-        case adsb:ADSB_AirbornePositionGNSS => adsb.toJson
-        case adsb:ADSB_Reserved => adsb.toJson
-        case adsb:ADSB_TargetState => adsb.toJson
-        case adsb:ADSB_AircraftOperationStatus => adsb.toJson
-
-        case adsb:ADSB_Unknown => adsb.toJson
-
-        case _ => JsString(a.adsb.toString)
-      }      
-    }
-
-    def read(value: JsValue):ADSB_Ingested = value match {
-      case _ => deserializationError("not supported")
-    }
-  }
 }

@@ -13,9 +13,14 @@ import io.syspulse.skel.config._
 import io.syspulse.skel.util.Util
 
 import io.syspulse.aeroware.adsb.radar.store._
+import io.syspulse.aeroware.adsb.radar.server.RadarRoutes
 
 case class Config (
-  feed:String = "mqtt://localhost:1883",
+  host:String="0.0.0.0",
+  port:Int=8080,
+  uri:String = "/api/v1/radar",
+
+  feed:String = "stdin://",
   output:String = "",
   
   format:String = "",
@@ -29,13 +34,13 @@ case class Config (
 
   datastore:String = "mem://",
 
-  cmd:String = "simulator",
+  cmd:String = "server",
 
   params: Seq[String] = Seq(),
 )
 
 
-object App {
+object App extends skel.Server {
   def main(args: Array[String]):Unit = {
 
         Console.err.println(s"args: '${args.mkString(",")}'")
@@ -46,7 +51,10 @@ object App {
       new ConfigurationProp,
       new ConfigurationEnv, 
       new ConfigurationArgs(args,"adsb-radar","",
-                
+        ArgString('h', "http.host",s"listen host (def: ${d.host})"),
+        ArgInt('p', "http.port",s"listern port (def: ${d.port})"),
+        ArgString('u', "http.uri",s"api uri (def: ${d.uri})"),
+
         ArgString('f', "feed",s"Input Feed (def: ${d.feed})"),
         ArgString('o', "output",s"Output file (def: ${d.output})"),
         ArgString('e', "entity",s"Ingest entity: (def: ${d.entity})"),
@@ -71,6 +79,10 @@ object App {
     Console.err.println(s"${c}")
 
     implicit val config = Config(      
+      host = c.getString("http.host").getOrElse(d.host),
+      port = c.getInt("http.port").getOrElse(d.port),
+      uri = c.getString("http.uri").getOrElse(d.uri),
+
       feed = c.getString("feed").getOrElse(d.feed),
       output = c.getString("output").getOrElse(d.output),                  
       limit = c.getLong("limit").getOrElse(d.limit),
@@ -96,7 +108,7 @@ object App {
       }
     }
     
-    config.cmd match {
+    val r = config.cmd match {
       case "simulator" => 
         val supervisor = actor.AirspaceSupervisor()
         val root = ActorSystem[String](supervisor, "Airspace-System")
@@ -105,11 +117,26 @@ object App {
         root ! "start"
         root ! "random"
         
+      case "server" =>
+        val r = run( config.host, config.port, config.uri, c, 
+          Seq(
+            // (Behaviors.ignore,"",(actor,as) => {
+            //   ws = Some(new WsServiceRoutes()(as))
+            //   ws.get
+            // }),
+            (RadarRegistry(store),"RadarRegistry",(actor,as ) => new RadarRoutes(actor)(as) ),
+          )
+        )
+
+        val pipe = new PipelineRadar(config.feed,config.output,store)
+        pipe.run()
+
       case _ => 
         Console.err.println(s"Unknown command: ${config.cmd}")
-        sys.exit(0)
+        sys.exit(-1)
     }
-        
+
+    Console.err.println(s"Result: ${r}")    
   }
   
 }
