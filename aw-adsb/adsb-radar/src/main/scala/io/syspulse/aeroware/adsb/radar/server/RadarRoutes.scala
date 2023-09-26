@@ -84,7 +84,7 @@ class RadarRoutes(registry: ActorRef[Command])(implicit context: ActorContext[_]
       parameters("ts0".as[String].optional, "ts1".as[String].optional) { (ts0, ts1) => 
         onSuccess(getRadarTelemetry(aid,
           TimeUtil.wordToTs(ts0.getOrElse(""),0L).get,
-          TimeUtil.wordToTs(ts1.getOrElse(""),Long.MaxValue).get)) { r =>
+          TimeUtil.wordToTs(ts1.getOrElse(""),Long.MaxValue-1).get)) { r =>
           
           metricGetCount.inc()
           encodeResponse(complete(r))
@@ -111,7 +111,7 @@ class RadarRoutes(registry: ActorRef[Command])(implicit context: ActorContext[_]
 
 
   @GET @Path("/") @Produces(Array(MediaType.APPLICATION_JSON))
-  @Operation(tags = Array("Radar"), summary = "Return all Radara Telemetry",
+  @Operation(tags = Array("Radar"), summary = "Return all Radar Telemetry",
     responses = Array(
       new ApiResponse(responseCode = "200", description = "Telemtry",content = Array(new Content(schema = new Schema(implementation = classOf[RadarTelemetry])))))
   )

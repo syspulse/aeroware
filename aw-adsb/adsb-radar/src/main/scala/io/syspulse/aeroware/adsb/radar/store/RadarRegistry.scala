@@ -17,6 +17,7 @@ import scala.util.Failure
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import java.util.concurrent.Executors
+import io.syspulse.aeroware.adsb.core.AircraftAddress
 
 object RadarRegistry {
   val log = Logger(s"${this}")
@@ -43,27 +44,40 @@ object RadarRegistry {
       case GetRadarTelemetry(replyTo) =>
         val f = for {
           rt <- store.all            
-          r <- {
-            Future(
+          r <- Future(
             rt match {
               case Success(tt) => 
                 Success(RadarTelemetry(tt,total = Some(tt.size)))
               case Failure(e) => Failure(e)              
             }            
           )
-          }          
+          _ <- {
+            replyTo ! r
+            Future(r)
+          }
         } yield r
         
-        f.map(rsp => replyTo ! rsp)
-
-        // //replyTo ! rsp
-        // val f = Future{ Success(RadarTelemetry(Seq(),total = Some(10))) }
-        // f.map(rsp => replyTo ! rsp)        
+        // f.map(rsp => replyTo ! rsp)
 
         Behaviors.same
       
       case GetRadarTelemetryTime(aid, ts0, ts1, replyTo) =>
         //replyTo ! Telemetrys(store.?(id,ts0,ts1))
+        val f = for {
+          rt <- store.??(AircraftAddress(aid),ts0,ts1)
+          r <- Future(
+            rt match {
+              case Success(tt) => 
+                Success(RadarTelemetry(tt,total = Some(tt.size)))
+              case Failure(e) => Failure(e)              
+            }            
+          )
+          _ <- {
+            replyTo ! r
+            Future(r)
+          }
+        } yield r
+
         Behaviors.same
       
     }

@@ -26,7 +26,7 @@ import java.util.concurrent.Executors
 
 class RadarStoreMem extends RadarStore {
   //implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-  implicit val ec: scala.concurrent.ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(4))
+  implicit val ec: scala.concurrent.ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(1))
 
   val log = Logger(s"${this}")
     
@@ -36,8 +36,9 @@ class RadarStoreMem extends RadarStore {
   val radar = new Radar()
 
   def all:Future[Try[Seq[TrackTelemetry]]] = {
+    log.info(s"all: (${storeAddr.size})")
     Future{
-      Success(storeAddr.values.reduce(_ ++ _).toSeq)    
+      Success(storeAddr.values.reduce(_ ++ _).sortBy(_.ts).toSeq)    
     }
   }
 
@@ -58,8 +59,16 @@ class RadarStoreMem extends RadarStore {
     }
   }
 
-  def ??(addr:AircraftAddress,ts0:Long,ts1:Long):Future[Try[Seq[TrackTelemetry]]] = Future {
-    Success(storeTs.range(ts0,ts1+1).values.flatten.toSeq)
+  def ??(addr:AircraftAddress,ts0:Long,ts1:Long):Future[Try[Seq[TrackTelemetry]]] = {
+    log.info(s"??: ${addr},[${ts0}-${ts1}]")
+    Future {
+      Success(
+        storeTs.range(ts0,ts1+1).values.flatten
+          .filter(tt => tt.aid.getKey() == addr.getKey())          
+          .toSeq
+          //.sortBy(_.ts)
+      )
+    }
   }
 
   def ?(addr:AircraftAddress):Future[Try[Seq[TrackTelemetry]]] = Future { 
@@ -70,17 +79,17 @@ class RadarStoreMem extends RadarStore {
   }
 
   def <--(d:MeshData):Future[Try[RadarStoreMem]] = {
-    Future {
-      val t = radar.signal(d.ts,d.data)
-      t match {
-        case Some(t) =>
-          // save to datastore
-          this.+(t)
+    // must not be concurrent !
+    val t = radar.signal(d.ts,d.data)
 
-        case None =>
-      }
-      Success(this)
-    }
+    t match {
+      case Some(t) =>
+        // save to datastore
+        this.+(t)
+
+      case None =>
+        Future(Failure(new Exception(s"could not add to Radar")))
+    }    
   }
 
 }
