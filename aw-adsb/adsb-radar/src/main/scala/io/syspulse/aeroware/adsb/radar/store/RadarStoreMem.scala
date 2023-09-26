@@ -26,7 +26,7 @@ import java.util.concurrent.Executors
 
 class RadarStoreMem extends RadarStore {
   //implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-  implicit val ec: scala.concurrent.ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(1))
+  implicit val ec: scala.concurrent.ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(2))
 
   val log = Logger(s"${this}")
     
@@ -37,8 +37,9 @@ class RadarStoreMem extends RadarStore {
 
   def all:Future[Try[Seq[TrackTelemetry]]] = {
     log.info(s"all: (${storeAddr.size})")
+    
     Future{
-      Success(storeAddr.values.reduce(_ ++ _).sortBy(_.ts).toSeq)    
+      Success(storeAddr.values.foldLeft(Seq[TrackTelemetry]())(_ ++ _).sortBy(_.ts).toSeq)
     }
   }
 

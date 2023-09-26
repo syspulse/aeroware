@@ -157,7 +157,8 @@ def appAssemblyConfig(appName:String,appMainClass:String) =
 // ======================================================================================================================
 lazy val root = (project in file("."))
   .aggregate(
-    core, 
+    core,
+    aircraft,
     gamet, 
     metar,
     notam,
@@ -173,6 +174,7 @@ lazy val root = (project in file("."))
   )
   .dependsOn(
     core, 
+    aircraft,
     gamet,
     metar, 
     notam,

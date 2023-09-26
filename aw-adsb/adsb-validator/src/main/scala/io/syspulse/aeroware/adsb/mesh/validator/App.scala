@@ -16,6 +16,7 @@ import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Options
 
 import io.syspulse.aeroware.adsb.mesh.rewards._
 import io.syspulse.aeroware.adsb.mesh.store._
+import io.syspulse.aeroware.aircraft.icao.AircraftICAORegistry
 
 
 case class Config (
@@ -135,7 +136,7 @@ object App extends skel.Server {
     )
 
     Console.err.println(s"Config: ${config}")
-
+    
     val store = config.datastore.split("://").toList match {
       case "parq" :: dir :: Nil => new DataStoreLake(dir)
       case "parq" :: Nil => new DataStoreLake()
@@ -146,7 +147,7 @@ object App extends skel.Server {
       }
     }
 
-    log.info(s"Datastore: ${store}")
+    log.info(s"Datastore: ${store}")        
 
     config.cmd match {
       case "validator" => {
@@ -165,7 +166,7 @@ object App extends skel.Server {
         sys.exit(0)
       }
 
-      case "rewards" => {
+      case "rewards" => {        
         val rewards = new RewardADSB()
         val datastore = new DataStoreMem()
         val r = rewards.calculate(Instant.now.toEpochMilli(),Instant.now.toEpochMilli(),datastore)

@@ -16,6 +16,7 @@ import io.syspulse.aeroware.adsb.radar.store._
 import io.syspulse.aeroware.adsb.radar.server.RadarRoutes
 import akka.actor.typed.scaladsl.Behaviors
 import io.syspulse.aeroware.adsb.radar.server.RadarRoutesWS
+import io.syspulse.aeroware.aircraft.icao.AircraftICAORegistry
 
 case class Config (
   host:String="0.0.0.0",

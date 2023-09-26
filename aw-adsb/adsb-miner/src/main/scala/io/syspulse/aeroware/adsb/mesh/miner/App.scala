@@ -15,6 +15,7 @@ import io.syspulse.aeroware.adsb.core.ADSB
 
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Options
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
+import io.syspulse.aeroware.aircraft.icao.AircraftICAORegistry
 
 case class Config (
   feed:String = "",
@@ -104,10 +105,11 @@ object App extends skel.Server {
       params = c.getParams(),
     )
 
-    Console.err.println(s"Config: ${config}")
-
+    Console.err.println(s"Config: ${config}")    
+    
     config.cmd match {
       case "miner" => {
+                
         val pp = new PipelineMiner(config.feed,config.output)
         val r = pp.run()
         Console.err.println(s"r=${r}")
