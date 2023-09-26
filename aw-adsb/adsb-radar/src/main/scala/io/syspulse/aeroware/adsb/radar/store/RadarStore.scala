@@ -20,6 +20,7 @@ trait RadarStore {
   def <--(d:MeshData):Future[Try[RadarStore]]
   
   def ??(addr:AircraftAddress,ts0:Long,ts1:Long):Future[Try[Seq[TrackTelemetry]]]
+  def ??(ts0:Long,ts1:Long):Future[Try[Seq[TrackTelemetry]]]
   //def ??(addr:AircraftAddress):Future[Try[Seq[Craft]]]
   
   def all:Future[Try[Seq[TrackTelemetry]]]

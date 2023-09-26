@@ -79,7 +79,17 @@ class PipelineRadar(feed:String,output:String,datastore:RadarStore)(implicit con
 
     val msgs = if(data.stripLeading().startsWith("{")) {          
       try {        
-        val msg = data.parseJson.convertTo[MeshData]
+        val msg = { 
+          val msg = data.parseJson.convertTo[MeshData]
+          config.past match {
+            case -1 => 
+              msg.copy(ts = System.currentTimeMillis / 1000L * 1000L + msg.ts % 1000L )
+            case 0 => 
+              msg
+            case p => 
+              msg.copy(ts = msg.ts - p)
+          }          
+        }
         Seq(msg)
       } catch {
         case e:Exception => 

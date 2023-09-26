@@ -71,6 +71,17 @@ class RadarStoreMem extends RadarStore {
     }
   }
 
+  def ??(ts0:Long,ts1:Long):Future[Try[Seq[TrackTelemetry]]] = {
+    log.info(s"??: [${ts0}-${ts1}]")
+    Future {
+      Success(
+        storeTs.range(ts0,ts1+1).values.flatten
+          .toSeq
+          //.sortBy(_.ts)
+      )
+    }
+  }
+
   def ?(addr:AircraftAddress):Future[Try[Seq[TrackTelemetry]]] = Future { 
     storeAddr.get(addr.getKey()) match {
       case Some(dd) => Success(dd.toSeq)

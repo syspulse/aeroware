@@ -12,28 +12,6 @@ import io.syspulse.aeroware.adsb.core.adsb.Raw
 import scala.concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit
 
-class Expiry(expiryCheck:Duration, runner: ()=>Unit) extends Closeable {
-  import java.util.concurrent._
-  protected val expiryScheduler = new ScheduledThreadPoolExecutor(1)
-  @volatile
-  protected var expiryFuture: Option[ScheduledFuture[_]] = None
-
-  // Start immediately
-  start
-
-  def start = {    
-    if(expiryFuture.isDefined) expiryFuture.get.cancel(true)
-    val task = new Runnable { 
-      def run() = runner()
-    }
-    expiryFuture = Some(expiryScheduler.scheduleAtFixedRate(task, expiryCheck.toMillis, expiryCheck.toMillis, TimeUnit.MILLISECONDS))
-  }
-
-  override def close = {
-    if(expiryFuture.isDefined) expiryFuture.get.cancel(true)
-  }
-}
-
 class Radar(
   zoneId:String = "UTC", 
   expiryTime:Duration = FiniteDuration(1000 * 60,TimeUnit.MILLISECONDS),

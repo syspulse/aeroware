@@ -14,6 +14,8 @@ import io.syspulse.skel.util.Util
 
 import io.syspulse.aeroware.adsb.radar.store._
 import io.syspulse.aeroware.adsb.radar.server.RadarRoutes
+import akka.actor.typed.scaladsl.Behaviors
+import io.syspulse.aeroware.adsb.radar.server.RadarRoutesWS
 
 case class Config (
   host:String="0.0.0.0",
@@ -33,6 +35,8 @@ case class Config (
   entity:String = "",
 
   datastore:String = "mem://",
+
+  past:Long = -1L,  // timetravel timestamps to current time time . -1 means map into present
 
   cmd:String = "server",
 
@@ -67,6 +71,7 @@ object App extends skel.Server {
         
         ArgString('d', "datastore",s"datastore [mem://,file://, parq://] (def: ${d.datastore})"),
         
+        ArgLong('_', "past",s"Time travel into the past in msec (0: no past, -1: map to current time (def: ${d.past})"),
         
         ArgCmd("simulator","Simulator"),
         ArgCmd("server","Sever "),
@@ -93,6 +98,8 @@ object App extends skel.Server {
           
       entity = c.getString("entity").getOrElse(d.entity),
       datastore = c.getString("datastore").getOrElse(d.datastore),
+
+      past = c.getLong("past").getOrElse(d.past),
       
       cmd = c.getCmd().getOrElse(d.cmd),
       params = c.getParams(),
@@ -118,13 +125,11 @@ object App extends skel.Server {
         root ! "random"
         
       case "server" =>
+        val registry = RadarRegistry(store)
         val r = run( config.host, config.port, config.uri, c, 
           Seq(
-            // (Behaviors.ignore,"",(actor,as) => {
-            //   ws = Some(new WsServiceRoutes()(as))
-            //   ws.get
-            // }),
-            (RadarRegistry(store),"RadarRegistry",(actor,as ) => new RadarRoutes(actor)(as) ),
+            (Behaviors.ignore,"",(registryActor,as) => new RadarRoutesWS(store,"ws")(as) ),
+            (registry,"RadarRegistry-REST",(registryActor,as) => new RadarRoutes(registryActor)(as) ),
           )
         )
 
