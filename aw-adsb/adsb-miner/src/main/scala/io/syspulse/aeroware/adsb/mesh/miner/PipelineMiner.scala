@@ -34,6 +34,7 @@ import io.syspulse.skel.config._
 import io.syspulse.skel.ingest._
 import io.syspulse.skel.ingest.store._
 import io.syspulse.skel.ingest.flow.Pipeline
+import io.syspulse.skel.ingest.flow.Flows
 
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
@@ -108,15 +109,15 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
   val signerAddr = wallet.signers.values.head.addr
   val signerAddrBytes = Util.fromHexString(signerAddr)
   
-  val defaultRetrySetting = RestartSettings(
-    minBackoff = FiniteDuration(3000,TimeUnit.MILLISECONDS),
-    maxBackoff = FiniteDuration(10000,TimeUnit.MILLISECONDS),
+  val retry = RestartSettings(
+    minBackoff = FiniteDuration(config.timeoutRetry,TimeUnit.MILLISECONDS),
+    maxBackoff = FiniteDuration(config.timeoutRetry,TimeUnit.MILLISECONDS),
     randomFactor = 0.2
   )
-  .withMaxRestarts(10, FiniteDuration(5,TimeUnit.MINUTES))
+  //.withMaxRestarts(10, FiniteDuration(5,TimeUnit.MINUTES))
 
-  val connectTimeout = 1000L
-  val idleTimeout = 1000L
+  // val connectTimeout = 1000L
+  // val idleTimeout = 1000L
   
   val dataEncoder = Flow[MSG_MinerData].map( md => {      
       val mqttData = upickle.default.writeBinary(md)
@@ -131,22 +132,25 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
     })
 
   // MQTT
-  def toMQTT(mqttHost:String,mqttPort:Int,mqttTopic:String="adsb",clientId:String="adsb-client") = {
+  def toMQTT(mqttHost:String,mqttPort:Int,mqttTopic:String="adsb",clientId:String="adsb-miner") = {
     
     val mqttClientId = s"${clientId}"
-    //val mqttConnectionId = s"${math.abs(Random.nextLong())}"
-
+    
+    // Don't enable "withAutomaticReconnect(true)", RestartSink will reconnect with a log message !
     val mqttConnectionSettings = MqttConnectionSettings(
       broker = s"tcp://${mqttHost}:${mqttPort}", 
       clientId = mqttClientId,
       persistence = new MemoryPersistence
-    ).withAutomaticReconnect(true)
+    )
+    //.withAutomaticReconnect(true)
+    .withConnectionTimeout(FiniteDuration(config.timeoutConnect,TimeUnit.MILLISECONDS))
+    .withDisconnectTimeout(FiniteDuration(config.timeoutIdle,TimeUnit.MILLISECONDS))
     
     
     val mqttSink: Sink[MqttMessage, Future[Done]] = MqttSink(mqttConnectionSettings, MqttQoS.AtLeastOnce)
           
     val mqttPublisher = Flow[Array[Byte]].map( data => {
-      log.debug(s"Payload[${Util.hex(data)}] -> MQTT(${mqttHost}:${mqttPort})")
+      log.debug(s"Payload[${Util.hex(data)}] -> mqtt://${mqttHost}:${mqttPort}/${mqttTopic}")
       MqttMessage(mqttTopic,ByteString(data))  
     })
 
@@ -154,34 +158,41 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
       .via(mqttPublisher)      
       .toMat(mqttSink)(Keep.both)
              
-    RestartSink.withBackoff(defaultRetrySetting) { 
-      log.info(s"-> MQTT(${mqttHost}:${mqttPort})")
-      () => sink
+    RestartSink.withBackoff(retry) { () => 
+      log.info(s"Connecting -> mqtt://${mqttHost}:${mqttPort}/${mqttTopic}")
+      sink
     }  
   }
     
-  def fromTcp(host:String,port:Int) = {
-    val ip = InetSocketAddress.createUnresolved(host, port)
-    val conn = Tcp().outgoingConnection(
-      remoteAddress = ip,
-      connectTimeout = Duration(connectTimeout,TimeUnit.MILLISECONDS),
-      idleTimeout = Duration(idleTimeout,TimeUnit.MILLISECONDS)
-    )
-    val sourceRestarable = RestartSource.withBackoff(defaultRetrySetting) { () => 
-      log.info(s"Connecting -> dump1090(${host}:${port})...")
-      Source.actorRef(1, OverflowStrategy.fail)
-        .via(conn)
-        .log("dump1090")
-    }
-    sourceRestarable
-  }
+  // def fromTcp(host:String,port:Int) = {
+  //   val ip = InetSocketAddress.createUnresolved(host, port)
+  //   val conn = Tcp().outgoingConnection(
+  //     remoteAddress = ip,
+  //     connectTimeout = Duration(connectTimeout,TimeUnit.MILLISECONDS),
+  //     idleTimeout = Duration(idleTimeout,TimeUnit.MILLISECONDS)
+  //   )
+  //   val sourceRestarable = RestartSource.withBackoff(defaultRetrySetting) { () => 
+  //     log.info(s"Connecting -> dump1090(${host}:${port})...")
+  //     Source.actorRef(1, OverflowStrategy.fail)
+  //       .via(conn)
+  //       .log("dump1090")
+  //   }
+  //   sourceRestarable
+  // }
     
   override def source() = {
     feed.split("://").toList match {
-      case "dump1090" :: _ | "tcp" :: _ => {
+      case "dump1090" :: _ => 
         val uri = Dump1090URI(feed)
-        fromTcp(uri.host,uri.port.toInt)
-      }
+        Flows.fromTcpClient(uri.host,uri.port.toInt, 
+          connectTimeout = config.timeoutConnect, idleTimeout = config.timeoutIdle,
+          retry = retry
+        )
+      case "tcp" :: uri :: Nil => 
+        Flows.fromTcpClientUri(uri, 
+          connectTimeout = config.timeoutConnect, idleTimeout = config.timeoutIdle,
+          retry = retry
+        )
       case _ => super.source()
     }
   }

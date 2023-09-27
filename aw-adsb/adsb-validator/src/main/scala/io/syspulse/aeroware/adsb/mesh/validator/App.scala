@@ -47,6 +47,10 @@ case class Config (
 
   id:String = System.currentTimeMillis().toString,
 
+  timeoutConnect:Long = 1000L,
+  timeoutIdle:Long = 15000L,
+  timeoutRetry:Long = 5000L,
+
   cmd:String = "validator",
   params: Seq[String] = Seq(),
 )
@@ -92,6 +96,10 @@ object App extends skel.Server {
         ArgLong('_', "fanout.window",s"Window to group output data (msec) (def: ${d.fanoutWindow})"),
 
         ArgString('_', "id",s"Validator ID (unique over restarts) (def: ${d.id})"),
+
+        ArgLong('_', "timeout.idle",s"Idle connection timeout in msec (def: ${d.timeoutIdle})"),
+        ArgLong('_', "timeout.connect",s"Connection timeout in msec (def: ${d.timeoutConnect})"),
+        ArgLong('_', "timeout.retry",s"Retry timeout in msec (def: ${d.timeoutRetry})"),
         
         ArgCmd("validator","Validator pipeline"),
         ArgCmd("rewards","Rewards calculations"),
@@ -130,6 +138,10 @@ object App extends skel.Server {
       blacklistIp = c.getListString("blacklist.ip",d.blacklistIp),
 
       id = c.getString("id").getOrElse(d.id),
+
+      timeoutIdle = c.getLong("timeout.idle").getOrElse(d.timeoutIdle),
+      timeoutConnect = c.getLong("timeout.connect").getOrElse(d.timeoutConnect),
+      timeoutRetry = c.getLong("timeout.retry").getOrElse(d.timeoutRetry),
 
       cmd = c.getCmd().getOrElse(d.cmd),
       params = c.getParams(),

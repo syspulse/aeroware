@@ -37,6 +37,10 @@ case class Config (
   buffer:Int = 1024*1024,
   throttle:Long = 0L,
 
+  timeoutConnect:Long = 3000L,
+  timeoutIdle:Long = 60000L,
+  timeoutRetry:Long = 10000L,
+
   cmd:String = "miner",
   params: Seq[String] = Seq(),
 )
@@ -73,6 +77,10 @@ object App extends skel.Server {
         ArgString('_', "delimiter",s"""Delimiter characteds (def: '${d.delimiter}'). Usage example: --delimiter=`echo -e $"\r"` """),
         ArgInt('_', "buffer",s"Frame buffer (Akka Framing) (def: ${d.buffer})"),
         ArgLong('_', "throttle",s"Throttle messages in msec (def: ${d.throttle})"),
+
+        ArgLong('_', "timeout.idle",s"Idle connection timeout in msec (def: ${d.timeoutIdle})"),
+        ArgLong('_', "timeout.connect",s"Connection timeout in msec (def: ${d.timeoutConnect})"),
+        ArgLong('_', "timeout.retry",s"Retry timeout in msec (def: ${d.timeoutRetry})"),
                 
         ArgCmd("miner","Miner pipeline"),
         
@@ -100,6 +108,10 @@ object App extends skel.Server {
       delimiter = c.getString("delimiter").getOrElse(d.delimiter),
       buffer = c.getInt("buffer").getOrElse(d.buffer),
       throttle = c.getLong("throttle").getOrElse(d.throttle),
+
+      timeoutIdle = c.getLong("timeout.idle").getOrElse(d.timeoutIdle),
+      timeoutConnect = c.getLong("timeout.connect").getOrElse(d.timeoutConnect),
+      timeoutRetry = c.getLong("timeout.retry").getOrElse(d.timeoutRetry),
           
       cmd = c.getCmd().getOrElse(d.cmd),
       params = c.getParams(),
