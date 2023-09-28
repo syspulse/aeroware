@@ -163,23 +163,7 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
       sink
     }  
   }
-    
-  // def fromTcp(host:String,port:Int) = {
-  //   val ip = InetSocketAddress.createUnresolved(host, port)
-  //   val conn = Tcp().outgoingConnection(
-  //     remoteAddress = ip,
-  //     connectTimeout = Duration(connectTimeout,TimeUnit.MILLISECONDS),
-  //     idleTimeout = Duration(idleTimeout,TimeUnit.MILLISECONDS)
-  //   )
-  //   val sourceRestarable = RestartSource.withBackoff(defaultRetrySetting) { () => 
-  //     log.info(s"Connecting -> dump1090(${host}:${port})...")
-  //     Source.actorRef(1, OverflowStrategy.fail)
-  //       .via(conn)
-  //       .log("dump1090")
-  //   }
-  //   sourceRestarable
-  // }
-    
+      
   override def source() = {
     feed.split("://").toList match {
       case "dump1090" :: _ => 

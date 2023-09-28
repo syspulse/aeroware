@@ -70,23 +70,7 @@ abstract class PipelineIngest[T](feed:String,output:String)(implicit config:Conf
     maxBackoff = FiniteDuration(10000,TimeUnit.MILLISECONDS),
     randomFactor = 0.2
   )
-  .withMaxRestarts(10, FiniteDuration(5,TimeUnit.MINUTES))
-
-  // def fromTcp(host:String,port:Int) = {
-  //   val ip = InetSocketAddress.createUnresolved(host, port)
-  //   val conn = Tcp().outgoingConnection(
-  //     remoteAddress = ip,
-  //     connectTimeout = Duration(connectTimeout,TimeUnit.MILLISECONDS),
-  //     idleTimeout = Duration(idleTimeout,TimeUnit.MILLISECONDS)
-  //   )
-  //   val sourceRestarable = RestartSource.withBackoff(defaultRetrySetting) { () => 
-  //     log.info(s"Connecting -> dump1090(${host}:${port})...")
-  //     Source.actorRef(1, OverflowStrategy.fail)
-  //       .via(conn)
-  //       .log("dump1090")
-  //   }
-  //   sourceRestarable
-  // }
+  //.withMaxRestarts(10, FiniteDuration(5,TimeUnit.MINUTES))
     
   override def source() = {
     feed.split("://").toList match {
