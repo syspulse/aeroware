@@ -2,9 +2,11 @@ package io.syspulse.aeroware.adsb.core
 
 import enumeratum._
 import enumeratum.values._
+import io.syspulse.aeroware.core.AircraftID
 
 case class AircraftAddress(icaoId:String,icaoType:String,icaoCallsign:String) {
   def getKey() = icaoId.toLowerCase
+  def toId():AircraftID = AircraftID(icaoId,icaoCallsign)
 }
 
 object AircraftAddress {

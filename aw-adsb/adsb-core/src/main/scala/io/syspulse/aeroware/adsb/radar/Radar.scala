@@ -11,28 +11,29 @@ import java.io.Closeable
 import io.syspulse.aeroware.adsb.core.adsb.Raw
 import scala.concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit
+import io.syspulse.aeroware.core.AircraftID
 
 class Radar(
   zoneId:String = "UTC", 
   expiryTime:Duration = FiniteDuration(1000 * 60,TimeUnit.MILLISECONDS),
   expiryCheck:Duration = FiniteDuration(1000 * 60,TimeUnit.MILLISECONDS)) extends Closeable { 
   
-  val aircrafts:mutable.Map[AircraftAddress,Craft] = mutable.HashMap()
-  val expirations:mutable.TreeMap[String,AircraftAddress] = mutable.TreeMap()
+  val aircrafts:mutable.Map[AircraftID,Craft] = mutable.HashMap()
+  val expirations:mutable.TreeMap[String,AircraftID] = mutable.TreeMap()
   val expiry = new Expiry(expiryCheck, expire)
-  def expKey(a:AircraftAddress,ts:Long = now):String = s"${ts}:${a}"
+  def expKey(a:AircraftID,ts:Long = now):String = s"${ts}:${a}"
   def now = System.currentTimeMillis
 
-  val address0 = AircraftAddress("","","")
+  val aid0 = AircraftID()
 
-  def +(a:Craft):Craft = { aircrafts.put(a.getId,a); a}
-  def find(id:AircraftAddress):Option[Craft] = aircrafts.get(id)
+  def +(a:Craft):Craft = { aircrafts.put(a.getId(),a); a}
+  def find(addr:AircraftAddress):Option[Craft] = aircrafts.get(addr.toId())
 
   def size = aircrafts.size
   def all:Iterable[Craft] = aircrafts.values
 
   def expire():Unit = {
-    val expired = expirations.range( expKey(address0,now - expiryTime.toMillis), expKey(address0,now) ) 
+    val expired = expirations.range( expKey(aid0,now - expiryTime.toMillis), expKey(aid0,now) ) 
     expired.foreach( e => {
       aircrafts.remove(e._2)
       expirations.remove(e._1)
@@ -40,21 +41,21 @@ class Radar(
   } 
 
   def event(adsb:ADSB):Option[TrackTelemetry] = {
-    val address = adsb.addr
-    val t = aircrafts.get(address) match {
+    val aid = adsb.addr.toId()
+    val t = aircrafts.get(aid) match {
       case Some(aircraft) => {
         val t = aircraft.event(adsb)
         // update expiration
-        expirations.remove( expKey(address))
-        expirations.addOne( expKey(address) -> address)
+        expirations.remove( expKey(aid))
+        expirations.addOne( expKey(aid) -> aid)
         t
       }
       case None => {
         // not found, add new one
-        val aircraft = Craft(address)
+        val aircraft = Craft(aid)
         val t = aircraft.event(adsb)
-        aircrafts.put(address,aircraft)
-        expirations.addOne(expKey(address) -> address)
+        aircrafts.put(aid,aircraft)
+        expirations.addOne(expKey(aid) -> aid)
         t
       }
     }

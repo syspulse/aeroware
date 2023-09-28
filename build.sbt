@@ -200,7 +200,10 @@ lazy val core = (project in file("aw-core"))
   .settings (
       sharedConfig,
       name := "aw-core",
-      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(),
+      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(
+        libEnumeratum,
+        libKebsSpray
+      ),
 )
 
 lazy val aircraft = (project in file("aw-aircraft"))

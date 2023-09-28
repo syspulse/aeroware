@@ -7,10 +7,11 @@ import com.typesafe.scalalogging.Logger
 
 import io.syspulse.aeroware.core.{Speed,VRate,Altitude,Location}
 import io.syspulse.aeroware.adsb.core._
+import io.syspulse.aeroware.core.AircraftID
 
 
-abstract class Trackable(id:AircraftAddress, cacheSize:Int = 100) {
-  def getId:AircraftAddress = id
+abstract class Trackable(aid:AircraftID, cacheSize:Int = 100) {
+  def getId():AircraftID = aid
   
   val eventsCache:mutable.Stack[ADSB] = mutable.Stack()
   
@@ -18,7 +19,7 @@ abstract class Trackable(id:AircraftAddress, cacheSize:Int = 100) {
   var p0:Option[ADSB_AirbornePositionBaro] = None
 
   var telemetry:List[TrackTelemetry] = List()
-  val tFirst = TrackTelemetry(0L,id,Location.UNKNOWN,Speed.UNKNOWN,VRate.UNKNOWN,0.0)
+  val tFirst = TrackTelemetry(0L,aid,Location.UNKNOWN,Speed.UNKNOWN,VRate.UNKNOWN,0.0)
   
   @volatile
   var tLast:Option[TrackTelemetry] = None
@@ -46,7 +47,7 @@ abstract class Trackable(id:AircraftAddress, cacheSize:Int = 100) {
             (t.hSpeed,t.vRate,t.heading)
           }
 
-          val t = TrackTelemetry(p.ts,a.addr,loc,hSpeed,vRate,heading)
+          val t = TrackTelemetry(p.ts,a.addr.toId(),loc,hSpeed,vRate,heading)
           
           telemetry = telemetry :+ t
 
@@ -68,7 +69,7 @@ abstract class Trackable(id:AircraftAddress, cacheSize:Int = 100) {
           (t.loc)
         }
         
-        val t = TrackTelemetry(p.ts,a.addr,loc,hSpeed,vRate,heading)
+        val t = TrackTelemetry(p.ts,a.addr.toId(),loc,hSpeed,vRate,heading)
         telemetry = telemetry :+ t
 
         tLast = Some(t)

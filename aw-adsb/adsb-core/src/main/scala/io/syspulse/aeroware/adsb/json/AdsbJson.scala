@@ -1,16 +1,5 @@
 package io.syspulse.aeroware.adsb.core
 
-import io.syspulse.skel.service.JsonCommon
-
-
-import io.syspulse.aeroware.adsb.core._
-import io.syspulse.aeroware.core._
-
-import spray.json.{DefaultJsonProtocol, DeserializationException, JsString, JsValue, JsonFormat, deserializationError}
-import spray.json.RootJsonFormat
-import spray.json.JsObject
-import spray.json.JsNumber
-import spray.json.JsArray
 import spray.json._
 import DefaultJsonProtocol._ 
 
@@ -18,19 +7,17 @@ import pl.iterators.kebs.json.KebsSpray
 import pl.iterators.kebs.json.KebsEnumFormats
 import pl.iterators.kebs.json.SprayJsonValueEnum
 
+import io.syspulse.skel.service.JsonCommon
+import io.syspulse.aeroware.adsb.core._
+import io.syspulse.aeroware.core._
+import io.syspulse.aeroware.json.CoreJson
+
 trait AdsbJsonProtocol extends DefaultJsonProtocol with SprayJsonValueEnum
 
-object AdsbJson extends AdsbJsonProtocol {
-  //import DefaultJsonProtocol._
+object AdsbJson extends AdsbJsonProtocol {  
+  import CoreJson._
   
   implicit val jf_aa = jsonFormat3(AircraftAddress.apply _)
-  implicit val jf_un = jsonFormat(Units)
-  implicit val jf_st = jsonFormat(SpeedType)
-
-  implicit val jf_al = jsonFormat3(Altitude.apply _)
-  implicit val jf_l = jsonFormat4(Location.apply _)
-  implicit val jf_vr = jsonFormat3(VRate.apply _)
-  implicit val jf_sp = jsonFormat4(Speed.apply _)
   
   implicit val jf_ap = jsonFormat5(ADSB_Unknown)
 

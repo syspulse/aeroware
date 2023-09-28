@@ -9,6 +9,7 @@ import io.syspulse.aeroware.core.Location
 import io.syspulse.aeroware.core.Altitude
 import io.syspulse.aeroware.core.Speed
 import io.syspulse.aeroware.core.VRate
+import io.syspulse.aeroware.core.AircraftID
 
-case class TrackTelemetry(ts:Long,aid:AircraftAddress,loc:Location,hSpeed:Speed,vRate:VRate,heading:Double)
+case class TrackTelemetry(ts:Long,aid:AircraftID,loc:Location,hSpeed:Speed,vRate:VRate,heading:Double)
 

@@ -13,9 +13,9 @@ final case class RadarTelemetry(data: immutable.Seq[TrackTelemetry],total:Option
 object RadarProto extends JsonCommon {
   import DefaultJsonProtocol._
   import io.syspulse.aeroware.adsb.core.AdsbJson._
+  import io.syspulse.aeroware.json.CoreJson._
   
   implicit val jf_tt = jsonFormat6(TrackTelemetry)
-
   implicit val jf_rd = jsonFormat2(RadarTelemetry)
   
 }
