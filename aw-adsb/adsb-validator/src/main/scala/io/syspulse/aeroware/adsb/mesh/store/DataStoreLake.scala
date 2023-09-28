@@ -87,8 +87,8 @@ class DataStoreLake(dir:String = "./lake/{addr}/data-{HH}{mm}/data-{id}.parq")(i
   def +(msg:MSG_MinerData,penalty:Double):Future[Try[DataStore]] = {
     val addr = Util.hex(msg.addr)
         
-    val vdd = msg.data.map{ d => 
-      RawData(msg.ts,addr,d.ts,d.adsb,penalty)
+    val vdd = msg.payload.map{ d => 
+      RawData(msg.ts,addr,d.ts,d.pt,d.data,penalty)
     }
 
     val file = dir.replaceAll("\\{addr\\}",addr).replaceAll("\\{id\\}",config.id)

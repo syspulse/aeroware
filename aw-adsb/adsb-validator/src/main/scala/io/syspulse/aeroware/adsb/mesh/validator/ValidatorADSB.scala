@@ -37,7 +37,7 @@ class ValidatorADSB(ops:ValidatorConfig) extends ValidatorEngine[MSG_MinerData] 
 
   def validate(m:MSG_MinerData):Double = {
     // verify signature
-    val data = m.data
+    val data = m.payload
     val addr = Util.hex(m.addr)
 
     val p = guard.permit(m)
@@ -53,7 +53,7 @@ class ValidatorADSB(ops:ValidatorConfig) extends ValidatorEngine[MSG_MinerData] 
         return RewardADSB.penaltyNoData
       }
 
-      val invalidCount = data.filter( a => a.adsb == null || a.adsb.isBlank()).size
+      val invalidCount = data.filter( a => a.data == null || a.data.isBlank()).size
       
       if(invalidCount > 0) {
         log.warn(s"Missing ADSB raw data: ${addr}")
@@ -84,8 +84,8 @@ class ValidatorADSB(ops:ValidatorConfig) extends ValidatorEngine[MSG_MinerData] 
     // validate the data is in ADSB format
     if(ops.validateData) {
       val penalty = 0.0
-      m.data.foldLeft(0.0)( (r,d) => {
-        val a = Decoder.decode(d.adsb,d.ts)
+      m.payload.foldLeft(0.0)( (r,d) => {
+        val a = Decoder.decode(d.data,d.ts)
         a match {
           case Success(a) => 0.0
           case Failure(e) => RewardADSB.penaltyInvalidData

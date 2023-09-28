@@ -85,9 +85,6 @@ import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
 import io.syspulse.aeroware.adsb.core.adsb.Raw
 
-import io.syspulse.aeroware.adsb.ingest.Dump1090URI
-import io.syspulse.aeroware.adsb.ingest.ADSB_Ingested
-
 import io.syspulse.aeroware.adsb.mesh.protocol._
 import io.syspulse.aeroware.adsb.mesh.transport.MqttURI
 
@@ -95,7 +92,7 @@ import io.syspulse.skel.util.Util
 import io.syspulse.skel.crypto.Eth
 import io.syspulse.skel.crypto.wallet.{WalletVaultKeyfiles,WalletVaultKeyfile}
 
-import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerADSB
+import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerPayload
 import io.syspulse.aeroware.adsb.mesh.protocol.MinerSig
 import io.syspulse.aeroware.adsb.mesh.transport.MQTTServerFlow
 import io.syspulse.aeroware.adsb.mesh.transport.MQTTConfig
@@ -285,23 +282,23 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
 
     val err = if(pentaly != 0.0) {      
       log.warn(s"penalty: ${pentaly}: ${m}")      
-      m.data.size
+      m.payload.size
     } else {
       0
     }
     
-    validatorStat.+(m.data.size,err)
+    validatorStat.+(m.payload.size,err)
 
-    log.info(s"stat=[${m.data.size},${err},${validatorStat}]")
+    log.info(s"stat=[${m.payload.size},${err},${validatorStat}]")
 
     err == 0
   })
   .mapConcat( m => {
-    // transform into raw ADSB messages
-    m.data.map(a => 
+    m.payload.map(a => 
       MeshData(
         ts = a.ts,
-        data = a.adsb
+        pt = a.pt,
+        data = a.data
     )).toSeq
   })
   .groupedWithin(Int.MaxValue,FiniteDuration(config.fanoutWindow,TimeUnit.MILLISECONDS))

@@ -9,7 +9,7 @@ import io.syspulse.aeroware.adsb.radar.Craft
 import io.syspulse.aeroware.adsb.radar.Aircraft
 import io.syspulse.aeroware.adsb.core.AircraftAddress
 
-import io.syspulse.aeroware.adsb.mesh.protocol.MeshData
+import io.syspulse.aeroware.adsb.mesh.MeshData
 import io.syspulse.aeroware.adsb.radar.TrackTelemetry
 
 trait RadarStore {

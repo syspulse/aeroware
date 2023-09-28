@@ -32,19 +32,19 @@ object MinerSig {
 case class MSG_MinerData(
   ts: Long, 
   addr:Array[Byte], 
-  data: Array[MSG_MinerADSB], 
+  payload: Array[MSG_MinerPayload], 
   sig:MinerSig, 
   ops:Int, 
   socket:String=""
 ) extends MSG_Miner with Ingestable {
-  override def toString = s"${this.getClass.getSimpleName}(0x${ops.toHexString},${ts},${Util.hex(addr)},${data.toSeq},${sig})"
+  override def toString = s"${this.getClass.getSimpleName}(0x${ops.toHexString},${ts},${Util.hex(addr)},${payload.toSeq},${sig})"
 }
 
 object MSG_MinerData {
   implicit val rw: RW[MSG_MinerData] = macroRW
 
   implicit val jf_ms = jsonFormat2(MinerSig.apply _)
-  implicit val jf_ma = jsonFormat2(MSG_MinerADSB.apply _)
+  implicit val jf_ma = jsonFormat3(MSG_MinerPayload.apply _)
   implicit val jf_md = jsonFormat6(MSG_MinerData.apply _)
   
 }

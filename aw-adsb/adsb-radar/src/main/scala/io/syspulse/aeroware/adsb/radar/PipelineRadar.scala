@@ -52,7 +52,7 @@ import io.syspulse.aeroware.adsb.core.adsb.Raw
 import io.syspulse.aeroware.adsb.ingest.Dump1090URI
 import io.syspulse.aeroware.adsb.ingest.ADSB_Ingested
 
-import io.syspulse.aeroware.adsb.mesh.protocol._
+import io.syspulse.aeroware.adsb.mesh._
 
 import io.syspulse.skel.util.Util
 

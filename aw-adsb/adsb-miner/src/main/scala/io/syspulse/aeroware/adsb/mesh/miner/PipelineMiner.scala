@@ -78,12 +78,13 @@ import akka.stream.alpakka.mqtt.MqttQoS
 import akka.stream.scaladsl.Sink
 import akka.stream.scaladsl.Keep
 import akka.stream.scaladsl.RestartSink
-import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerADSB
+import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerPayload
 import io.syspulse.aeroware.adsb.mesh.protocol.MinerSig
 import akka.stream.RestartSettings
 
 import java.util.concurrent.atomic.AtomicLong
 import jakarta.validation.constraints.Min
+import io.syspulse.aeroware.adsb.mesh.PayloadTypes
 
 class MinerStat {
   val total = new AtomicLong()
@@ -219,12 +220,12 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
   }
 
   val encoder = Flow[Seq[ADSB]].map( aa => { 
-    val data = aa.map(a => MSG_MinerADSB(a.ts,a.raw)).toArray
+    val data = aa.map(a => MSG_MinerPayload(a.ts,PayloadTypes.ADSB, a.raw)).toArray
     
     val msg = MSG_MinerData(
       ts = System.currentTimeMillis(),
       addr = signerAddrBytes,
-      data = data,
+      payload = data,
       sig = MinerSig.empty,
       ops = config.protocolOptions
     )
@@ -233,7 +234,7 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
   })
 
   val signer = Flow[MSG_MinerData].map( msg => { 
-    val data = upickle.default.writeBinary(msg.data)
+    val data = upickle.default.writeBinary(msg.payload)
     val sig = wallet.msign(data,None, None).head
 
     msg.copy(
@@ -242,7 +243,7 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
   })
 
   val checksum = Flow[MSG_MinerData].map( msg => { 
-    val data = msg.data
+    val data = msg.payload
     val sigData = upickle.default.writeBinary(data)
     val sig = Util.hex(msg.sig.r) + ":" + Util.hex(msg.sig.s)
 
@@ -256,8 +257,8 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
   })
 
   val stat = Flow[MSG_MinerData].map( msg => { 
-    minerStat.+(msg.data.size)
-    log.info(s"stat=[${msg.data.size},${minerStat}]")
+    minerStat.+(msg.payload.size)
+    log.info(s"stat=[${msg.payload.size},${minerStat}]")
     msg
   })
 
