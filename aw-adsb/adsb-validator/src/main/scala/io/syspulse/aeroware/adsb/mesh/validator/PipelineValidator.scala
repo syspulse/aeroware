@@ -305,14 +305,33 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
     )).toSeq
   })
   .groupedWithin(Int.MaxValue,FiniteDuration(config.fanoutWindow,TimeUnit.MILLISECONDS))
-  .mapConcat( group => {
-    // sort by timestamp and remove duplicates
-    // there is always a possibility that duplicate can be in another window at the window edge
-    // |         A(10,"MSG") | A(11,"MSG")         |
-    group
-      .sortBy(_.ts)
-      .distinctBy( f => f.data)
-  })
+  // .mapConcat( group => {
+  //   // sort by timestamp and remove duplicates
+  //   // there is always a possibility that duplicate can be in another window at the window edge
+  //   // |         A(10,"MSG") | A(11,"MSG")         |
+  //   group
+  //     .sortBy(_.ts)
+  //     .distinctBy( f => f.data)
+  // })
+  .statefulMapConcat { () =>
+      var state = List.empty[MeshData]
+      var lastTs = System.currentTimeMillis()
+      (mm) => {
+        //val currentWindowStart = eventTime - windowDuration.toMillis
+        val uniq = mm.filter(m => ! state.find(_.data == m.data).isDefined)
+        state =  state.prependedAll( uniq )
+        val now = System.currentTimeMillis()
+        // Two window tolerances for duplication (rest will be skipped on prevalidation)
+        if( (now - lastTs) > config.fanoutWindow * 2 ) {
+          // take only latest messages
+          state = state.takeWhile(m => m.ts > lastTs)
+          lastTs = now
+        }
+
+        log.debug(s"dedup: ${uniq} (state=${state})")
+        uniq
+      }
+    }
 
   def parse(data:String):Seq[MSG_MinerData] = {    
     log.debug(s"data: ${data}")
