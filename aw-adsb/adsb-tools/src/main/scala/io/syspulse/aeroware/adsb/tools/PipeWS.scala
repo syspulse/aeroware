@@ -28,7 +28,7 @@ abstract class PipeWS(wsHost:String,wsPort:Int) extends cask.MainRoutes {
     }
   }
 
-  @cask.websocket("/stream")
+  @cask.websocket("/api/v1/radar/ws")
   def stream(): cask.WebsocketResult = {
     cask.WsHandler { connection =>
       cask.WsActor {

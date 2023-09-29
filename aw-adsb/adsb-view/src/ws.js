@@ -7,7 +7,7 @@ import { readable } from 'svelte/store'
 export const WS = readable(0, set => {
   // this function is called once, when the first subscriber to the store arrives
 
-  let socket = new WebSocket("ws://localhost:30000/stream");
+  let socket = new WebSocket("ws://localhost:8080/api/v1/radar/ws");
   
   socket.onopen = function( event ) {
     console.log("Connected");

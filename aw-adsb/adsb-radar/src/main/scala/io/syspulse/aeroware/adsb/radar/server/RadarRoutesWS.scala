@@ -46,7 +46,10 @@ class RadarRoutesWS(store: RadarStore,uri:String)(implicit context: ActorContext
     Await.result(f,FiniteDuration(3000L,TimeUnit.MILLISECONDS)) match {
       case Success(tt) => 
         if(tt.size > 0) {
-          val payload = tt.map(t => t.toJson.compactPrint).mkString("\n")
+          //val payload = tt.map(t => t.toJson.compactPrint).mkString("\n")
+          val payload = tt.map(t => 
+            s"${t.ts},${t.aid.icaoId},${t.aid.callsign},${t.loc.lat},${t.loc.lon},${t.loc.alt.alt},${t.hSpeed.v},${t.vRate.v},${t.heading}"
+          ).mkString("\n")
           rws.broadcastText(payload)
         }
       case Failure(e) => 

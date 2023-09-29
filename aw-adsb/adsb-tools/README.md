@@ -36,7 +36,7 @@ Decode from dump1090 format and emulate dump1090 by accepting tcp clients and se
 
 Play recorded flight, print decoded, broadcast to websocket clients with delay between events and repeat 10 times all flow
 ```
-./run-player.sh ./data/flight-1.csv stdout "ws://0.0.0.0:30000" delay "repeat(10)"
+./run-player.sh ./data/flight-1.csv stdout "ws://0.0.0.0:8080" delay "repeat(10)"
 ```
 
 Read from stdin any data and try to parse it
@@ -51,7 +51,7 @@ Play from recorded flight and track telemetry every 1 second
 
 Play directly from dump1090, track all and broadcast to websocket clients
 ```
-nc rp-1 30002 | ./run-player.sh '/dev/stdin' radar "ws://0.0.0.0:30000"
+nc rp-1 30002 | ./run-player.sh '/dev/stdin' radar "ws://0.0.0.0:8080"
 ```
 Note: ws:// is also __radar__ internally - it is just nice to see the same telemetry pushed to Websocket printed
 
