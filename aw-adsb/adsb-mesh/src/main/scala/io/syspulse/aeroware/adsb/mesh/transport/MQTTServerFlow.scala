@@ -52,10 +52,9 @@ import akka.stream.alpakka.mqtt.streaming.PacketId
 import akka.stream.alpakka.mqtt.streaming.ControlPacket
 import akka.stream.alpakka.mqtt.streaming.ControlPacketType
 
-
+import io.syspulse.aeroware.core.Raw
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
-import io.syspulse.aeroware.adsb.core.adsb.Raw
 
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
 import scala.concurrent.Promise

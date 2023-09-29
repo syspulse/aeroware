@@ -4,13 +4,14 @@ import scala.util.{Try,Success,Failure}
 
 import com.typesafe.scalalogging.Logger
 
-import io.syspulse.aeroware.adsb.core._
 import scala.collection._
 import scala.concurrent.duration.Duration
 import java.io.Closeable
-import io.syspulse.aeroware.adsb.core.adsb.Raw
 import scala.concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit
+
+import io.syspulse.aeroware.core.Raw
+import io.syspulse.aeroware.adsb.core._
 import io.syspulse.aeroware.core.AircraftID
 
 class Radar(

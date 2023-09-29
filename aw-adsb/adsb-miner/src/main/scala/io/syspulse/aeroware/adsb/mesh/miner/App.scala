@@ -28,7 +28,7 @@ case class Config (
   blockWindow: Long = 1000L,
   protocolOptions:Int = MSG_Options.V_1 | MSG_Options.O_EC,
 
-  entity:String = "",
+  entity:String = "adsb",
   format:String = "",
 
   limit:Long = 0L,
@@ -57,7 +57,7 @@ object App extends skel.Server {
       new ConfigurationAkka,
       new ConfigurationProp,
       new ConfigurationEnv, 
-      new ConfigurationArgs(args,"adsb-validator","",
+      new ConfigurationArgs(args,"aw-miner","",
         
         ArgString('_', "keystore.file",s"Keystore file (def: ${d.keystore})"),
         ArgString('_', "keystore.pass",s"Keystore password"),        
@@ -69,8 +69,8 @@ object App extends skel.Server {
         ArgString('f', "feed",s"Input Feed (def: ${d.feed})"),
         ArgString('o', "output",s"Output file (def: ${d.output})"),
 
-        ArgString('e', "entity",s"Ingest entity: (def: ${d.entity})"),        
-        ArgString('_', "format",s"Format () (def: ${d.format})"),
+        ArgString('e', "entity",s"mining entity (adsb,notam,metar,..) (def: ${d.entity})"),        
+        ArgString('_', "format",s"format () (def: ${d.format})"),
 
         ArgLong('_', "limit",s"Limit (def: ${d.limit})"),
         ArgLong('_', "freq",s"Frequency (def: ${d.feed})"),
@@ -100,6 +100,7 @@ object App extends skel.Server {
       
       feed = c.getString("feed").getOrElse(d.feed),
       output = c.getString("output").getOrElse(d.output),
+
       entity = c.getString("entity").getOrElse(d.entity),
       format = c.getString("format").getOrElse(d.format),
 
@@ -122,7 +123,8 @@ object App extends skel.Server {
     config.cmd match {
       case "miner" => {
                 
-        val pp = new PipelineMiner(config.feed,config.output)
+        val pp = new PipelineMinerADSB(config.feed,config.output)
+
         val r = pp.run()
         Console.err.println(s"r=${r}")
         r match {

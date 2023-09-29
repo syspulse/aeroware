@@ -45,9 +45,9 @@ import io.syspulse.skel.ingest._
 import io.syspulse.skel.ingest.store._
 import io.syspulse.skel.ingest.flow.Pipeline
 
+import io.syspulse.aeroware.core.Raw
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
-import io.syspulse.aeroware.adsb.core.adsb.Raw
 
 import io.syspulse.aeroware.adsb.ingest.Dump1090URI
 import io.syspulse.aeroware.adsb.ingest.ADSB_Ingested

@@ -30,9 +30,9 @@ import io.syspulse.skel.crypto.wallet.WalletVaultKeyfiles
 import scala.concurrent.Future
 import scala.util.Random
 
+import io.syspulse.aeroware.core.Raw
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
-import io.syspulse.aeroware.adsb.core.adsb.Raw
 
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
 import scala.concurrent.ExecutionContext

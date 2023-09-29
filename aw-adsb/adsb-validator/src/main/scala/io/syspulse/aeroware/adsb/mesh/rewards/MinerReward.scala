@@ -19,7 +19,7 @@ import io.syspulse.skel.crypto.wallet.WalletVaultKeyfiles
 
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
-import io.syspulse.aeroware.adsb.core.adsb.Raw
+
 import io.syspulse.aeroware.adsb.mesh.protocol._
 import scala.concurrent.ExecutionContext
 

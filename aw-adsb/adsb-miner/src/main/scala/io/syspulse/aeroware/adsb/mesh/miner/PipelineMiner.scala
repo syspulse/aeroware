@@ -50,20 +50,8 @@ import io.syspulse.aeroware.adsb.mesh.transport.MqttURI
 import upickle._
 import upickle.default.{ReadWriter => RW, macroRW}
 
-import io.syspulse.skel.ingest.IngestClient
-import io.syspulse.skel.util.Util
-import io.syspulse.skel.crypto.Eth
-import io.syspulse.skel.crypto.wallet.WalletVaultKeyfile
-import io.syspulse.skel.crypto.wallet.WalletVault
-
 import scala.concurrent.Future
 import scala.util.Random
-
-import io.syspulse.aeroware.adsb._
-import io.syspulse.aeroware.adsb.core._
-import io.syspulse.aeroware.adsb.core.adsb.Raw
-import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
-import io.syspulse.aeroware.adsb.mesh.miner
 
 import scala.concurrent.ExecutionContext
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Options
@@ -78,13 +66,29 @@ import akka.stream.alpakka.mqtt.MqttQoS
 import akka.stream.scaladsl.Sink
 import akka.stream.scaladsl.Keep
 import akka.stream.scaladsl.RestartSink
-import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerPayload
-import io.syspulse.aeroware.adsb.mesh.protocol.MinerSig
 import akka.stream.RestartSettings
 
 import java.util.concurrent.atomic.AtomicLong
 import jakarta.validation.constraints.Min
+
+import io.syspulse.skel.ingest.IngestClient
+import io.syspulse.skel.util.Util
+import io.syspulse.skel.crypto.Eth
+import io.syspulse.skel.crypto.wallet.WalletVaultKeyfile
+import io.syspulse.skel.crypto.wallet.WalletVault
+
+import io.syspulse.aeroware.core.Minable
+
+import io.syspulse.aeroware.adsb._
+import io.syspulse.aeroware.adsb.core._
+import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
+import io.syspulse.aeroware.adsb.mesh.miner
+
+import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerPayload
+import io.syspulse.aeroware.adsb.mesh.protocol.MinerSig
+
 import io.syspulse.aeroware.adsb.mesh.PayloadTypes
+import io.syspulse.aeroware.adsb.mesh.payload.PayloadType
 
 class MinerStat {
   val total = new AtomicLong()
@@ -94,12 +98,27 @@ class MinerStat {
   override def toString = s"${total}"
 }
 
-class PipelineMiner(feed:String,output:String)(implicit config:Config)
-  extends Pipeline[ADSB,MSG_MinerData,MSG_MinerData](feed,output,config.throttle,config.delimiter,config.buffer) {
+class PipelineMinerADSB(feed:String,output:String)(implicit config:Config)
+  extends PipelineMiner(feed,output) {
+  
+  override def getPayloadType() = PayloadTypes.ADSB
+
+  override def decode(data:String,ts:Long):Option[Minable] = {
+    Decoder.decode(data,ts) match {
+      case Success(a) => Some(a)
+      case Failure(e) => None
+    }
+  }
+}
+
+abstract class PipelineMiner(feed:String,output:String)(implicit config:Config)
+  extends Pipeline[Minable,MSG_MinerData,MSG_MinerData](feed,output,config.throttle,config.delimiter,config.buffer) {
 
   implicit protected val log = Logger(s"${this}")
   //implicit val ec = system.dispatchers.lookup("default-executor") //ExecutionContext.global
   implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+
+  def getPayloadType():PayloadType = ???
 
   val minerStat = new MinerStat()
 
@@ -133,7 +152,10 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
     })
 
   // MQTT
-  def toMQTT(mqttHost:String,mqttPort:Int,mqttTopic:String="adsb",clientId:String="adsb-miner") = {
+  def toMQTT(mqttHost:String,mqttPort:Int,
+             //mqttTopic:String="adsb",
+             mqttTopic:String=config.entity,
+             clientId:String="aw-miner") = {
     
     val mqttClientId = s"${clientId}"
     
@@ -219,8 +241,12 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
     }
   }
 
-  val encoder = Flow[Seq[ADSB]].map( aa => { 
-    val data = aa.map(a => MSG_MinerPayload(a.ts,PayloadTypes.ADSB, a.raw)).toArray
+  val encoder = Flow[Seq[Minable]].map( aa => { 
+    val data = aa.map(a => MSG_MinerPayload(
+      a.ts,
+      getPayloadType(), 
+      a.raw)
+    ).toArray
     
     val msg = MSG_MinerData(
       ts = System.currentTimeMillis(),
@@ -262,8 +288,8 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
     msg
   })
 
-  override def process:Flow[ADSB,MSG_MinerData,_] = 
-    Flow[ADSB]
+  override def process:Flow[Minable,MSG_MinerData,_] = 
+    Flow[Minable]
       .groupedWithin(config.blockSize, FiniteDuration(config.blockWindow,TimeUnit.MILLISECONDS))
       .via(encoder)
       .via(signer)
@@ -272,14 +298,16 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
       //.via(dataEncoder)
   
   
-  def decode(data:String,ts:Long):Option[ADSB] = {
-    Decoder.decode(data,ts) match {
-      case Success(a) => Some(a)
-      case Failure(e) => None
-    }
-  }
+  // def decode(data:String,ts:Long):Option[ADSB] = {
+  //   Decoder.decode(data,ts) match {
+  //     case Success(a) => Some(a)
+  //     case Failure(e) => None
+  //   }
+  // }
 
-  def parse(data:String):Seq[ADSB] = {
+  def decode(data:String,ts:Long):Option[Minable] = ???
+
+  def parse(data:String):Seq[Minable] = {
     if(data.isEmpty()) return Seq()
     try {
       val a = data.trim.split("\\s+").toList match {

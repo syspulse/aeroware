@@ -15,5 +15,3 @@ object PayloadTypes {
   val GAMET = 5
   val ACARS = 6
 }
-
-

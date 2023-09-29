@@ -7,17 +7,18 @@ import enumeratum.values._
 
 import io.syspulse.aeroware.core.{ Units, Altitude, Location, Speed, VRate}
 import io.syspulse.skel.util.Util
+import io.syspulse.aeroware.core.Minable
 
-package object adsb {
-  type Raw = String
-}
+// package object adsb {
+//   type Raw = String
+// }
+import io.syspulse.aeroware.core.Raw
 
-import adsb._
 import ADSB._
 
 case class AirbornePosition(raw:RawAirbornePosition)
 
-abstract class ADSB extends Serializable {
+abstract class ADSB extends Minable {
     val ts:Long // timestamp
     val df:Byte
     val capability:Byte

@@ -5,8 +5,8 @@ import io.syspulse.skel.util.Util
 import spray.json._
 import DefaultJsonProtocol._ 
 
+import io.syspulse.aeroware.core.Raw
 import io.syspulse.aeroware.adsb.core.ADSB
-import io.syspulse.aeroware.adsb.core.adsb.Raw
 
 import io.syspulse.skel.Ingestable
 import io.syspulse.aeroware.adsb.mesh.payload.PayloadType

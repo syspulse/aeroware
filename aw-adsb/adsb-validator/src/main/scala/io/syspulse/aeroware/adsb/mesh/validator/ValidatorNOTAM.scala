@@ -17,7 +17,6 @@ import io.syspulse.skel.crypto.Eth
 import io.syspulse.skel.crypto.wallet.WalletVaultKeyfiles
 import io.syspulse.skel.crypto.key.PK
 
-import io.syspulse.aeroware.adsb.core.adsb.Raw
 import io.syspulse.aeroware.adsb.mesh.protocol._
 import io.syspulse.aeroware.adsb.mesh.rewards._
 
