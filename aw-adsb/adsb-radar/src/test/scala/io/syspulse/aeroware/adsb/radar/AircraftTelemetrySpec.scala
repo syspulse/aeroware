@@ -21,12 +21,12 @@ import io.syspulse.aeroware.adsb.radar
 
 
 class AircraftTelemetrySpec extends AnyWordSpecLike with Matchers {
-  val a1 = Aircraft(AircraftAddress("UK-CQF-001","C-172","UR-CQF"))
+  val a1 = Aircraft(AircraftAddress("UK-CQF-001","C-172","UR-CQF").toId())
 
-  val v1 = TrackTelemetry(0L,a1.addr,loc=Location(52.123,3.17,Altitude(100,Units.METERS)),hSpeed=Speed(60,Units.KNOTS),vRate=VRate(5,Units.FPM),heading=0.0)
-  val v2 = TrackTelemetry(0L,a1.addr,loc=Location(52.123,3.17,Altitude(100,Units.METERS)),hSpeed=Speed(60,Units.KNOTS),vRate=VRate(5,Units.FPM),heading=0.0)
+  val v1 = TrackTelemetry(0L,a1.aid,loc=Location(52.123,3.17,Altitude(100,Units.METERS)),hSpeed=Speed(60,Units.KNOTS),vRate=VRate(5,Units.FPM),heading=0.0)
+  val v2 = TrackTelemetry(0L,a1.aid,loc=Location(52.123,3.17,Altitude(100,Units.METERS)),hSpeed=Speed(60,Units.KNOTS),vRate=VRate(5,Units.FPM),heading=0.0)
 
-  val v3 = TrackTelemetry(0L,a1.addr,loc=Location(52.258,3.18,Altitude(150,Units.METERS)),hSpeed=Speed(65,Units.KNOTS),vRate=VRate(5,Units.FPM),heading=0.0)
+  val v3 = TrackTelemetry(0L,a1.aid,loc=Location(52.258,3.18,Altitude(150,Units.METERS)),hSpeed=Speed(65,Units.KNOTS),vRate=VRate(5,Units.FPM),heading=0.0)
 
   "AircraftTelemetrySpec" must {
 
