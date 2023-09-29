@@ -151,10 +151,13 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
         blacklistIp = config.blacklistIp,
     )
 
-  // ----- Validation ---  
+  // --- Stream Validators --------------------------------------------------
+  // Additional validation is performed in batch mode to detect complex frauds
+  // and correctly distribute rewards for the same data
   val validator = config.entity match {
     case "adsb" => new ValidatorADSB(configValidator)
     case "notam" => new ValidatorNOTAM(configValidator)
+    case "any" | "aeroware" | "" => new ValidatorAny(configValidator)
     case _ => 
       log.error(s"unknown entity: ${config.entity}")
       sys.exit(2)

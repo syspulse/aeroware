@@ -148,7 +148,7 @@ case class RawAirbornePosition(SS: BitVector,NICsb: BitVector,ALT: BitVector,T: 
   }
 
   def getLocalPosition(ref:Location):Location = {
-    Decoder.getLocalPosition(ref,isOdd,latCPR,lonCPR, getAltitude)
+    Adsb.getLocalPosition(ref,isOdd,latCPR,lonCPR, getAltitude)
   }
 }
 
@@ -176,7 +176,7 @@ case class RawADSB(DF: BitVector, CA: BitVector, ICAO: BitVector, TC: BitVector,
       case v if 9 until 19 contains v =>
         (
           "Airborne position (w/ Baro Altitude)",
-          Decoder.codecRawAirbornePositions.decode(DATA).toOption.get.value
+          Adsb.codecRawAirbornePositions.decode(DATA).toOption.get.value
         )
       case 19                          => "Airborne velocities"
       case v if 20 until 23 contains v => "Airborne position (w/ GNSS Height)"
@@ -210,7 +210,7 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
       return Failure(new Exception(s"invalid size: ${message.size}: ${data}"))
 
     val df = try {
-      Decoder.codecRawDF.decode(BitVector.fromHex(message).get).toOption.get.value.toByte(false)
+      Adsb.codecRawDF.decode(BitVector.fromHex(message).get).toOption.get.value.toByte(false)
     } catch {
       case e:Exception => return Failure(new Exception(s"invalid format: failed to parse DF: ${data}"))
     }
@@ -229,7 +229,7 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
     // DF >24: Comm-D Extended Length Message    
     val adsb = df match {
       case 11 => 
-        val raw = Decoder.codecRawAllCall.decode(BitVector.fromHex(message).get).toOption.get.value
+        val raw = Adsb.codecRawAllCall.decode(BitVector.fromHex(message).get).toOption.get.value
         val df = raw.DF.toByte(false)
         val capability = raw.CA.toByte(false)
         val addr = decodeAircraftAddr(raw.ICAO)
@@ -237,7 +237,7 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
         ADSB_AllCall(df,capability,addr,raw.PI.toByteArray, raw = message,ts)
 
       case 17 | 18 | 19 =>
-        val raw = Decoder.codecRawADSB.decode(BitVector.fromHex(message).get).toOption.get.value
+        val raw = Adsb.codecRawADSB.decode(BitVector.fromHex(message).get).toOption.get.value
 
         val df = raw.DF.toByte(false)
         val capability = raw.CA.toByte(false)
@@ -246,26 +246,26 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
         val tc = raw.TC.toByte(false)
         tc match {
           case v if 1 until 5 contains v => {
-            val aid = Decoder.codecRawAircraftIdentification.decode(raw.DATA).toOption.get.value
+            val aid = Adsb.codecRawAircraftIdentification.decode(raw.DATA).toOption.get.value
             ADSB_AircraftIdentification(df,capability,addr,
               tc, aid.EC.toByte(false),
-              callSign = Decoder.decodeDataAsChars(Seq(aid.C1,aid.C2,aid.C3,aid.C4,aid.C5,aid.C6,aid.C7,aid.C8)),
+              callSign = Adsb.decodeDataAsChars(Seq(aid.C1,aid.C2,aid.C3,aid.C4,aid.C5,aid.C6,aid.C7,aid.C8)),
               raw = message, ts)
           }
           case v if 5 until 9 contains v => ADSB_SurfacePosition(df,capability,addr,raw = message)
           case v if 9 until 19 contains v => {
-            val a = Decoder.codecRawAirbornePositions.decode(raw.DATA).toOption.get.value
+            val a = Adsb.codecRawAirbornePositions.decode(raw.DATA).toOption.get.value
             val loc = a.getLocalPosition(refLoc)
             ADSB_AirbornePositionBaro(df,capability,addr,
               loc, a.isOdd, a.latCPR, a.lonCPR, 
               raw = message, ts)
           }
           case 19                          => {
-            val st = Decoder.codecRawAirborneVelocityST.decode(raw.DATA).toOption.get.value
+            val st = Adsb.codecRawAirborneVelocityST.decode(raw.DATA).toOption.get.value
 
             st.ST.toByte(false) match {
               case 1 => {
-                val a = Decoder.codecRawAirborneVelocityST1.decode(raw.DATA).toOption.get.value
+                val a = Adsb.codecRawAirborneVelocityST1.decode(raw.DATA).toOption.get.value
                 val (hSpeed,heading) = a.getSpeedHeading
                 val vRate = a.getVRate
                 ADSB_AirborneVelocity(df,capability,addr,
@@ -274,7 +274,7 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
                   raw = message, ts)
               }
               case 3 => {
-                val a = Decoder.codecRawAirborneVelocityST3.decode(raw.DATA).toOption.get.value
+                val a = Adsb.codecRawAirborneVelocityST3.decode(raw.DATA).toOption.get.value
                 val (hSpeed,heading) = a.getSpeedHeading
                 val vRate = a.getVRate
                 ADSB_AirborneVelocity(df,capability,addr,
@@ -303,7 +303,7 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
   }
 
   def decodeAirbornePosition(message: String): RawAirbornePosition =
-    Decoder.codecRawAirbornePositions
+    Adsb.codecRawAirbornePositions
       .decode(BitVector.fromHex(message).get)
       .toOption
       .get
@@ -313,7 +313,7 @@ abstract class ADSB_Decoder(decoderLocation:Location) {
 
 class Decoder(val decoderLocation:Location = Location(50.4584,30.3381,Altitude(221,Units.METERS))) extends ADSB_Decoder(decoderLocation)
 
-object Decoder {
+object Adsb {
   val log = Logger(this.getClass().getSimpleName())
 
   def decodeParity(msg:Array[Byte]) = {

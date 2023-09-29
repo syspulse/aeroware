@@ -39,7 +39,7 @@ abstract class Trackable(aid:AircraftID, cacheSize:Int = 100) {
     val r = a match {
       case p:ADSB_AirbornePositionBaro => {
         if(p0.isDefined) {
-          val loc = Decoder.getGloballPosition(p0.get,p)
+          val loc = Adsb.getGloballPosition(p0.get,p)
           p0 = Some(p)
 
           val (hSpeed:Speed,vRate:VRate,heading:Double) = { 

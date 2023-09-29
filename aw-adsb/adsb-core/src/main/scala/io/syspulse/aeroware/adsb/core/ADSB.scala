@@ -39,7 +39,7 @@ case class ADSB_AirbornePositionBaro(df:Byte,capability:Byte, addr:AircraftAddre
   def getLocalPosition(ref:ADSB_AirbornePositionBaro): ADSB_AirbornePositionBaro = {
     ADSB_AirbornePositionBaro(
       df, capability, addr,
-      loc = Decoder.getLocalPosition(ref.loc, isOdd, latCPR, lonCPR, loc.alt),
+      loc = Adsb.getLocalPosition(ref.loc, isOdd, latCPR, lonCPR, loc.alt),
       isOdd = isOdd, latCPR = latCPR, lonCPR = lonCPR, raw = raw, ts = ts
     )
   }
@@ -60,7 +60,7 @@ case class ADSB_AllCall(df:Byte,capability:Byte,addr:AircraftAddress, parity:Arr
   def isGround() = capability == 4
 
   val interrogator = {
-    Decoder.decodeParity(parity).zip(parity).map{ case(a1,a2) => (a1 ^ a2).toByte }    
+    Adsb.decodeParity(parity).zip(parity).map{ case(a1,a2) => (a1 ^ a2).toByte }    
   }
 
   val code = {

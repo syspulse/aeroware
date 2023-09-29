@@ -277,7 +277,6 @@ object Metar {
   def decode(data:String): Try[METAR] = {
     log.debug(s"data='${data}'")
     val data1 = clean(data)
-    println(s"data1='${data1}")
     val metar = parse(data1, Metar.metarParser(_))
     metar match {
       case Parsed.Success(v, index) => 

@@ -19,14 +19,24 @@ import io.syspulse.skel.crypto.key.PK
 
 import io.syspulse.aeroware.adsb.mesh.protocol._
 import io.syspulse.aeroware.adsb.mesh.rewards._
+import io.syspulse.aeroware.notam.Notam
 
 class ValidatorNOTAM(ops:ValidatorConfig) extends ValidatorCore(ops) {
   override def validate(m:MSG_MinerData):Double = {
     var p0 = super.validate(m)
-    if(p0 < 0)
-      return p0
+    
+    // validate the data is in ADSB format
+    val p1 = if(ops.validateData) {
+      m.payload.foldLeft(0.0)( (r,d) => {
+        val a = Notam.decode(d.data)
+        a match {
+          case Success(a) => 0.0
+          case Failure(e) => Rewards.penaltyInvalidData
+        }        
+      }) 
+    } else 0.0
 
-    return 0.0
+    return p0 + p1
   }
 }
 

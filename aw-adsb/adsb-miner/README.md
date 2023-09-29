@@ -9,9 +9,24 @@ Miner prototype
 
 ## Miner
 
-```
-./run-miner.sh -f data/flight-1000.raw -o mqtt://localhost:1883
+### ADS-B data
 
+```
+./run-miner.sh -f data/adsb/flight-1000.raw -o mqtt://localhost:1883
+```
+
+### NOTAM data
+
+__NOTE__: because of multi-line nature, delimiter should be empty for single NOTAM/file
+
+```
+./run-miner.sh -e notam -f data/notam/NOTAM-1.txt --delimiter=''
+```
+
+__ATTENTION__: special delimiting is required for multiple NOTAM per file:
+
+```
+./run-miner.sh -f dir://data/notam/ -e notam -o stdout:// --delimiter='\n\n' --block.size=1
 ```
 
 Debug options:
@@ -45,17 +60,17 @@ ATTENTION: __--proto.version__ must be identical both on `miner` and `validator`
 Example:
 
 ```
-./run-miner.sh -f data/flight-1000.raw  --proto.options=0x1 -o raw:// >file-v1.txt
+./run-miner.sh -f data/adsb/flight-1000.raw  --proto.options=0x1 -o raw:// >file-v1.txt
 ./run-validator.sh -f ../adsb-miner/file-v1.txt --proto.options=0x1
 ```
 
 ```
-./run-miner.sh -f data/flight-1000.raw  --proto.options=0x1 -o hex:// >file-v1.txt
+./run-miner.sh -f data/adsb/flight-1000.raw  --proto.options=0x1 -o hex:// >file-v1.txt
 ./run-validator.sh -f ../adsb-miner/file-v1.txt --proto.options=0x1
 ```
 
 ```
-./run-miner.sh -f data/flight-1000.raw  --proto.options=0x2 -o hex:// >file-v2.txt
+./run-miner.sh -f data/adsb/flight-1000.raw  --proto.options=0x2 -o hex:// >file-v2.txt
 ./run-validator.sh -f ../adsb-miner/file-v2.txt --proto.options=0x2
 ```
 

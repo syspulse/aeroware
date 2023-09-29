@@ -31,22 +31,19 @@ class ValidatorADSB(ops:ValidatorConfig) extends ValidatorCore(ops) {
       
   override def validate(m:MSG_MinerData):Double = {
     var p0 = super.validate(m)
-    if(p0 < 0)
-      return p0
-
+    
     // validate the data is in ADSB format
-    if(ops.validateData) {
-      val penalty = 0.0
+    val p1 = if(ops.validateData) {
       m.payload.foldLeft(0.0)( (r,d) => {
-        val a = Decoder.decode(d.data,d.ts)
+        val a = Adsb.decode(d.data,d.ts)
         a match {
           case Success(a) => 0.0
           case Failure(e) => Rewards.penaltyInvalidData
         }        
       }) 
-    }
+    } else 
+      0.0
     
-    // no penalties
-    return 0.0
+    return p0 + p1
   }
 }

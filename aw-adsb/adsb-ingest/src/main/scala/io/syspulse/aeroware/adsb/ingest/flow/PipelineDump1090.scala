@@ -49,7 +49,7 @@ class PipelineDump1090(feed:String,output:String)(implicit config:Config) extend
     if(data.isEmpty() || (config.denoise.size > 0 && config.denoise.contains(data))) 
       return None
     
-    (if(ts.isDefined) Decoder.decode(data,ts.get) else Decoder.decodeDump1090(data)) match {
+    (if(ts.isDefined) Adsb.decode(data,ts.get) else Adsb.decodeDump1090(data)) match {
       case Success(a) => Some(a)
       case Failure(e) => Some(ADSB_Failure(e.toString,data))
     }

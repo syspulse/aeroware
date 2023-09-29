@@ -144,7 +144,7 @@ object App extends skel.Server {
             Thread.sleep(Long.MaxValue)
         }
 
-        Console.err.println(s"Events: ${pp.countObj}")
+        Console.err.println(s"Events: ${pp.countObj.get()}")
         sys.exit(0)
       }
 

@@ -278,29 +278,23 @@ abstract class PipelineMiner(feed:String,output:String)(implicit config:Config)
       .via(checksum)
       .via(stat)
       //.via(dataEncoder)
-  
-  
-  // def decode(data:String,ts:Long):Option[ADSB] = {
-  //   Decoder.decode(data,ts) match {
-  //     case Success(a) => Some(a)
-  //     case Failure(e) => None
-  //   }
-  // }
-
+    
   // decoding is for validation only
   // to be compatible with Validator to avoid penalty
   // If protocols are fully compatible, this step can be
   // totally omitted since validator expect raw data
   def decode(data:String,ts:Long):Option[Minable] = ???
 
+  def preparse(data:String):List[String] = ???
+
   def parse(data:String):Seq[Minable] = {
     if(data.isEmpty()) return Seq()
-    try {
-      val a = data.trim.split("\\s+").toList match {
+    try {      
+      val a = preparse(data) match {
         case ts :: a :: Nil => decode(a,ts.toLong)
         case a :: Nil => decode(a,System.currentTimeMillis())
         case _ => {
-          log.error(s"failed to parse: invalid format: ${data}")
+          log.error(s"failed to pre-parse: invalid format: ${data}")
           return Seq.empty
           None
         }

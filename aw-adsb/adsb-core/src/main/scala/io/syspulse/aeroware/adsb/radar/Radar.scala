@@ -65,7 +65,7 @@ class Radar(
   }
 
   def signal(ts:Long,data:Raw):Option[TrackTelemetry] = {
-    Decoder.decode(data,ts) match {
+    Adsb.decode(data,ts) match {
       case Success(adsb) => 
         event(adsb)
 

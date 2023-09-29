@@ -34,6 +34,7 @@ abstract class ValidatorCore(ops:ValidatorConfig) extends ValidatorPenalty[MSG_M
     ++ { if(ops.validateIpBlacklist) Seq(GuardBlacklistIp(ops.blacklistIp)) else Seq() }
   )
 
+  // ATTENTION: penalties are not accumulative 
   def validate(m:MSG_MinerData):Double = {
     // verify signature
     val data = m.payload

@@ -254,7 +254,6 @@ object Notam {
   def decode(data:String): Try[NOTAM] = {
     log.debug(s"data='${data}'")
     val data1 = clean(data)
-    println(s"data1='${data1}")
     val notam = parse(data1, Notam.notamParser(_))
     notam match {
       case Parsed.Success(v, index) => 

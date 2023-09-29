@@ -32,10 +32,14 @@ class PipelineMinerNOTAM(feed:String,output:String)(implicit config:Config)
   
   override def getPayloadType() = PayloadTypes.NOTAM
 
+  override def preparse(data:String):List[String] = List(data)
+
   override def decode(data:String,ts:Long):Option[Minable] = {
     Notam.decode(data) match {
       case Success(a) => Some(NOTAM_Mined(a,data))
-      case Failure(e) => None
+      case Failure(e) => 
+        log.warn(s"failed to parse: '${data}'",e)
+        None
     }
   }  
 }

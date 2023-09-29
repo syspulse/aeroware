@@ -32,11 +32,13 @@ class PipelineMinerADSB(feed:String,output:String)(implicit config:Config)
   override def getPayloadType() = PayloadTypes.ADSB
 
   override def decode(data:String,ts:Long):Option[Minable] = {
-    Decoder.decode(data,ts) match {
+    Adsb.decode(data,ts) match {
       case Success(a) => Some(ADSB_Mined(a))
       case Failure(e) => None
     }
   }
+
+  override def preparse(data:String):List[String] = data.trim.split("\\s+").toList
 
   override def source() = {
     feed.split("://").toList match {

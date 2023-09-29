@@ -44,7 +44,7 @@ import AdsbIngestedJsonProtocol._
 class PipelineADSB(feed:String,output:String)(implicit config:Config) extends PipelineIngest[ADSB](feed,output) {
   
   def decode(data:String,ts:Long):Option[ADSB] = {
-    Decoder.decode(data,ts) match {
+    Adsb.decode(data,ts) match {
       case Success(a) => Some(a)
       case Failure(e) => None
     }
