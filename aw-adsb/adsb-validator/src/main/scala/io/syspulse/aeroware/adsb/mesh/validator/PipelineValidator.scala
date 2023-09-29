@@ -138,26 +138,37 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
   
   val validatorAddr = wallet.signers.values.toList.head.addr
 
-  // ----- Validation ---
-  val validator = new ValidatorADSB(
-    ValidatorConfig (
-      validateTs = config.validation.contains("ts"),
-      validateSig = config.validation.contains("sig"),
-      validateData = config.validation.contains("data"),
-      validatePayload = config.validation.contains("payload"),
-      toleranceTs = config.validation.find(_ == "ts.tolernace").map(_.toLong).getOrElse(1000L),
+  val configValidator = ValidatorConfig (
+        validateTs = config.validation.contains("ts"),
+        validateSig = config.validation.contains("sig"),
+        validateData = config.validation.contains("data"),
+        validatePayload = config.validation.contains("payload"),
+        toleranceTs = config.validation.find(_ == "ts.tolernace").map(_.toLong).getOrElse(1000L),
 
-      validateAddrBlacklist = config.validation.contains("blacklist") || config.validation.contains("blacklist.addr"),
-      validateIpBlacklist = config.validation.contains("blacklist.ip"),
-      blacklistAddr = config.blacklistAddr,
-      blacklistIp = config.blacklistIp,
-  ))
+        validateAddrBlacklist = config.validation.contains("blacklist") || config.validation.contains("blacklist.addr"),
+        validateIpBlacklist = config.validation.contains("blacklist.ip"),
+        blacklistAddr = config.blacklistAddr,
+        blacklistIp = config.blacklistIp,
+    )
+
+  // ----- Validation ---  
+  val validator = config.entity match {
+    case "adsb" => new ValidatorADSB(configValidator)
+    case "notam" => new ValidatorNOTAM(configValidator)
+    case _ => 
+      log.error(s"unknown entity: ${config.entity}")
+      sys.exit(2)
+  }
    
   // MQTT Server (Broker)
   val connectTimeout = config.timeoutConnect
   val idleTimeout = config.timeoutIdle
 
-  def asMQTT(mqttHost:String,mqttPort:Int,mqttTopic:String="adsb",clientId:String="adsb-client",protocolVer:Int = 0) = {
+  def asMQTT(mqttHost:String,mqttPort:Int,
+    //mqttTopic:String="adsb",
+    mqttTopic:String=config.entity,
+    clientId:String="aw-miner",
+    protocolVer:Int = 0) = {
     
     val mqttSettings = MqttSessionSettings().withMaxPacketSize(8192)
     val mqttSession = ActorMqttServerSession(mqttSettings)
@@ -174,12 +185,12 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
       // .map( connection => {
           val mqttConnectionId = connection.remoteAddress.toString
           //val mqttConnectionId = s"${clientId}-${math.abs(Random.nextLong())}"
-          log.info(s"Miner(${connection.remoteAddress}) ---> mqtt://${mqttHost}:${mqttPort}/${mqttConnectionId}")
+          log.info(s"mqtt://${mqttHost}:${mqttPort}/${mqttTopic} <-- Miner(${connection.remoteAddress})")
           val mqttConnectionFlow: Flow[Command[Nothing], Either[MqttCodec.DecodeError, Event[Nothing]], NotUsed] =
               Mqtt
                 .serverSessionFlow(mqttSession, ByteString(mqttConnectionId))                
                 .join(
-                  connection.flow.log(s"Miner(${connection.remoteAddress}) -> mqtt://${mqttHost}:${mqttPort}/${mqttConnectionId}")
+                  connection.flow.log(s"mqtt://${mqttHost}:${mqttPort}/${mqttTopic} <-- Miner(${connection.remoteAddress})")
                   .watchTermination()( (v, f) => 
                     f.onComplete {
                       case Failure(err) => log.error(s"connection flow failed",err)
@@ -208,7 +219,7 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
           val subscribed = Promise[Done]()
           source
             .map(r => {
-              log.debug(s"${r} -> mqtt://${mqttHost}:${mqttPort}/${mqttConnectionId}")
+              log.debug(s"mqtt://${mqttHost}:${mqttPort}/${mqttTopic} <- ${r}")
               r
             })
             .map {
@@ -250,7 +261,7 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
             
             // inject remote address into payload
             // EXCEPTIONALLY UNOPTIMIZED, I am just tired and want to have something working before sleep
-            log.debug(s"Payload[${Util.hex(payload.toArray)}] <- mqtt://${remoteAddr}")
+            log.debug(s"<- mqtt://${remoteAddr}(Payload[${Util.hex(payload.toArray)}])")
             //ByteString(s"${remoteAddr.getAddress().getHostAddress()}:${remoteAddr.getPort().toString}/${Util.hex(payload.toArray)}")
             
             val remoteAddressFull = s"${remoteAddr.getAddress().getHostAddress()}:${remoteAddr.getPort().toString}"

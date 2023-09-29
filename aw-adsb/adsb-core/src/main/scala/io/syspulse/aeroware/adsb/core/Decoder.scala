@@ -463,6 +463,7 @@ object Decoder {
 
 
   val decoder = new Decoder
+  
   def decode(data:String, ts:Long = 0L) = decoder.decode(data,ts)
 
   def decodeDump1090(data:String) = decode(Dump1090.decode(data))

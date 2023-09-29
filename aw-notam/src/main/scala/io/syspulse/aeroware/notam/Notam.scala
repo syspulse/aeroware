@@ -12,6 +12,62 @@ import java.time.format.DateTimeFormatter
 import com.typesafe.scalalogging.Logger
 import scala.util.{Try,Success,Failure}
 import io.syspulse.aeroware.core.Altitude
+import io.syspulse.aeroware.core.Minable
+import io.syspulse.aeroware.core.Raw
+
+// -----------------------------------------------------------------------------------------------------------
+  case class NotamSeq(ser:String,id:Int,seq:Int) 
+  case class NotamID(seq1:NotamSeq,typ:String,seq2:Option[NotamSeq]) {
+    def describe:String = typ match {      
+      case "N" => s"New: ${seq1.ser}:${seq1.id}/${seq1.seq}"
+      case "C" => s"Cancel: ${seq1.ser}:${seq1.id}/${seq1.seq}"
+      case "R" => s"Replace: ${seq1.ser}:${seq1.id}/${seq1.seq}: with ${seq2.get.ser}:${seq2.get.id}/${seq2.get.seq}"
+    }
+  }
+
+  abstract class NotamData {
+    def describe:String
+  }
+
+  case class NOTAM_Q(data:String) extends NotamData {
+    def describe = s"Synopsis: '${data}'"
+  }
+  case class NOTAM_A(firs:Seq[String], extra:Option[String]) extends NotamData {
+    def describe = s"ICAO: '${firs}' (${extra})"
+  }
+  case class NOTAM_B(date:ZonedDateTime) extends NotamData {
+    def describe = s"Time Start: '${date}'"
+  }
+  case class NOTAM_C(date:ZonedDateTime) extends NotamData {
+    def describe = s"Time End: '${date}'"
+  }
+  case class NOTAM_D(data:String) extends NotamData {
+    def describe = s"Time Active: '${data}'"
+  }
+  case class NOTAM_E(data:String) extends NotamData {
+    def describe = s"Desription: '${data}'"
+  }
+  case class NOTAM_F(alt:Altitude) extends NotamData {
+    def describe = s"Lower Altitude Limit: '${alt}'"
+  }
+  case class NOTAM_G(alt:Altitude) extends NotamData {
+    def describe = s"Upper Altitude Limit: '${alt}'"
+  }
+
+  case class NOTAM(
+    id: Option[NotamID] = None,
+    Q: Option[NOTAM_Q] = None,
+    A: Option[NOTAM_A] = None,
+    B: Option[NOTAM_B] = None,
+    C: Option[NOTAM_C] = None,
+    D: Option[NOTAM_D] = None,
+    E: Option[NOTAM_E] = None,
+    F: Option[NOTAM_F] = None,
+    G: Option[NOTAM_G] = None,
+
+    ts:Long = 0L,             // ATTENTION, timestamp should be set !
+    raw:Option[Raw] = None    // optionally save the payload
+  )
 
 object Notam {
   val log = Logger(s"${this}")
@@ -160,57 +216,6 @@ object Notam {
     (NewLine | End)
     ).map( d => NotamID(d._1,d._2,d._3) )
   
-  // -----------------------------------------------------------------------------------------------------------
-  case class NotamSeq(ser:String,id:Int,seq:Int) 
-  case class NotamID(seq1:NotamSeq,typ:String,seq2:Option[NotamSeq]) {
-    def describe:String = typ match {      
-      case "N" => s"New: ${seq1.ser}:${seq1.id}/${seq1.seq}"
-      case "C" => s"Cancel: ${seq1.ser}:${seq1.id}/${seq1.seq}"
-      case "R" => s"Replace: ${seq1.ser}:${seq1.id}/${seq1.seq}: with ${seq2.get.ser}:${seq2.get.id}/${seq2.get.seq}"
-    }
-  }
-
-  abstract class NotamData {
-    def describe:String
-  }
-
-  case class NOTAM_Q(data:String) extends NotamData {
-    def describe = s"Synopsis: '${data}'"
-  }
-  case class NOTAM_A(firs:Seq[String], extra:Option[String]) extends NotamData {
-    def describe = s"ICAO: '${firs}' (${extra})"
-  }
-  case class NOTAM_B(date:ZonedDateTime) extends NotamData {
-    def describe = s"Time Start: '${date}'"
-  }
-  case class NOTAM_C(date:ZonedDateTime) extends NotamData {
-    def describe = s"Time End: '${date}'"
-  }
-  case class NOTAM_D(data:String) extends NotamData {
-    def describe = s"Time Active: '${data}'"
-  }
-  case class NOTAM_E(data:String) extends NotamData {
-    def describe = s"Desription: '${data}'"
-  }
-  case class NOTAM_F(alt:Altitude) extends NotamData {
-    def describe = s"Lower Altitude Limit: '${alt}'"
-  }
-  case class NOTAM_G(alt:Altitude) extends NotamData {
-    def describe = s"Upper Altitude Limit: '${alt}'"
-  }
-
-  case class NOTAM(
-    id: Option[NotamID] = None,
-    Q: Option[NOTAM_Q] = None,
-    A: Option[NOTAM_A] = None,
-    B: Option[NOTAM_B] = None,
-    C: Option[NOTAM_C] = None,
-    D: Option[NOTAM_D] = None,
-    E: Option[NOTAM_E] = None,
-    F: Option[NOTAM_F] = None,
-    G: Option[NOTAM_G] = None,
-  )
-
   def notamParser[_: P] = P( 
     line_1.? ~
     line_Q.? ~

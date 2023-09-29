@@ -27,58 +27,12 @@ import io.syspulse.aeroware.adsb.mesh.guard.GuardEngine
 import io.syspulse.aeroware.adsb.mesh.guard.GuardBlacklistAddr
 import io.syspulse.aeroware.adsb.mesh.guard.GuardBlacklistIp
 
-class ValidatorADSB(ops:ValidatorConfig) extends ValidatorEngine[MSG_MinerData] {
-    
-  val guard = new GuardEngine(List()
-    ++ { if(ops.validateAddrBlacklist) Seq(GuardBlacklistAddr(ops.blacklistAddr)) else Seq() }
-    ++ { if(ops.validateIpBlacklist) Seq(GuardBlacklistIp(ops.blacklistIp)) else Seq() }
-  )
-
-  def validate(m:MSG_MinerData):Double = {
-    // verify signature
-    val data = m.payload
-    val addr = Util.hex(m.addr)
-
-    val p = guard.permit(m)
-    if(! p) {
-      log.warn(s"Not permitted: ${addr}")
-      return RewardADSB.penaltyNotPermitted
-    }
-    
-    // check data is present 
-    if(ops.validatePayload) {
-      if(data.size == 0) {
-        log.warn(s"Missing data: ${addr}")
-        return RewardADSB.penaltyNoData
-      }
-
-      val invalidCount = data.filter( a => a.data == null || a.data.isBlank()).size
+class ValidatorADSB(ops:ValidatorConfig) extends ValidatorCore(ops) {
       
-      if(invalidCount > 0) {
-        log.warn(s"Missing ADSB raw data: ${addr}")
-        return RewardADSB.penaltyMissingSomeData
-      }
-    }
-
-    // check ts is not far into the past
-    if(ops.validateTs) {
-      val diff = Math.abs(System.currentTimeMillis - m.ts)
-      if(diff > ops.toleranceTs) {
-        log.warn(s"Timestamp diff above tolerance (${ops.toleranceTs}): ${diff}")
-        return RewardADSB.penaltyTimeDiff
-      }
-    }
-
-    if(ops.validateSig) {
-      val sigData = upickle.default.writeBinary(data)
-      val sig = Util.hex(m.sig.r) + ":" + Util.hex(m.sig.s)
-      
-      val v = Eth.verifyAddress(sigData,sig,addr)
-      if(!v) {
-        log.warn(s"Signature invalid: ${addr}: ${m.sig}")
-        return RewardADSB.penaltyInvalidSig
-      }
-    }
+  override def validate(m:MSG_MinerData):Double = {
+    var p0 = super.validate(m)
+    if(p0 < 0)
+      return p0
 
     // validate the data is in ADSB format
     if(ops.validateData) {
@@ -87,7 +41,7 @@ class ValidatorADSB(ops:ValidatorConfig) extends ValidatorEngine[MSG_MinerData] 
         val a = Decoder.decode(d.data,d.ts)
         a match {
           case Success(a) => 0.0
-          case Failure(e) => RewardADSB.penaltyInvalidData
+          case Failure(e) => Rewards.penaltyInvalidData
         }        
       }) 
     }

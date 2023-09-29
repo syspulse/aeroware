@@ -36,12 +36,6 @@ import io.syspulse.skel.ingest.store._
 import io.syspulse.skel.ingest.flow.Pipeline
 import io.syspulse.skel.ingest.flow.Flows
 
-import io.syspulse.aeroware.adsb._
-import io.syspulse.aeroware.adsb.core._
-
-import io.syspulse.aeroware.adsb.ingest.Dump1090URI
-import io.syspulse.aeroware.adsb.ingest.ADSB_Ingested
-
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
 //import io.syspulse.aeroware.adsb.mesh.transport.MQTTClientPublisher
 //import io.syspulse.aeroware.adsb.mesh.transport.MQTTConfig
@@ -98,18 +92,6 @@ class MinerStat {
   override def toString = s"${total}"
 }
 
-class PipelineMinerADSB(feed:String,output:String)(implicit config:Config)
-  extends PipelineMiner(feed,output) {
-  
-  override def getPayloadType() = PayloadTypes.ADSB
-
-  override def decode(data:String,ts:Long):Option[Minable] = {
-    Decoder.decode(data,ts) match {
-      case Success(a) => Some(a)
-      case Failure(e) => None
-    }
-  }
-}
 
 abstract class PipelineMiner(feed:String,output:String)(implicit config:Config)
   extends Pipeline[Minable,MSG_MinerData,MSG_MinerData](feed,output,config.throttle,config.delimiter,config.buffer) {
@@ -189,12 +171,12 @@ abstract class PipelineMiner(feed:String,output:String)(implicit config:Config)
       
   override def source() = {
     feed.split("://").toList match {
-      case "dump1090" :: _ => 
-        val uri = Dump1090URI(feed)
-        Flows.fromTcpClient(uri.host,uri.port.toInt, 
-          connectTimeout = config.timeoutConnect, idleTimeout = config.timeoutIdle,
-          retry = retry
-        )
+      // case "dump1090" :: _ => 
+      //   val uri = Dump1090URI(feed)
+      //   Flows.fromTcpClient(uri.host,uri.port.toInt, 
+      //     connectTimeout = config.timeoutConnect, idleTimeout = config.timeoutIdle,
+      //     retry = retry
+      //   )
       case "tcp" :: uri :: Nil => 
         Flows.fromTcpClientUri(uri, 
           connectTimeout = config.timeoutConnect, idleTimeout = config.timeoutIdle,
@@ -305,6 +287,10 @@ abstract class PipelineMiner(feed:String,output:String)(implicit config:Config)
   //   }
   // }
 
+  // decoding is for validation only
+  // to be compatible with Validator to avoid penalty
+  // If protocols are fully compatible, this step can be
+  // totally omitted since validator expect raw data
   def decode(data:String,ts:Long):Option[Minable] = ???
 
   def parse(data:String):Seq[Minable] = {

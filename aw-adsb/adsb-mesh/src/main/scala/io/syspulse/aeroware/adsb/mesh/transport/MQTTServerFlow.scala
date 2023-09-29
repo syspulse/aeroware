@@ -87,12 +87,12 @@ class MQTTServerFlow(config:MQTTConfig)(implicit val as:ActorSystem,ec:Execution
     .flatMapMerge(
       mqttMaxConnections, { connection:Tcp.IncomingConnection =>
     // .map( connection => {
-        log.info(s"Miner(${connection.remoteAddress}) ---> MQTT(${config.host}:${config.port})")
+        log.info(s"mqtt://${config.host}:${config.port} <-- Miner(${connection.remoteAddress})")
         val mqttConnectionFlow: Flow[Command[Nothing], Either[MqttCodec.DecodeError, Event[Nothing]], NotUsed] =
             Mqtt
               .serverSessionFlow(mqttSession, ByteString(connection.remoteAddress.getAddress.getAddress))
               .join(
-                connection.flow.log(s"Miner(${connection.remoteAddress}) ? -> MQTT(${config.host}:${config.port})")
+                connection.flow.log(s"mqtt://${config.host}:${config.port} <-- Miner(${connection.remoteAddress}) ?")
                 .watchTermination()( (v, f) => 
                   f.onComplete {
                     case Failure(err) => log.error(s"connection flow failed: $err")

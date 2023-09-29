@@ -18,7 +18,7 @@ import ADSB._
 
 case class AirbornePosition(raw:RawAirbornePosition)
 
-abstract class ADSB extends Minable {
+abstract class ADSB extends Serializable {
     val ts:Long // timestamp
     val df:Byte
     val capability:Byte

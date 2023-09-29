@@ -1,4 +1,4 @@
-package io.syspulse.aeroware.adsb.mesh.validator
+package io.syspulse.aeroware.adsb.mesh.rewards
 
 import scala.util.{Try,Failure,Success}
 
@@ -12,20 +12,26 @@ import scala.util.Random
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.concurrent
 import scala.jdk.CollectionConverters._
-import scala.concurrent.ExecutionContext
 
 import io.syspulse.skel.util.Util
 import io.syspulse.skel.crypto.Eth
 import io.syspulse.skel.crypto.wallet.WalletVaultKeyfiles
-import io.syspulse.skel.crypto.key.PK
 
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
 import io.syspulse.aeroware.adsb.mesh.protocol._
-import io.syspulse.aeroware.adsb.mesh.rewards._
+import scala.concurrent.ExecutionContext
 
-trait ValidatorEngine[T] {
-  val log = Logger(s"${this.getClass().getSimpleName()}")
-  // account for possible reward adjustment (to prevent Spam)
-  def validate(t:T):Double
+import io.syspulse.skel.crypto.key.PK
+
+import io.syspulse.aeroware.adsb.mesh.store.DataStore
+
+object Rewards {
+  val penaltyInvalidSig = -0.5
+  val penaltyNoData = -0.025            // no ADSB Data
+  val penaltyMissingSomeData = -0.02    // missingsome ADSB data
+  val penaltyInvalidData = -0.045       // Non-parsable ADSB data
+  val penaltyTimeDiff = -0.0001          // time difference too high
+
+  val penaltyNotPermitted = -0.0001     // Not permitted
 }

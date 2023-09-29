@@ -31,8 +31,9 @@ case class Config (
   
   fanoutWindow: Long = 3000L,
 
-  entity:String = "",
+  entity:String = "adsb",
   format:String = "",
+
   limit:Long = 0L,
   freq: Long = 0L,
   delimiter:String = "\n",
@@ -76,8 +77,8 @@ object App extends skel.Server {
         
         ArgString('f', "feed",s"Input Feed (def: ${d.feed})"),
         ArgString('o', "output",s"Output file (def: ${d.output})"),
-        ArgString('e', "entity",s"Ingest entity: (def: ${d.entity})"),
-        
+
+        ArgString('e', "entity",s"Ingest entity: (def: ${d.entity})"),        
         ArgString('_', "format",s"Outptu format (none,json,csv) (def: ${d.format})"),
 
         ArgLong('_', "limit",s"Limit (def: ${d.limit})"),
@@ -122,6 +123,7 @@ object App extends skel.Server {
       
       feed = c.getString("feed").getOrElse(d.feed),
       output = c.getString("output").getOrElse(d.output),
+      
       entity = c.getString("entity").getOrElse(d.entity),
       format = c.getString("format").getOrElse(d.format),
 

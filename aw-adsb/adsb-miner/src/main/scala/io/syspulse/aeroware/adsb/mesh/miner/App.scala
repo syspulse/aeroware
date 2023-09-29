@@ -123,7 +123,12 @@ object App extends skel.Server {
     config.cmd match {
       case "miner" => {
                 
-        val pp = new PipelineMinerADSB(config.feed,config.output)
+        val pp = config.entity match {
+          case "adsb" =>
+            new PipelineMinerADSB(config.feed,config.output)
+          case "notam" =>
+            new PipelineMinerNOTAM(config.feed,config.output)
+        }        
 
         val r = pp.run()
         Console.err.println(s"r=${r}")
