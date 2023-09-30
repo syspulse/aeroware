@@ -67,22 +67,28 @@ object AircraftICAORegistry {
   def fromResourceFile(file:String="data/aircraft_db.csv"): Seq[AircraftICAO] = {
     log.info(s"Loading from Resource: ${file}")
 
-    val txt = scala.io.Source.fromResource(file).getLines()
+    try {
+      val txt = scala.io.Source.fromResource(file).getLines()
 
-    // detect file type by name
-    val header = txt.take(1).toSeq.head
-    log.info(s"Loaded from Resource: ${file}: header='${header}'")
+      // detect file type by name
+      val header = txt.take(1).toSeq.head
+      log.info(s"Loading from Resource: ${file}: header='${header}'")
+      
+      val aa = header.trim.toLowerCase() match {
+        case "icao,regid,mdl,type,operator" => fromLegacyDBIterator(txt)
+        case "icao24,r,t" => fromVRSIterator(txt)
+        case "icao24,r,t,desc" => fromFAWIterator(txt)
 
-    val aa = header.trim.toLowerCase() match {
-      case "icao,regid,mdl,type,operator" => fromLegacyDBIterator(txt)
-      case "icao24,r,t" => fromVRSIterator(txt)
-      case "icao24,r,t,desc" => fromFAWIterator(txt)
+        case _ => { log.error(s"Loading from Resource: ${file}: unknown format: '${header}'"); Seq() }
+      }
 
-      case _ => { log.error(s"Loading from Resource: ${file}: unknown format: '${header}'"); Seq() }
+      log.info(s"Loaded from Resource: ${file}: ${aa.size}")
+      aa
+    } catch {
+      case e:Exception =>
+        log.error(s"could not load: ${file}",e)
+        Seq()
     }
-
-    log.info(s"Loaded from Resource: ${file}: ${aa.size}")
-    aa
   }
   
 }

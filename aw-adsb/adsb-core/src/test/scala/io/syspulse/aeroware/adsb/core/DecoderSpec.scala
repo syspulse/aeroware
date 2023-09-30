@@ -30,30 +30,30 @@ class DecoderSpec extends AnyWordSpec with Matchers with Testables {
 
   "Decoder" should {
     s"decode ${msg1} DF=17" in {
-      val a1 = Decoder.decode(msg1)
+      val a1 = Adsb.decode(msg1)
       a1.get.df should === (17)
     }
   
     s"decode ${msg1} Capability=5" in {
-      val a1 = Decoder.decode(msg1)
+      val a1 = Adsb.decode(msg1)
       a1.get.capability should === (5)
     }
   
     s"decode ${msg1} ICAO Aircraft Address" in {
-      val a1 = Decoder.decode(msg1)
+      val a1 = Adsb.decode(msg1)
       a1.get.addr should === (AircraftAddress("4840d6","Fokker 70","PH-KZD"))
     }
   
     s"decode all ${file1} without crash" in {
       load(file1).map( message => {
-        val a1 = Decoder.decode(message)
+        val a1 = Adsb.decode(message)
         info(s"${message} -> ${a1}")
         //a1.getClass should === (ADSB_AircraftIdentification(17,5,AircraftAddress("4840d6","Fokker 70","PH-KZD"),null).getClass)
       })
     }
   
     s"fail to decode ${msgErr1}" in {
-      val a1 = Decoder.decode(msgErr1)
+      val a1 = Adsb.decode(msgErr1)
       info(s"${a1}")
       a1.isFailure should === (true)
       info(s"${a1.toEither.left}")
@@ -61,7 +61,7 @@ class DecoderSpec extends AnyWordSpec with Matchers with Testables {
     }
   
     s"fail to decode ${msgErr2}" in {
-      val a1 = Decoder.decode(msgErr2)
+      val a1 = Adsb.decode(msgErr2)
       info(s"${a1}")
       a1.isFailure should === (true)
       info(s"${a1.toEither.left}")
@@ -69,7 +69,7 @@ class DecoderSpec extends AnyWordSpec with Matchers with Testables {
     }
   
     s"fail to decode dump1090 format message: ${msgErr3}" in {
-      val a1 = Decoder.decode(msgErr3)
+      val a1 = Adsb.decode(msgErr3)
       info(s"${a1}")
       a1.isFailure should === (true)
       info(s"${a1.toEither.left}")
@@ -77,45 +77,45 @@ class DecoderSpec extends AnyWordSpec with Matchers with Testables {
     }
 
     s"decode dump1090 format message with decodeDump1090: ${msgErr3}" in {
-      val a1 = Decoder.decodeDump1090(msgErr3)
+      val a1 = Adsb.decodeDump1090(msgErr3)
       info(s"${a1}")
       a1.isSuccess should === (true)
     }
 
     s"decode LocalACAS to ADSB_Unknown: ${msg2}" in {
-      val a1 = Decoder.decode(msg2)
+      val a1 = Adsb.decode(msg2)
       info(s"${a1}")
       a1.isFailure should === (false)
       a1.get.getClass.getSimpleName should === ("ADSB_Unknown")
     }
 
     s"decode bin'000001' to 'A'" in {
-      val v = Decoder.decodeCharacter(bin"000001")
+      val v = Adsb.decodeCharacter(bin"000001")
       v should === ('A')
     }
 
     s"decode 26 to 'Z'" in {
-      val v = Decoder.decodeCharacter(BitVector.fromBin(26.toBinaryString).get)
+      val v = Adsb.decodeCharacter(BitVector.fromBin(26.toBinaryString).get)
       v should === ('Z')
     }
 
     s"decode 48 to '0'" in {
-      val v = Decoder.decodeCharacter(BitVector.fromBin(48.toBinaryString).get)
+      val v = Adsb.decodeCharacter(BitVector.fromBin(48.toBinaryString).get)
       v should === ('0')
     }
 
     s"decode 57 to '9'" in {
-      val v = Decoder.decodeCharacter(BitVector.fromBin(57.toBinaryString).get)
+      val v = Adsb.decodeCharacter(BitVector.fromBin(57.toBinaryString).get)
       v should === ('9')
     }
 
     s"decode 32 to ' '" in {
-      val v = Decoder.decodeCharacter(BitVector.fromBin(32.toBinaryString).get)
+      val v = Adsb.decodeCharacter(BitVector.fromBin(32.toBinaryString).get)
       v should === (' ')
     }
 
     s"decode 30 (invalid) to '#'" in {
-      val v = Decoder.decodeCharacter(BitVector.fromBin(30.toBinaryString).get)
+      val v = Adsb.decodeCharacter(BitVector.fromBin(30.toBinaryString).get)
       v should === ('#')
     }
 

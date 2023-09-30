@@ -43,12 +43,12 @@ class AirbornePositionSpec extends AnyWordSpec with Matchers with Testables {
   "AirbornePositionSpec" should {
 
     s"decode ${msg1} as ADSB_AirbornePositionBaro type" in {
-      val a1 = Decoder.decode(msg1)
+      val a1 = Adsb.decode(msg1)
       a1.get.getClass should === (ADSB_AirbornePositionBaro(17,5,AircraftAddress("40621D","",""),loc=null,isOdd=false, latCPR=0, lonCPR=0, raw=null).getClass)
     }
 
     s"decode ${msg1} ADSB_AirbornePositionBaro with altitude 38000 feet" in {
-      val a1 = Decoder.decode(msg1).get.asInstanceOf[ADSB_AirbornePositionBaro]
+      val a1 = Adsb.decode(msg1).get.asInstanceOf[ADSB_AirbornePositionBaro]
       a1.loc.alt should === (Altitude(38000,Units.FEET))
     }
 
@@ -68,7 +68,7 @@ class AirbornePositionSpec extends AnyWordSpec with Matchers with Testables {
       val a1 = decoder.decode(msg2).get.asInstanceOf[ADSB_AirbornePositionBaro]
       val a2 = decoder.decode(msg1).get.asInstanceOf[ADSB_AirbornePositionBaro]
 
-      val loc = Decoder.getGloballPosition(a1,a2)
+      val loc = Adsb.getGloballPosition(a1,a2)
       //info(loc.toString)
     }
 
@@ -93,7 +93,7 @@ class AirbornePositionSpec extends AnyWordSpec with Matchers with Testables {
 
       for( m <- flight.tail ) {
         val a1 = decoder.decode(m).get.asInstanceOf[ADSB_AirbornePositionBaro]
-        val loc = Decoder.getGloballPosition(a0,a1)
+        val loc = Adsb.getGloballPosition(a0,a1)
         //println(s"${loc.lat},${loc.lon},${loc.alt.alt}")
         a0 = a1
       }

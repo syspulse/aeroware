@@ -157,14 +157,16 @@ def appAssemblyConfig(appName:String,appMainClass:String) =
 // ======================================================================================================================
 lazy val root = (project in file("."))
   .aggregate(
-    core, 
+    core,
+    aircraft,
     gamet, 
     metar,
     notam,
+    sigmet,
     adsb_core, 
     adsb_ingest, 
     adsb_tools, 
-    adsb_live, 
+    adsb_radar, 
     gpx_core, 
     adsb_mesh, 
     adsb_miner, 
@@ -172,17 +174,20 @@ lazy val root = (project in file("."))
   )
   .dependsOn(
     core, 
+    aircraft,
     gamet,
     metar, 
-    notam, 
+    notam,
+    sigmet,
     adsb_core, 
     adsb_ingest, 
     adsb_tools, 
-    adsb_live, 
+    adsb_radar, 
     gpx_core, 
     adsb_mesh,
     adsb_miner, 
-    adsb_validator)
+    adsb_validator
+  )
   .disablePlugins(sbtassembly.AssemblyPlugin) // this is needed to prevent generating useless assembly and merge error
   .settings(
     
@@ -195,7 +200,10 @@ lazy val core = (project in file("aw-core"))
   .settings (
       sharedConfig,
       name := "aw-core",
-      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(),
+      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(
+        libEnumeratum,
+        libKebsSpray
+      ),
 )
 
 lazy val aircraft = (project in file("aw-aircraft"))
@@ -206,32 +214,6 @@ lazy val aircraft = (project in file("aw-aircraft"))
       libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(),
 )
 
-lazy val gamet = (project in file("aw-gamet"))
-  .dependsOn(core)
-  .settings (
-    sharedConfig,
-    sharedConfigAssembly,
-
-    name := "aw-gamet",
-    libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
-      libEnumeratum,
-      libFastparseLib 
-    )
-)
-
-lazy val notam = (project in file("aw-notam"))
-  .dependsOn(core)
-  .settings (
-    sharedConfig,
-    sharedConfigAssembly,
-
-    name := "aw-notam",
-    libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
-      libEnumeratum,
-      libFastparseLib 
-    )
-)
-
 lazy val adsb_core = (project in file("aw-adsb/adsb-core"))
   .dependsOn(core,aircraft)
   .disablePlugins(sbtassembly.AssemblyPlugin)
@@ -240,7 +222,8 @@ lazy val adsb_core = (project in file("aw-adsb/adsb-core"))
       name := "adsb-core",
       libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(
         libScodec,
-        libEnumeratum
+        libEnumeratum,
+        libKebsSpray, // enumerator json
       ),
 )
 
@@ -287,7 +270,7 @@ lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
   )
 
 lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
-  .dependsOn(core,aircraft,adsb_core,adsb_ingest,adsb_mesh)
+  .dependsOn(core,aircraft,adsb_core,adsb_ingest,adsb_mesh,notam)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .settings (
@@ -313,7 +296,7 @@ lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
   )
 
 lazy val adsb_validator = (project in file("aw-adsb/adsb-validator"))
-  .dependsOn(core,aircraft,adsb_core,adsb_ingest,adsb_mesh)
+  .dependsOn(core,aircraft,adsb_core,adsb_ingest,adsb_mesh,notam)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .settings (
@@ -346,21 +329,21 @@ lazy val adsb_tools = (project in file("aw-adsb/adsb-tools"))
       sharedConfig,
       sharedConfigAssembly,
 
-      appAssemblyConfig("adsb-live","io.syspulse.aeroware.adsb.tools.AppPlayer"),
+      appAssemblyConfig("adsb-tools","io.syspulse.aeroware.adsb.tools.AppPlayer"),
 
       libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ Seq(
         libCask  
       ),
   )
 
-lazy val adsb_live = (project in file("aw-adsb/adsb-live"))
-  .dependsOn(core, aircraft, adsb_core)
+lazy val adsb_radar = (project in file("aw-adsb/adsb-radar"))
+  .dependsOn(core, aircraft, adsb_core, adsb_mesh)
   .enablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,
       sharedConfigAssembly,
       
-      appAssemblyConfig("adsb-live","io.syspulse.aeroware.adsb.live.App"),
+      appAssemblyConfig("adsb-radar","io.syspulse.aeroware.adsb.radar.App"),
 
       libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ libTest ++ Seq(
         libAkkaTestkitType % Test  
@@ -384,6 +367,19 @@ lazy val gpx_core = (project in file("aw-gpx/gpx-core"))
       ),
   )
 
+lazy val gamet = (project in file("aw-gamet"))
+  .dependsOn(core)
+  .settings (
+    sharedConfig,
+    sharedConfigAssembly,
+
+    name := "aw-gamet",
+    libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
+      libEnumeratum,
+      libFastparseLib 
+    )
+)
+
 lazy val metar = (project in file("aw-metar"))
   .dependsOn(core)
   .settings (
@@ -395,4 +391,30 @@ lazy val metar = (project in file("aw-metar"))
       libEnumeratum,
       libFastparseLib 
     )
+  )
+
+lazy val notam = (project in file("aw-notam"))
+  .dependsOn(core)
+  .settings (
+    sharedConfig,
+    sharedConfigAssembly,
+
+    name := "aw-notam",
+    libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
+      libEnumeratum,
+      libFastparseLib 
+    )
 )
+
+lazy val sigmet = (project in file("aw-sigmet"))
+  .dependsOn(core)
+  .settings (
+    sharedConfig,
+    sharedConfigAssembly,
+
+    name := "aw-sigmet",
+    libraryDependencies ++= libCommon ++ libTest ++ libSkel ++ Seq(
+      libEnumeratum,
+      libFastparseLib 
+    )
+  )

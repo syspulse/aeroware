@@ -32,6 +32,7 @@ import io.syspulse.skel.config._
 import io.syspulse.skel.ingest._
 import io.syspulse.skel.ingest.store._
 import io.syspulse.skel.ingest.flow.Pipeline
+import io.syspulse.skel.ingest.flow.Flows
 
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
@@ -42,6 +43,7 @@ import io.syspulse.aeroware.adsb.ingest.ADSB_Ingested
 import java.net.InetSocketAddress
 import akka.stream.scaladsl.RestartSource
 import akka.stream.OverflowStrategy
+import akka.stream.RestartSettings
 
 // abstract class PipelineIngest[T](feed:String,output:String)(implicit config:Config,fmt:JsonFormat[ADSB_Ingested],parqEncoders:ParquetRecordEncoder[T],parsResolver:ParquetSchemaResolver[T])
 //   extends Pipeline[T,T,ADSB_Ingested](feed,output,config.throttle,config.delimiter,config.buffer) {
@@ -63,27 +65,18 @@ abstract class PipelineIngest[T](feed:String,output:String)(implicit config:Conf
   
   def filter:Seq[String] = config.filter
 
-  def fromTcp(host:String,port:Int) = {
-    val ip = InetSocketAddress.createUnresolved(host, port)
-    val conn = Tcp().outgoingConnection(
-      remoteAddress = ip,
-      connectTimeout = Duration(connectTimeout,TimeUnit.MILLISECONDS),
-      idleTimeout = Duration(idleTimeout,TimeUnit.MILLISECONDS)
-    )
-    val sourceRestarable = RestartSource.withBackoff(retrySettings) { () => 
-      log.info(s"Connecting -> dump1090(${host}:${port})...")
-      Source.actorRef(1, OverflowStrategy.fail)
-        .via(conn)
-        .log("dump1090")
-    }
-    sourceRestarable
-  }
+  val defaultRetrySetting = RestartSettings(
+    minBackoff = FiniteDuration(3000,TimeUnit.MILLISECONDS),
+    maxBackoff = FiniteDuration(10000,TimeUnit.MILLISECONDS),
+    randomFactor = 0.2
+  )
+  //.withMaxRestarts(10, FiniteDuration(5,TimeUnit.MINUTES))
     
   override def source() = {
     feed.split("://").toList match {
       case "dump1090" :: _ => {
         val uri = Dump1090URI(feed)
-        fromTcp(uri.host,uri.port.toInt)
+        Flows.fromTcpClient(uri.host,uri.port.toInt)
       }
       case _ => super.source()
     }

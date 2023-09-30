@@ -15,28 +15,35 @@ import io.syspulse.aeroware.adsb.core.ADSB
 
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Options
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
+import io.syspulse.aeroware.aircraft.icao.AircraftICAORegistry
 
 case class Config (
   feed:String = "",
-  output:String = "",
+  output:String = "mqtt://localhost:1883",
 
-  keystore:String = "",
-  keystorePass:String = "",
-  batchSize: Int = 2,
-  batchWindow: Long = 1000L,
+  keystore:String = "./keystore/miner-1.json",
+  keystorePass:String = "test123",
+  
+  blockSize: Int = 2,
+  blockWindow: Long = 1000L,
   protocolOptions:Int = MSG_Options.V_1 | MSG_Options.O_EC,
 
-  entity:String = "",
+  entity:String = "adsb",
   format:String = "",
+
   limit:Long = 0L,
   freq: Long = 0L,
-  delimiter:String = "",
-  buffer:Int = 0,
+  delimiter:String = "\n",
+  buffer:Int = 1024*1024,
   throttle:Long = 0L,
 
-  filter:Seq[String] = Seq.empty,
+  timeoutConnect:Long = 3000L,
+  timeoutIdle:Long = 1000L * 60 * 60,
+  timeoutRetry:Long = 10000L,
 
-  cmd:String = "",
+  jitter:Long = 0L,          // time jitter to add to current timestamp
+
+  cmd:String = "miner",
   params: Seq[String] = Seq(),
 )
 
@@ -47,70 +54,88 @@ object App extends skel.Server {
   def main(args: Array[String]):Unit = { 
     Console.err.println(s"args: '${args.mkString(",")}'")
 
+    val d = Config()
     val c = Configuration.withPriority(Seq(
       new ConfigurationAkka,
       new ConfigurationProp,
       new ConfigurationEnv, 
-      new ConfigurationArgs(args,"adsb-validator","",
+      new ConfigurationArgs(args,"aw-miner","",
         
-        ArgString('_', "keystore.file","Keystore file (def: ./keystore/)"),
-        ArgString('_', "keystore.pass","Keystore password"),        
-        ArgInt('_', "batch.size","ADSB Batch max size"),
-        ArgLong('_', "batch.window","ADSB Batch time window (msec)"),
-        ArgString('_', "proto.options",s"Protocol options (def: ${MSG_Options.defaultArg})"),
+        ArgString('_', "keystore.file",s"Keystore file (def: ${d.keystore})"),
+        ArgString('_', "keystore.pass",s"Keystore password"),        
         
-        ArgString('f', "feed","Input Feed (def: )"),
-        ArgString('o', "output","Output file (pattern is supported: data-{yyyy-MM-dd-HH-mm}.log)"),
-        ArgString('e', "entity","Ingest entity: (def: all)"),
+        ArgInt('_', "block.size",s"ADSB Block max size (def: ${d.blockSize})"),
+        ArgLong('_', "block.window",s"ADSB Block time window (msec) (def: ${d.blockWindow})"),
+        ArgString('_', "proto.options",s"Protocol options (def: ${d.protocolOptions})"),
         
-        ArgString('_', "format","Outptu format (none,json,csv) (def: none)"),
+        ArgString('f', "feed",s"Input Feed (def: ${d.feed})"),
+        ArgString('o', "output",s"Output file (def: ${d.output})"),
 
-        ArgLong('_', "limit","Limit"),
-        ArgLong('_', "freq","Frequency"),
-        ArgString('_', "delimiter","""Delimiter characteds (def: ''). Usage example: --delimiter=`echo -e $"\r"` """),
-        ArgInt('_', "buffer","Frame buffer (Akka Framing) (def: 1M)"),
-        ArgLong('_', "throttle","Throttle messages in msec (def: 0)"),
+        ArgString('e', "entity",s"mining entity (adsb,notam,metar,..) (def: ${d.entity})"),        
+        ArgString('_', "format",s"format () (def: ${d.format})"),
 
-        ArgString('t', "filter","Filter (ex: 'AN-225')"),
-        
-        ArgString('d', "datastore","datastore [elastic,stdout,file] (def: stdout)"),
-        
+        ArgLong('_', "limit",s"Limit (def: ${d.limit})"),
+        ArgLong('_', "freq",s"Frequency (def: ${d.feed})"),
+        ArgString('_', "delimiter",s"""Delimiter characteds (def: '${d.delimiter}'). Usage example: --delimiter=`echo -e $"\r"` """),
+        ArgInt('_', "buffer",s"Frame buffer (Akka Framing) (def: ${d.buffer})"),
+        ArgLong('_', "throttle",s"Throttle messages in msec (def: ${d.throttle})"),
+
+        ArgLong('_', "timeout.idle",s"Idle connection timeout in msec (def: ${d.timeoutIdle})"),
+        ArgLong('_', "timeout.connect",s"Connection timeout in msec (def: ${d.timeoutConnect})"),
+        ArgLong('_', "timeout.retry",s"Retry timeout in msec (def: ${d.timeoutRetry})"),
+
+        ArgLong('_', "jitter",s"Time jitter to add to Timestamp (def: ${d.jitter})"),
+                
         ArgCmd("miner","Miner pipeline"),
         
-        ArgParam("<params>","")
+        ArgParam("<params>",""),
+        ArgLogging()
       ).withExit(1)
-    ))
+    )).withLogging()
 
     Console.err.println(s"${c}")
 
     implicit val config = Config(
-      keystore = c.getString("keystore").getOrElse("./keystore/miner-1.json"),
-      keystorePass = c.getString("keystore.pass").getOrElse("test123"),
-      batchSize = c.getInt("batch.size").getOrElse(2),
-      batchWindow = c.getLong("batch.window").getOrElse(1000L),
-      protocolOptions = MSG_Options.fromArg(c.getString("proto.options").getOrElse(MSG_Options.defaultArg)),
+      keystore = c.getString("keystore.file").getOrElse(d.keystore),
+      keystorePass = c.getString("keystore.pass").getOrElse(d.keystorePass),
+      blockSize = c.getInt("block.size").getOrElse(d.blockSize),
+      blockWindow = c.getLong("block.window").getOrElse(d.blockWindow),
+      protocolOptions = MSG_Options.fromArg(c.getString("proto.options")).getOrElse(d.protocolOptions),
       
-      feed = c.getString("feed").getOrElse(""),
-      output = c.getString("output").getOrElse("mqtt://localhost:1883"),
-      entity = c.getString("entity").getOrElse("all"),
-      format = c.getString("format").getOrElse(""),
+      feed = c.getString("feed").getOrElse(d.feed),
+      output = c.getString("output").getOrElse(d.output),
 
-      limit = c.getLong("limit").getOrElse(0),
-      freq = c.getLong("freq").getOrElse(0),
-      delimiter = c.getString("delimiter").getOrElse("\n"),
-      buffer = c.getInt("buffer").getOrElse(1024*1024),
-      throttle = c.getLong("throttle").getOrElse(0L),
-    
-      filter = c.getString("filter").getOrElse("").split(",").toSeq,
-      cmd = c.getCmd().getOrElse("miner"),
+      entity = c.getString("entity").getOrElse(d.entity),
+      format = c.getString("format").getOrElse(d.format),
+
+      limit = c.getLong("limit").getOrElse(d.limit),
+      freq = c.getLong("freq").getOrElse(d.freq),
+      delimiter = c.getString("delimiter").getOrElse(d.delimiter),
+      buffer = c.getInt("buffer").getOrElse(d.buffer),
+      throttle = c.getLong("throttle").getOrElse(d.throttle),
+
+      timeoutIdle = c.getLong("timeout.idle").getOrElse(d.timeoutIdle),
+      timeoutConnect = c.getLong("timeout.connect").getOrElse(d.timeoutConnect),
+      timeoutRetry = c.getLong("timeout.retry").getOrElse(d.timeoutRetry),
+
+      jitter = c.getLong("jitter").getOrElse(d.jitter),
+          
+      cmd = c.getCmd().getOrElse(d.cmd),
       params = c.getParams(),
     )
 
-    Console.err.println(s"Config: ${config}")
-
+    Console.err.println(s"Config: ${config}")    
+    
     config.cmd match {
       case "miner" => {
-        val pp = new PipelineMiner(config.feed,config.output)
+                
+        val pp = config.entity match {
+          case "adsb" =>
+            new PipelineMinerADSB(config.feed,config.output)
+          case "notam" =>
+            new PipelineMinerNOTAM(config.feed,config.output)
+        }        
+
         val r = pp.run()
         Console.err.println(s"r=${r}")
         r match {
@@ -120,10 +145,12 @@ object App extends skel.Server {
           }
           case akka.NotUsed => 
             Thread.sleep(Long.MaxValue)
-            
+          
+          case _ => 
+            Thread.sleep(Long.MaxValue)
         }
 
-        Console.err.println(s"Events: ${pp.countObj}")
+        Console.err.println(s"Events: ${pp.countObj.get()}")
         sys.exit(0)
       }
 

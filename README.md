@@ -2,15 +2,42 @@
 
 Aviation Platform Research
 
-1. [__aw-core__](aw-core)               - Core Entities and Objects
-2. [__aw-aircraft__](aw-aircraft)       - Aircraft (icao spec)
-3. [__aw-gamet__](aw-gamet)             - GAMET tools
-4. [__aw-adsb__](aw-adsb)               - ADS-B parser and ingest
-5. [__aw-gpx__](aw-gpx)                 - GPX tools
-6. [__aw-nft__](aw-nft)                 - Experiments with NFT as Aeroware entity (Plane, License)
-7. [__aw-geo__](aw-geo)                 - Geo snippets
+- [__aw-core__](aw-core)               - Core Entities and Objects
+- [__aw-aircraft__](aw-aircraft)       - Aircraft (icao spec)
+- [__aw-adsb__](aw-adsb)               - ADS-B mesh (to be moved to `aw`)
+- [__aw-gpx__](aw-gpx)                 - GPX tools
+- [__aw-nft__](aw-nft)                 - Experiments with NFT as Aeroware entity (Hardware/plane, License)
+- [__aw-geo__](aw-geo)                 - Geo snippets
+- [__aw-data__](aw-data)               - Datasets (ICAO Aircrafts DB,...)
+- [__aw-gamet__](aw-gamet)             - GAMET tools
+- [__aw-notam__](aw-notam)             - NOTAM tools
+- [__aw-metar__](aw-metar)             - METAR tools
+- [__aw-sigmet__](aw-sigmet)           - SIGMET tools
 
-8. [__aw-lake__](aw-lake)               - Datasets (ICAO Aircrafts DB,...)
+---
+
+## Archticture
+
+### Aeroware Mesh
+
+High Level Overview
+
+<img src="doc/Aeroware-Mesh-Overview.drawio.png" width="850">
+
+
+---
+
+### PoC
+
+Simple Topology:
+
+[__adsb-miner__] --[MQTT]--> [__adsb-validator__] --[file]--> [__adsb-radar__] <--[http]-- [__wscat__]
+
+<img src="doc/Aeroware-Mesh-PoC.drawio.png" width="650">
+
+<br>
+
+See [aw-adsb/README.md]() for details
 
 ----
 

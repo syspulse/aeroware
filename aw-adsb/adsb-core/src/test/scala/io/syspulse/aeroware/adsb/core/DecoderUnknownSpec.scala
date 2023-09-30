@@ -29,7 +29,7 @@ class DecoderUnknownSpec extends AnyWordSpec with Matchers with Testables {
   
   "DecoderUnknown" should {    
     s"decode dump1090 message: ${msgUnknown1} as type 11" in {
-      val a1 = Decoder.decode(msgUnknown1)
+      val a1 = Adsb.decode(msgUnknown1)
       // info(s"${a1}")
       a1.isFailure should === (false)
       a1.get.df should === (11)
@@ -37,7 +37,7 @@ class DecoderUnknownSpec extends AnyWordSpec with Matchers with Testables {
     }
 
     s"decode message: A800080010030A80F500006E9FAD" in {
-      val a1 = Decoder.decode("A800080010030A80F500006E9FAD")
+      val a1 = Adsb.decode("A800080010030A80F500006E9FAD")
       info(s"${a1}")
       a1.isFailure should === (false)
       a1.get.df should === (21)

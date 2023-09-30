@@ -16,7 +16,7 @@ class PipeWebSocketServer(wsHost:String,wsPort:Int,interval:Long = 1L) extends c
   override def port = wsPort
 
   def process(a0:ADSB_AirbornePositionBaro,a1:ADSB_AirbornePositionBaro) = {
-    val loc = Decoder.getGloballPosition(a0,a1)
+    val loc = Adsb.getGloballPosition(a0,a1)
     if((a1.ts - aLast.get.ts) >= interval) {
       
       val data = output(a1,loc)

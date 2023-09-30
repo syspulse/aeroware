@@ -13,113 +13,167 @@ import io.syspulse.skel
 import io.syspulse.skel.config._
 import io.syspulse.skel.util.Util
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Options
-import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
 
 import io.syspulse.aeroware.adsb.mesh.rewards._
 import io.syspulse.aeroware.adsb.mesh.store._
+import io.syspulse.aeroware.aircraft.icao.AircraftICAORegistry
 
 
 case class Config (
-  feed:String = "",
+  feed:String = "mqtt://localhost:1883",
   output:String = "",
 
-  keystore:String = "",
-  keystorePass:String = "",
-  batchSize: Int = 3,
-  batchWindow: Long = 1000L,
+  keystore:String = "./keystore/validator-1.json",
+  keystorePass:String = "abcd1234",
+  blockSize: Int = 3,
+  blockWindow: Long = 1000L,
   protocolOptions:Int = MSG_Options.V_1 | MSG_Options.O_EC,
+  
+  fanoutWindow: Long = 1000L,
+  fanoutDedup: Long = 9000L,
 
-  entity:String = "",
+  entity:String = "adsb",
   format:String = "",
+
   limit:Long = 0L,
   freq: Long = 0L,
-  delimiter:String = "",
-  buffer:Int = 0,
+  delimiter:String = "\n",
+  buffer:Int = 1024*1024,
   throttle:Long = 0L,
 
-  filter:Seq[String] = Seq.empty,
+  datastore:String = "mem://",
 
-  datastore:String = "mem",
+  validation:Seq[String] = Seq("ts,sig,data,payload,blacklist,blacklist.ip"),
+  blacklistAddr:Seq[String] = Seq(),
+  blacklistIp:Seq[String] = Seq(),
+  toleranceTs:Long = 750L,
 
-  cmd:String = "",
+  id:String = System.currentTimeMillis().toString,
+
+  timeoutConnect:Long = 1000L,
+  timeoutIdle:Long = 15000L,
+  timeoutRetry:Long = 5000L,
+
+  cmd:String = "validator",
   params: Seq[String] = Seq(),
 )
 
 object App extends skel.Server {
-  import MSG_MinerData._
 
   def main(args: Array[String]):Unit = {
     Console.err.println(s"args: '${args.mkString(",")}'")
 
+    val d = Config()
     val c = Configuration.withPriority(Seq(
       new ConfigurationAkka,
       new ConfigurationProp,
       new ConfigurationEnv, 
       new ConfigurationArgs(args,"adsb-validator","",
         
-        ArgString('_', "keystore.file","Keystore file (def: ./keystore/)"),
-        ArgString('_', "keystore.pass","Keystore password"),        
-        ArgInt('_', "batch.size","ADSB Batch max size"),
-        ArgLong('_', "batch.window","ADSB Batch time window (msec)"),
-        ArgString('_', "proto.options",s"Protocol options (def: ${MSG_Options.defaultArg})"),
+        ArgString('_', "keystore.file",s"Keystore file (def: ${d.keystore})"),
+        ArgString('_', "keystore.pass",s"Keystore password"),        
         
-        ArgString('f', "feed","Input Feed (def: )"),
-        ArgString('o', "output","Output file (pattern is supported: data-{yyyy-MM-dd-HH-mm}.log)"),
-        ArgString('e', "entity","Ingest entity: (def: all)"),
+        // ArgInt('_', "block.size",s"ADSB Block max size (def: ${d.blockSize})"),
+        // ArgLong('_', "block.window",s"ADSB Block time window (msec) (def: ${d.blockWindow})"),
+        ArgString('_', "proto.options",s"Protocol options (def: ${d.protocolOptions})"),
         
-        ArgString('_', "format","Outptu format (none,json,csv) (def: none)"),
+        ArgString('f', "feed",s"Input Feed (def: ${d.feed})"),
+        ArgString('o', "output",s"Output file (def: ${d.output})"),
 
-        ArgLong('_', "limit","Limit"),
-        ArgLong('_', "freq","Frequency"),
-        ArgString('_', "delimiter","""Delimiter characteds (def: ''). Usage example: --delimiter=`echo -e $"\r"` """),
-        ArgInt('_', "buffer","Frame buffer (Akka Framing) (def: 1M)"),
-        ArgLong('_', "throttle","Throttle messages in msec (def: 0)"),
+        ArgString('e', "entity",s"Ingest entity: (def: ${d.entity})"),        
+        ArgString('_', "format",s"Outptu format (none,json,csv) (def: ${d.format})"),
 
-        ArgString('t', "filter","Filter (ex: 'AN-225')"),
+        ArgLong('_', "limit",s"Limit (def: ${d.limit})"),
+        ArgLong('_', "freq",s"Frequency (def: ${d.feed})"),
+        ArgString('_', "delimiter",s"""Delimiter characteds (def: '${d.delimiter}'). Usage example: --delimiter=`echo -e $"\r"` """),
+        ArgInt('_', "buffer",s"Frame buffer (Akka Framing) (def: ${d.buffer})"),
+        ArgLong('_', "throttle",s"Throttle messages in msec (def: ${d.throttle})"),
         
-        ArgString('d', "datastore","datastore [mem,file] (def: file)"),
+        ArgString('d', "datastore",s"datastore [mem://,file://, parq://] (def: ${d.datastore})"),
+
+        ArgString('v', "validation",s"What to validated (def: ${d.validation})"),
+
+        ArgString('_', "blacklist.addr",s"Address blacklist (def: ${d.blacklistAddr})"),
+        ArgString('_', "blacklist.ip",s"IP blacklist (def: ${d.blacklistIp})"),
+        ArgLong('_', "tolerance.ts",s"Timestamp validation tolerance in msec (def: ${d.toleranceTs})"),
+        
+        ArgLong('_', "fanout.window",s"Window to group output data (msec) (def: ${d.fanoutWindow})"),
+        ArgLong('_', "fanout.dedup",s"Dedup Window to track duplicattes (msec) (def: ${d.fanoutDedup})"),
+
+        ArgString('_', "id",s"Validator ID (unique over restarts) (def: ${d.id})"),
+
+        ArgLong('_', "timeout.idle",s"Idle connection timeout in msec (def: ${d.timeoutIdle})"),
+        ArgLong('_', "timeout.connect",s"Connection timeout in msec (def: ${d.timeoutConnect})"),
+        ArgLong('_', "timeout.retry",s"Retry timeout in msec (def: ${d.timeoutRetry})"),
         
         ArgCmd("validator","Validator pipeline"),
         ArgCmd("rewards","Rewards calculations"),
         
-        ArgParam("<params>","")
+        ArgParam("<params>",""),
+        ArgLogging()
       ).withExit(1)
-    ))
+    )).withLogging()
 
     Console.err.println(s"${c}")
 
     implicit val config = Config(
-      keystore = c.getString("keystore").getOrElse("./keystore/validator-1.json"),
-      keystorePass = c.getString("keystore.pass").getOrElse("abcd1234"),
-      batchSize = c.getInt("batch.size").getOrElse(10),
-      batchWindow = c.getLong("batch.window").getOrElse(1000L),
-      protocolOptions = MSG_Options.fromArg(c.getString("proto.options").getOrElse(MSG_Options.defaultArg)),
-      
-      feed = c.getString("feed").getOrElse("mqtt://localhost:1883"),
-      output = c.getString("output").getOrElse(""),
-      entity = c.getString("entity").getOrElse("validator"),
-      format = c.getString("format").getOrElse(""),
+      keystore = c.getString("keystore.file").getOrElse(d.keystore),
+      keystorePass = c.getString("keystore.pass").getOrElse(d.keystorePass),
+      blockSize = c.getInt("block.size").getOrElse(d.blockSize),
+      blockWindow = c.getLong("block.window").getOrElse(d.blockWindow),
+      protocolOptions = MSG_Options.fromArg(c.getString("proto.options")).getOrElse(d.protocolOptions),
 
-      limit = c.getLong("limit").getOrElse(0),
-      freq = c.getLong("freq").getOrElse(0),
-      delimiter = c.getString("delimiter").getOrElse("\n"),
-      buffer = c.getInt("buffer").getOrElse(1024*1024),
-      throttle = c.getLong("throttle").getOrElse(0L),
-    
-      filter = c.getString("filter").getOrElse("").split(",").toSeq,
-      cmd = c.getCmd().getOrElse("validator"),
+      fanoutWindow = c.getLong("fanout.window").getOrElse(d.fanoutWindow),
+      fanoutDedup = c.getLong("fanout.dedup").getOrElse(d.fanoutDedup),
+      
+      feed = c.getString("feed").getOrElse(d.feed),
+      output = c.getString("output").getOrElse(d.output),
+
+      entity = c.getString("entity").getOrElse(d.entity),
+      format = c.getString("format").getOrElse(d.format),
+
+      limit = c.getLong("limit").getOrElse(d.limit),
+      freq = c.getLong("freq").getOrElse(d.freq),
+      delimiter = c.getString("delimiter").getOrElse(d.delimiter),
+      buffer = c.getInt("buffer").getOrElse(d.buffer),
+      throttle = c.getLong("throttle").getOrElse(d.throttle),
+          
+      datastore = c.getString("datastore").getOrElse(d.datastore),
+      
+      validation = c.getListString("validation",d.validation),
+      blacklistAddr = c.getListString("blacklist.addr",d.blacklistAddr),
+      blacklistIp = c.getListString("blacklist.ip",d.blacklistIp),
+      toleranceTs = c.getLong("tolerance.ts").getOrElse(d.toleranceTs),
+
+      id = c.getString("id").getOrElse(d.id),
+
+      timeoutIdle = c.getLong("timeout.idle").getOrElse(d.timeoutIdle),
+      timeoutConnect = c.getLong("timeout.connect").getOrElse(d.timeoutConnect),
+      timeoutRetry = c.getLong("timeout.retry").getOrElse(d.timeoutRetry),
+
+      cmd = c.getCmd().getOrElse(d.cmd),
       params = c.getParams(),
     )
 
     Console.err.println(s"Config: ${config}")
+    
+    val store = config.datastore.split("://").toList match {
+      case "parq" :: dir :: Nil => new RawStoreLake(dir)
+      case "parq" :: Nil => new RawStoreLake()
+      case "mem" :: Nil | "cache" :: Nil => new RawStoreMem()
+      case _ => {
+        Console.err.println(s"Uknown datastore: '${config.datastore}'")
+        sys.exit(1)
+      }
+    }
 
-    val datastore = new DataStoreMem()
+    log.info(s"Datstore: ${store}")        
 
     config.cmd match {
       case "validator" => {
-        val pp = new PipelineValidator(config.feed,config.output,datastore)
+        val pp = new PipelineValidator(config.feed,config.output,store)
         val r = pp.run()
-        println(s"r=${r}")
+        Console.err.println(s"r=${r}")
         r match {
           case a:Awaitable[_] => {
             val rr = Await.result(a,Duration.Inf)
@@ -128,13 +182,13 @@ object App extends skel.Server {
           case akka.NotUsed => 
         }
 
-        Console.err.println(s"Events: ${pp.countObj}")
+        Console.err.println(s"Events: ${pp.countObj.get()}")
         sys.exit(0)
       }
 
-      case "rewards" => {
+      case "rewards" => {        
         val rewards = new RewardADSB()
-        val datastore = new DataStoreMem()
+        val datastore = new RawStoreMem()
         val r = rewards.calculate(Instant.now.toEpochMilli(),Instant.now.toEpochMilli(),datastore)
         Console.println(s"${r}")
       }

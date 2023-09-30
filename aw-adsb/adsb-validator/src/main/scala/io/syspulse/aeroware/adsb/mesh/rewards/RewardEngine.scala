@@ -19,13 +19,12 @@ import io.syspulse.skel.crypto.wallet.WalletVaultKeyfiles
 
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
-import io.syspulse.aeroware.adsb.core.adsb.Raw
 import io.syspulse.aeroware.adsb.mesh.protocol._
 import scala.concurrent.ExecutionContext
 
 import io.syspulse.skel.crypto.key.PK
 
-import io.syspulse.aeroware.adsb.mesh.store.DataStore
+import io.syspulse.aeroware.adsb.mesh.store.RawStore
 
 case class RewardMiner(addr:String,messages:Long,reward:Double)
 
@@ -37,7 +36,7 @@ trait RewardEngine {
 
   def calculate(a:MSG_MinerData):Double
 
-  def calculate(ts0:Long,ts1:Long,store:DataStore):RewardResults = {
+  def calculate(ts0:Long,ts1:Long,store:RawStore):RewardResults = {
     RewardResults(0,0.0,Set()) 
   }
 

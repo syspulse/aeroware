@@ -34,12 +34,7 @@ import io.syspulse.skel.config._
 import io.syspulse.skel.ingest._
 import io.syspulse.skel.ingest.store._
 import io.syspulse.skel.ingest.flow.Pipeline
-
-import io.syspulse.aeroware.adsb._
-import io.syspulse.aeroware.adsb.core._
-
-import io.syspulse.aeroware.adsb.ingest.Dump1090URI
-import io.syspulse.aeroware.adsb.ingest.ADSB_Ingested
+import io.syspulse.skel.ingest.flow.Flows
 
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
 //import io.syspulse.aeroware.adsb.mesh.transport.MQTTClientPublisher
@@ -49,19 +44,8 @@ import io.syspulse.aeroware.adsb.mesh.transport.MqttURI
 import upickle._
 import upickle.default.{ReadWriter => RW, macroRW}
 
-import io.syspulse.skel.ingest.IngestClient
-import io.syspulse.skel.util.Util
-import io.syspulse.skel.crypto.Eth
-import io.syspulse.skel.crypto.wallet.WalletVaultKeyfiles
-
 import scala.concurrent.Future
 import scala.util.Random
-
-import io.syspulse.aeroware.adsb._
-import io.syspulse.aeroware.adsb.core._
-import io.syspulse.aeroware.adsb.core.adsb.Raw
-import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
-import io.syspulse.aeroware.adsb.mesh.miner
 
 import scala.concurrent.ExecutionContext
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Options
@@ -76,83 +60,128 @@ import akka.stream.alpakka.mqtt.MqttQoS
 import akka.stream.scaladsl.Sink
 import akka.stream.scaladsl.Keep
 import akka.stream.scaladsl.RestartSink
-import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerADSB
+import akka.stream.RestartSettings
+
+import java.util.concurrent.atomic.AtomicLong
+import jakarta.validation.constraints.Min
+
+import io.syspulse.skel.ingest.IngestClient
+import io.syspulse.skel.util.Util
+import io.syspulse.skel.crypto.Eth
+import io.syspulse.skel.crypto.wallet.WalletVaultKeyfile
+import io.syspulse.skel.crypto.wallet.WalletVault
+
+import io.syspulse.aeroware.core.Minable
+
+import io.syspulse.aeroware.adsb._
+import io.syspulse.aeroware.adsb.core._
+import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
+import io.syspulse.aeroware.adsb.mesh.miner
+
+import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerPayload
 import io.syspulse.aeroware.adsb.mesh.protocol.MinerSig
 
-class PipelineMiner(feed:String,output:String)(implicit config:Config)
-  extends Pipeline[ADSB,MSG_MinerData,MSG_MinerData](feed,output,config.throttle,config.delimiter,config.buffer) {
+import io.syspulse.aeroware.adsb.mesh.PayloadTypes
+import io.syspulse.aeroware.adsb.mesh.payload.PayloadType
+
+class MinerStat {
+  val total = new AtomicLong()
+  def +(sz:Long):Long = {
+    total.addAndGet(sz)
+  }
+  override def toString = s"${total}"
+}
+
+
+abstract class PipelineMiner(feed:String,output:String)(implicit config:Config)
+  extends Pipeline[Minable,MSG_MinerData,MSG_MinerData](feed,output,config.throttle,config.delimiter,config.buffer) {
 
   implicit protected val log = Logger(s"${this}")
   //implicit val ec = system.dispatchers.lookup("default-executor") //ExecutionContext.global
   implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
-  val wallet = new skel.crypto.wallet.WalletVaultKeyfile(config.keystore, config.keystorePass)  
+  def getPayloadType():PayloadType = ???
+
+  val minerStat = new MinerStat()
+
+  val wallet = new WalletVaultKeyfile(config.keystore, config.keystorePass)  
   val wr = wallet.load()
-  log.info(s"wallet: ${wr}")
-  val signerPk = wallet.signers.toList.head._2.head.pk
-  val signerAddr = wallet.signers.toList.head._2.head.addr
   
-
-  val connectTimeout = 1000L
-  val idleTimeout = 1000L
+  val signerPk = wallet.signers.values.head.pk
+  val signerAddr = wallet.signers.values.head.addr
+  val signerAddrBytes = Util.fromHexString(signerAddr)
   
-  // MQTT
-  def toMQTT(mqttHost:String,mqttPort:Int,mqttTopic:String="adsb",clientId:String="adsb-client",protocolVer:Int = 0) = {
-    val mqttConnectionSettings = MqttConnectionSettings(
-      broker = s"tcp://${mqttHost}:${mqttPort}", 
-      clientId = clientId, 
-      persistence = new MemoryPersistence
-    ).withAutomaticReconnect(true)
+  val retry = RestartSettings(
+    minBackoff = FiniteDuration(config.timeoutRetry,TimeUnit.MILLISECONDS),
+    maxBackoff = FiniteDuration(config.timeoutRetry,TimeUnit.MILLISECONDS),
+    randomFactor = 0.2
+  )
+  //.withMaxRestarts(10, FiniteDuration(5,TimeUnit.MINUTES))
 
-    val mqttClientId = clientId
-    val mqttConnectionId = s"${math.abs(Random.nextLong())}"
-    
-    val mqttSink: Sink[MqttMessage, Future[Done]] = MqttSink(mqttConnectionSettings, MqttQoS.AtLeastOnce)
-      
-    val mqttPublisher = Flow[MSG_MinerData].map( md => {
-      
+  // val connectTimeout = 1000L
+  // val idleTimeout = 1000L
+  
+  val dataEncoder = Flow[MSG_MinerData].map( md => {      
       val mqttData = upickle.default.writeBinary(md)
       log.debug(s"encoded = ${Util.hex(mqttData)}")
 
-      val wireData = if(MSG_Options.isV1(protocolVer)) Util.hex(mqttData).getBytes else mqttData
+      val wireData = if(MSG_Options.isV1(config.protocolOptions)) Util.hex(mqttData).getBytes else mqttData
 
-      log.debug(s"Payload[${Util.hex(wireData)}] -> MQTT(${mqttHost}:${mqttPort})")
-      MqttMessage(mqttTopic,ByteString(wireData))  
+      // healthcheck for decoding
+      //val decodedMsg = upickle.default.readBinary[MSG_MinerData](wireData)
+      //log.info(s"decodedMsg: ${decodedMsg}")      
+      wireData
     })
 
-    val sink = mqttPublisher.toMat(mqttSink)(Keep.both)
-             
-    RestartSink.withBackoff(retrySettings) { 
-      log.info(s"-> MQTT(${mqttHost}:${mqttPort})")
-      () => sink
-    }
-  
-  }
-  
-  def filter:Seq[String] = config.filter
-
-  def fromTcp(host:String,port:Int) = {
-    val ip = InetSocketAddress.createUnresolved(host, port)
-    val conn = Tcp().outgoingConnection(
-      remoteAddress = ip,
-      connectTimeout = Duration(connectTimeout,TimeUnit.MILLISECONDS),
-      idleTimeout = Duration(idleTimeout,TimeUnit.MILLISECONDS)
-    )
-    val sourceRestarable = RestartSource.withBackoff(retrySettings) { () => 
-      log.info(s"Connecting -> dump1090(${host}:${port})...")
-      Source.actorRef(1, OverflowStrategy.fail)
-        .via(conn)
-        .log("dump1090")
-    }
-    sourceRestarable
-  }
+  // MQTT
+  def toMQTT(mqttHost:String,mqttPort:Int,
+             //mqttTopic:String="adsb",
+             mqttTopic:String=config.entity,
+             clientId:String="aw-miner") = {
     
+    val mqttClientId = s"${clientId}"
+    
+    // Don't enable "withAutomaticReconnect(true)", RestartSink will reconnect with a log message !
+    val mqttConnectionSettings = MqttConnectionSettings(
+      broker = s"tcp://${mqttHost}:${mqttPort}", 
+      clientId = mqttClientId,
+      persistence = new MemoryPersistence
+    )
+    //.withAutomaticReconnect(true)
+    .withConnectionTimeout(FiniteDuration(config.timeoutConnect,TimeUnit.MILLISECONDS))
+    .withDisconnectTimeout(FiniteDuration(config.timeoutIdle,TimeUnit.MILLISECONDS))
+    
+    
+    val mqttSink: Sink[MqttMessage, Future[Done]] = MqttSink(mqttConnectionSettings, MqttQoS.AtLeastOnce)
+          
+    val mqttPublisher = Flow[Array[Byte]].map( data => {
+      log.debug(s"Payload[${Util.hex(data)}] -> mqtt://${mqttHost}:${mqttPort}/${mqttTopic}")
+      MqttMessage(mqttTopic,ByteString(data))  
+    })
+
+    val sink = dataEncoder
+      .via(mqttPublisher)      
+      .toMat(mqttSink)(Keep.both)
+             
+    RestartSink.withBackoff(retry) { () => 
+      log.info(s"Connecting -> mqtt://${mqttHost}:${mqttPort}/${mqttTopic}")
+      sink
+    }  
+  }
+      
   override def source() = {
     feed.split("://").toList match {
-      case "dump1090" :: _ => {
-        val uri = Dump1090URI(feed)
-        fromTcp(uri.host,uri.port.toInt)
-      }
+      // case "dump1090" :: _ => 
+      //   val uri = Dump1090URI(feed)
+      //   Flows.fromTcpClient(uri.host,uri.port.toInt, 
+      //     connectTimeout = config.timeoutConnect, idleTimeout = config.timeoutIdle,
+      //     retry = retry
+      //   )
+      case "tcp" :: uri :: Nil => 
+        Flows.fromTcpClientUri(uri, 
+          connectTimeout = config.timeoutConnect, idleTimeout = config.timeoutIdle,
+          retry = retry
+        )
       case _ => super.source()
     }
   }
@@ -161,63 +190,116 @@ class PipelineMiner(feed:String,output:String)(implicit config:Config)
     output.split("://").toList match {
       case "mqtt" :: _ => {
         val uri = MqttURI(output)
-        toMQTT(uri.host,uri.port.toInt)
+        toMQTT(uri.host,uri.port.toInt, clientId = signerAddr)
       }
+      
+      case "raw" :: _ => {
+        val sink = 
+          dataEncoder
+          .toMat(Sink.foreach{d => {
+                        
+            if(MSG_Options.isV1(config.protocolOptions)) {
+              // Textual protocol
+              println(Util.hex(d))              
+            } else {
+              // binary protocol
+              d.foreach(b => print(b.toChar))
+            }
+              
+          }})(Keep.both)
+        sink
+      }
+
+      case "hex" :: _ => {
+        val sink = 
+          dataEncoder
+          .toMat(Sink.foreach{d => {
+            println(Util.hex(d))            
+          }})(Keep.both)
+        sink
+      }
+
       case _ => super.sink()
     }
   }
 
-  val signer = Flow[Seq[ADSB]].map( aa => { 
-    val adsbData = aa.map(a => MSG_MinerADSB(a.ts,a.raw)).toArray
-    val sigData = upickle.default.writeBinary(adsbData)
-    val sig = wallet.msign(sigData,None, None).head
+  val encoder = Flow[Seq[Minable]].map( aa => { 
 
-    val msgData = MSG_MinerData(
-      ts = System.currentTimeMillis(),
-      pk = signerPk,
-      adsbs = adsbData,
-      sig = MinerSig(sig)
+    // timestamp of the Event/Message (e.g. ADSB received from hardware, like dump1090)
+    val data = aa.map(a => MSG_MinerPayload(
+      a.ts,
+      getPayloadType(), 
+      a.raw)
+    ).toArray
+    
+    // timestamp of the Miner data with possible jitter
+    val tsData = System.currentTimeMillis + config.jitter
+
+    val msg = MSG_MinerData(
+      ts = tsData,
+      addr = signerAddrBytes,
+      payload = data,
+      sig = MinerSig.empty,
+      ops = config.protocolOptions
     )
 
-    msgData
+    msg
   })
 
-  val checksum = Flow[MSG_MinerData].map( m => { 
-    val adsbData = m.adsbs
-    val sigData = upickle.default.writeBinary(adsbData)
-    val sig = Util.hex(m.sig.r) + ":" + Util.hex(m.sig.s)
+  val signer = Flow[MSG_MinerData].map( msg => { 
+    val data = upickle.default.writeBinary(msg.payload)
+    val sig = wallet.msign(data,None, None).head
 
-    val v = wallet.mverify(List(sig),sigData,None,None)
+    msg.copy(
+      sig = MinerSig(sig)
+    )    
+  })
+
+  val checksum = Flow[MSG_MinerData].map( msg => { 
+    val data = msg.payload
+    val sigData = upickle.default.writeBinary(data)
+    val sig = Util.hex(msg.sig.r) + ":" + Util.hex(msg.sig.s)
+
+    val v = wallet.mverifyAddress(List(sig),sigData,Seq(signerAddr))
     if(v == 0) {
-      log.error(s"Invalid signature: ${m.sig}")
+      log.error(s"Signature: INVALID: ${msg.sig}")
     }else
-      log.info(s"Verified: ${m.sig}")
-    m
+      log.debug(s"Signature: OK: ${msg.sig}")
+    
+    msg
   })
 
+  val stat = Flow[MSG_MinerData].map( msg => { 
+    minerStat.+(msg.payload.size)
+    log.info(s"stat=[${msg.payload.size},${minerStat}]")
+    msg
+  })
 
-  override def process:Flow[ADSB,MSG_MinerData,_] = 
-    Flow[ADSB]
-      .groupedWithin(config.batchSize, FiniteDuration(config.batchWindow,TimeUnit.MILLISECONDS))
+  override def process:Flow[Minable,MSG_MinerData,_] = 
+    Flow[Minable]
+      .groupedWithin(config.blockSize, FiniteDuration(config.blockWindow,TimeUnit.MILLISECONDS))
+      .via(encoder)
       .via(signer)
       .via(checksum)
-  
-  
-  def decode(data:String,ts:Long):Option[ADSB] = {
-    Decoder.decode(data,ts) match {
-      case Success(a) => Some(a)
-      case Failure(e) => None
-    }
-  }
+      .via(stat)
+      //.via(dataEncoder)
+    
+  // decoding is for validation only
+  // to be compatible with Validator to avoid penalty
+  // If protocols are fully compatible, this step can be
+  // totally omitted since validator expect raw data
+  def decode(data:String,ts:Long):Option[Minable] = ???
 
-  def parse(data:String):Seq[ADSB] = {
+  def preparse(data:String):List[String] = ???
+
+  def parse(data:String):Seq[Minable] = {
     if(data.isEmpty()) return Seq()
-    try {
-      val a = data.trim.split("\\s+").toList match {
+    try {      
+      val a = preparse(data) match {
         case ts :: a :: Nil => decode(a,ts.toLong)
         case a :: Nil => decode(a,System.currentTimeMillis())
         case _ => {
-          log.error(s"failed to parse: invalid format: ${data}")
+          log.error(s"failed to pre-parse: invalid format: ${data}")
           return Seq.empty
           None
         }

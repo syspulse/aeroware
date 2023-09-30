@@ -7,6 +7,7 @@ import enumeratum.values._
 sealed abstract class Units(val value: Int, val name: String) extends IntEnumEntry {
   override def toString = s"${this.getClass().getSimpleName}(${value},${name})"
 }
+
 object Units extends IntEnum[Units] {
   case object METERS     extends Units(value = 0, name = "meters")
   case object KM         extends Units(value = 1, name = "km")

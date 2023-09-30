@@ -43,42 +43,42 @@ class AirborneVelocitySpec extends AnyWordSpec with Matchers with Testables {
   "AirborneVelocitySpec" should {
 
     s"decode ${msg1} as ADSB_AirborneVelocity type Subtype-1" in {
-      val a1 = Decoder.decode(msg1)
+      val a1 = Adsb.decode(msg1)
       a1.get.getClass should === (ADSB_AirborneVelocity(17,19,AircraftAddress("485020","",""),Speed(0,Units.KNOTS),0,VRate(0,Units.FPM),raw=null).getClass)
     }
 
     s"decode ${msg1} ADSB_AirborneVelocity with hSpeed 159.20 kt" in {
-      val a1 = Decoder.decode(msg1).get.asInstanceOf[ADSB_AirborneVelocity]
+      val a1 = Adsb.decode(msg1).get.asInstanceOf[ADSB_AirborneVelocity]
       a1.hSpeed should === (Speed(159.2,Units.KNOTS))
     }
 
     s"decode ${msg1} ADSB_AirborneVelocity with heading 182.88 deg" in {
-      val a1 = Decoder.decode(msg1).get.asInstanceOf[ADSB_AirborneVelocity]
+      val a1 = Adsb.decode(msg1).get.asInstanceOf[ADSB_AirborneVelocity]
       a1.heading should === (183.0)
     }
 
     s"decode ${msg1} ADSB_AirborneVelocity with vRate 832 fpm" in {
-      val a1 = Decoder.decode(msg1).get.asInstanceOf[ADSB_AirborneVelocity]
+      val a1 = Adsb.decode(msg1).get.asInstanceOf[ADSB_AirborneVelocity]
       a1.vRate should === (VRate(-832.0,Units.FPM))
     }
   
     s"decode ${msg3} as ADSB_AirborneVelocity type Subtype-3" in {
-      val a1 = Decoder.decode(msg3)
+      val a1 = Adsb.decode(msg3)
       a1.get.getClass should === (ADSB_AirborneVelocity(17,19,AircraftAddress("A05F21","",""),Speed(0,Units.KNOTS),0,VRate(0,Units.FPM),raw=null).getClass)
     }
 
     s"decode ${msg3} ADSB_AirborneVelocity with hSpeed 376 kt" in {
-      val a1 = Decoder.decode(msg3).get.asInstanceOf[ADSB_AirborneVelocity]
+      val a1 = Adsb.decode(msg3).get.asInstanceOf[ADSB_AirborneVelocity]
       a1.hSpeed should === (Speed(376.0,Units.KNOTS))
     }
 
     s"decode ${msg3} ADSB_AirborneVelocity with header 243.98 deg" in {
-      val a1 = Decoder.decode(msg3).get.asInstanceOf[ADSB_AirborneVelocity]
+      val a1 = Adsb.decode(msg3).get.asInstanceOf[ADSB_AirborneVelocity]
       a1.heading should === (243.98)
     }
 
     s"decode ${msg3} ADSB_AirborneVelocity with vRate 832 fpm" in {
-      val a1 = Decoder.decode(msg3).get.asInstanceOf[ADSB_AirborneVelocity]
+      val a1 = Adsb.decode(msg3).get.asInstanceOf[ADSB_AirborneVelocity]
       a1.vRate should === (VRate(-2304.0,Units.FPM))
     }
   }

@@ -83,10 +83,6 @@ import io.syspulse.skel.ingest.flow.Pipeline
 
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
-import io.syspulse.aeroware.adsb.core.adsb.Raw
-
-import io.syspulse.aeroware.adsb.ingest.Dump1090URI
-import io.syspulse.aeroware.adsb.ingest.ADSB_Ingested
 
 import io.syspulse.aeroware.adsb.mesh.protocol._
 import io.syspulse.aeroware.adsb.mesh.transport.MqttURI
@@ -95,18 +91,31 @@ import io.syspulse.skel.util.Util
 import io.syspulse.skel.crypto.Eth
 import io.syspulse.skel.crypto.wallet.{WalletVaultKeyfiles,WalletVaultKeyfile}
 
-import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerADSB
+import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerPayload
 import io.syspulse.aeroware.adsb.mesh.protocol.MinerSig
 import io.syspulse.aeroware.adsb.mesh.transport.MQTTServerFlow
 import io.syspulse.aeroware.adsb.mesh.transport.MQTTConfig
 
-import io.syspulse.aeroware.adsb.mesh.store._
 import io.syspulse.aeroware.adsb.mesh.rewards._
 import io.syspulse.aeroware.adsb.mesh.validator._
-import io.syspulse.aeroware.adsb.mesh.validation._
 import io.syspulse.aeroware.adsb.mesh._
 
 import akka.NotUsed
+import java.util.concurrent.atomic.AtomicLong
+import io.syspulse.aeroware.adsb.mesh.store.RawStore
+
+class ValidatorStat {
+  val total = new AtomicLong()
+  val errors = new AtomicLong()
+  
+  def +(sz:Long,err:Long):Long = {
+    if(err != 0)
+      errors.addAndGet(err)
+
+    total.addAndGet(sz)
+  }
+  override def toString = s"${total},${errors}"
+}
 
 case class PublishWithAddr (remoteAddr: InetSocketAddress,
                             flags: ControlPacketFlags,
@@ -114,32 +123,59 @@ case class PublishWithAddr (remoteAddr: InetSocketAddress,
                             packetId: Option[PacketId],
                             payload: ByteString)
 
-class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit config:Config)
-  extends Pipeline[MSG_MinerData,MSG_MinerData,MSG_MinerData](feed,output,config.throttle,config.delimiter,config.buffer) {
+class PipelineValidator(feed:String,output:String,RawStore:RawStore)(implicit config:Config)
+  extends Pipeline[MSG_MinerData,MeshData,MeshData](feed,output,config.throttle,config.delimiter,config.buffer) {
   
   implicit protected val log = Logger(s"${this}")
   //implicit val ec = system.dispatchers.lookup("default-executor") //ExecutionContext.global
   implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
+  val validatorStat = new ValidatorStat()
+
   // ----- Wallet ---
   val wallet = new WalletVaultKeyfile(config.keystore, config.keystorePass)  
   val wr = wallet.load()
-  log.info(s"wallet: ${wr}")
-  val signerPk = wallet.signers.toList.head._2.head.pk
-  val signerAddr = wallet.signers.toList.head._2.head.addr
+  
+  val validatorAddr = wallet.signers.values.toList.head.addr
+  
+  val configValidator = ValidatorConfig (
+        validateTs = config.validation.contains("ts"),
+        validateSig = config.validation.contains("sig"),
+        validateData = config.validation.contains("data"),
+        validatePayload = config.validation.contains("payload"),
+        toleranceTs = config.toleranceTs,
 
-  // ----- Validation ---
-  val validationEngine = new ValidationADSB()
+        validateAddrBlacklist = config.validation.contains("blacklist") || config.validation.contains("blacklist.addr"),
+        validateIpBlacklist = config.validation.contains("blacklist.ip"),
+        blacklistAddr = config.blacklistAddr,
+        blacklistIp = config.blacklistIp,
+    )
+
+  // --- Stream Validators --------------------------------------------------
+  // Additional validation is performed in batch mode to detect complex frauds
+  // and correctly distribute rewards for the same data
+  val validator = config.entity match {
+    case "adsb" => new ValidatorADSB(configValidator)
+    case "notam" => new ValidatorNOTAM(configValidator)
+    case "any" | "aeroware" | "" => new ValidatorAny(configValidator)
+    case _ => 
+      log.error(s"unknown entity: ${config.entity}")
+      sys.exit(2)
+  }
    
   // MQTT Server (Broker)
-  val connectTimeout = 1000L
-  val idleTimeout = 15000L
+  val connectTimeout = config.timeoutConnect
+  val idleTimeout = config.timeoutIdle
 
-  def asMQTT(mqttHost:String,mqttPort:Int,mqttTopic:String="adsb",clientId:String="adsb-client",protocolVer:Int = 0) = {
+  def asMQTT(mqttHost:String,mqttPort:Int,
+    //mqttTopic:String="adsb",
+    mqttTopic:String=config.entity,
+    clientId:String="aw-miner",
+    protocolVer:Int = 0) = {
     
     val mqttSettings = MqttSessionSettings().withMaxPacketSize(8192)
     val mqttSession = ActorMqttServerSession(mqttSettings)
-    val mqttConnectionId = s"${clientId}- ${math.abs(Random.nextLong())}"
+    //val mqttConnectionId = s"${clientId}- ${math.abs(Random.nextLong())}"
     
     // max connections are cumulative (not simultaneous). Disconnects do not decrement !
     val mqttMaxConnections = Int.MaxValue
@@ -150,12 +186,14 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
       //.idleTimeout(FiniteDuration(idleTimeout,TimeUnit.MILLISECONDS)) // <- This completes the Server binding ! (no client can connect)
       .flatMapMerge( mqttMaxConnections, { connection:Tcp.IncomingConnection =>
       // .map( connection => {
-          log.info(s"Miner(${connection.remoteAddress}) ---> MQTT(${mqttHost}:${mqttPort})")
+          val mqttConnectionId = connection.remoteAddress.toString
+          //val mqttConnectionId = s"${clientId}-${math.abs(Random.nextLong())}"
+          log.info(s"mqtt://${mqttHost}:${mqttPort}/${mqttTopic} <-- Miner(${connection.remoteAddress})")
           val mqttConnectionFlow: Flow[Command[Nothing], Either[MqttCodec.DecodeError, Event[Nothing]], NotUsed] =
               Mqtt
-                .serverSessionFlow(mqttSession, ByteString(connection.remoteAddress.getAddress.getAddress))                
+                .serverSessionFlow(mqttSession, ByteString(mqttConnectionId))                
                 .join(
-                  connection.flow.log(s"Miner(${connection.remoteAddress}) -> MQTT(${mqttHost}:${mqttPort})")
+                  connection.flow.log(s"mqtt://${mqttHost}:${mqttPort}/${mqttTopic} <-- Miner(${connection.remoteAddress})")
                   .watchTermination()( (v, f) => 
                     f.onComplete {
                       case Failure(err) => log.error(s"connection flow failed",err)
@@ -184,7 +222,7 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
           val subscribed = Promise[Done]()
           source
             .map(r => {
-              log.debug(s"${r} -> MQTT(${mqttHost}:${mqttPort})")
+              log.debug(s"mqtt://${mqttHost}:${mqttPort}/${mqttTopic} <- ${r}")
               r
             })
             .map {
@@ -226,14 +264,18 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
             
             // inject remote address into payload
             // EXCEPTIONALLY UNOPTIMIZED, I am just tired and want to have something working before sleep
-            log.debug(s"Payload[${Util.hex(payload.toArray)}] <- MQTT(${remoteAddr})")
-            ByteString(s"${remoteAddr.getAddress().getHostAddress()}:${remoteAddr.getPort().toString}/${Util.hex(payload.toArray)}")
+            log.debug(s"<- mqtt://${remoteAddr}(Payload[${Util.hex(payload.toArray)}])")
+            //ByteString(s"${remoteAddr.getAddress().getHostAddress()}:${remoteAddr.getPort().toString}/${Util.hex(payload.toArray)}")
+            
+            val remoteAddressFull = s"${remoteAddr.getAddress().getHostAddress()}:${remoteAddr.getPort().toString}"
+            val addressMarker = s"ADDR,${"%02d".format(remoteAddressFull.size)},${remoteAddressFull}/"
+            //val output = ByteString(addressMarker).++(payload)
+            val output = ByteString(addressMarker + Util.hex(payload.toArray))
+            output
           }
         }
       )
   }
-  
-  def filter:Seq[String] = config.filter
     
   override def source() = {
     feed.split("://").toList match {
@@ -245,29 +287,103 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
     }
   }
 
-  override def process = Flow[MSG_MinerData].map( m => m)
+  override def process = Flow[MSG_MinerData].filter( m => {
+    // fast validation path to prevent Spam
+    val pentaly = validator.validate(m)
+
+    RawStore.+(m,pentaly)
+
+    val err = if(pentaly < 0.0) {      
+      log.warn(s"penalty: ${pentaly}: ${m}")      
+      m.payload.size
+    } else {
+      0
+    }
+    
+    validatorStat.+(m.payload.size,err)
+
+    log.info(s"stat=[${m.payload.size},${err},${validatorStat}]")
+
+    err == 0
+  })
+  .mapConcat( m => {
+    m.payload.map(a => 
+      MeshData(
+        ts = a.ts,
+        pt = a.pt,
+        data = a.data
+    )).toSeq
+  })
+  .groupedWithin(Int.MaxValue,FiniteDuration(config.fanoutWindow,TimeUnit.MILLISECONDS))
+  // .mapConcat( group => {
+  //   // sort by timestamp and remove duplicates
+  //   // there is always a possibility that duplicate can be in another window at the window edge
+  //   // |         A(10,"MSG") | A(11,"MSG")         |
+  //   group
+  //     .sortBy(_.ts)
+  //     .distinctBy( f => f.data)
+  // })
+  .statefulMapConcat { () =>
+      var state = List.empty[MeshData]
+      var lastTs = System.currentTimeMillis()
+      (mm) => {
+        //val currentWindowStart = eventTime - windowDuration.toMillis
+        val uniq = mm
+          .filter(m => ! state.find(_.data == m.data).isDefined)
+          .sortBy(_.ts)
+          
+        state =  state.prependedAll( uniq )
+        val now = System.currentTimeMillis()
+        // Two window tolerances for duplication (rest will be skipped on prevalidation)
+        if( (now - lastTs) > config.fanoutDedup) {
+          // take only latest messages
+          state = state.takeWhile(m => m.ts > lastTs)
+          lastTs = now
+        }
+
+        log.debug(s"dedup: ${uniq} (state=${state})")
+        uniq
+      }
+    }
 
   def parse(data:String):Seq[MSG_MinerData] = {    
     log.debug(s"data: ${data}")
-    val remoteAddr = data.takeWhile(_ != '/')
-    val payload = data.dropWhile(_ != '/').drop(1)
+    
+    val (remoteAddr,payload) = {
+      // check if payload contains injected address
+      if(data.take(4) == "ADDR") {
+        //get size
+        val sz = data.drop(4 + 1).take(2).toInt
+
+        val remoteAddr = data.drop(4 + 1 + 2 + 1).take(sz)
+        val payload = data.drop(4 + 1 + 2 + 1 + sz + 1)
+        (remoteAddr,payload)
+      } else 
+        ("",data)
+    }
         
+    log.debug(s"${remoteAddr}: ${payload}")
+    
     val wireData = ByteString(Util.fromHexString(payload))
-    log.debug(s"encoded: ${Util.hex(wireData.toArray)}")
-
+    // log.debug(s"encoded: ${Util.hex(wireData.toArray)}")
     val encodedData = if(MSG_Options.isV1(config.protocolOptions)) Util.fromHexString(wireData.utf8String) else wireData.toArray
-    val msg = upickle.default.readBinary[MSG_MinerData](encodedData)
-    msg.copy(socket = remoteAddr)
-    val m = msg
-
-    // fast validation path to prevent Spam
-    val r1 = validationEngine.validate(m)
-
-    if(r1 > 0.0)
-      datastore.+(m)
-  
-    Seq(m)
+    //val encodedData = if(MSG_Options.isV1(config.protocolOptions)) Util.fromHexString(payload) else payload.getBytes()
+    
+    log.debug(s"encoded: ${encodedData}")
+    
+    val msgs = try {
+      val msg = upickle.default.readBinary[MSG_MinerData](encodedData)
+      Seq(
+        msg.copy(socket = remoteAddr)
+      )
+    } catch {
+      case e:Exception => 
+        log.warn(s"failed to parse: ${Util.hex(encodedData)}: ${e.getMessage()}")
+        Seq()
+    }
+    
+    msgs
   }
 
-  def transform(a: MSG_MinerData): Seq[MSG_MinerData] = Seq(a)  
+  def transform(d: MeshData): Seq[MeshData] = Seq(d)  
 }

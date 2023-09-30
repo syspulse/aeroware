@@ -140,8 +140,7 @@ object Sigmet {
       
   def decode(data:String): Try[SIGMET] = {
     log.debug(s"data='${data}'")
-    val data1 = clean(data)
-    println(s"data1='${data1}")
+    val data1 = clean(data)    
         
     parse(data1, Sigmet.parser(_)) match {
       case Parsed.Success(sm, index) => 

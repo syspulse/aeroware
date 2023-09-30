@@ -22,6 +22,7 @@ import io.syspulse.aeroware.adsb.core._
 
 import org.scalactic.TolerantNumerics
 
+
 class RadarSpec extends AnyWordSpec with Matchers with Testables {
 
   implicit val doubleEquality = TolerantNumerics.tolerantDoubleEquality(0.0001)
@@ -134,7 +135,7 @@ class RadarSpec extends AnyWordSpec with Matchers with Testables {
       val aircraft1 = radar.find(a1)
       aircraft1.get.telemetry.size should ===(8)
       val t1 = aircraft1.get.telemetry.last
-      t1 should ===(AircraftTelemetry(id = a1,Location(50.643295,30.186124,Altitude(1275.0,Units.FEET)),Speed(220.435,Units.KNOTS),VRate(-1088.0,Units.FPM),258))
+      t1 should ===(TrackTelemetry(0L,aid = a1.toId(),Location(50.643295,30.186124,Altitude(1275.0,Units.FEET)),Speed(220.435,Units.KNOTS),VRate(-1088.0,Units.FPM),258))
 
       for( t <- aircraft1.get.telemetry) {
         //info(s"${t}")
