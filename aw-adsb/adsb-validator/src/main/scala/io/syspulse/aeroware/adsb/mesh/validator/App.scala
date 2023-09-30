@@ -40,7 +40,7 @@ case class Config (
   buffer:Int = 1024*1024,
   throttle:Long = 0L,
 
-  datastore:String = "mem://",
+  RawStore:String = "mem://",
 
   validation:Seq[String] = Seq("sig,data,payload,blacklist,blacklist.ip"),
   blacklistAddr:Seq[String] = Seq(),
@@ -87,7 +87,7 @@ object App extends skel.Server {
         ArgInt('_', "buffer",s"Frame buffer (Akka Framing) (def: ${d.buffer})"),
         ArgLong('_', "throttle",s"Throttle messages in msec (def: ${d.throttle})"),
         
-        ArgString('d', "datastore",s"datastore [mem://,file://, parq://] (def: ${d.datastore})"),
+        ArgString('d', "RawStore",s"RawStore [mem://,file://, parq://] (def: ${d.RawStore})"),
 
         ArgString('v', "validation",s"What to validated (def: ${d.validation})"),
 
@@ -123,7 +123,7 @@ object App extends skel.Server {
       
       feed = c.getString("feed").getOrElse(d.feed),
       output = c.getString("output").getOrElse(d.output),
-      
+
       entity = c.getString("entity").getOrElse(d.entity),
       format = c.getString("format").getOrElse(d.format),
 
@@ -133,7 +133,7 @@ object App extends skel.Server {
       buffer = c.getInt("buffer").getOrElse(d.buffer),
       throttle = c.getLong("throttle").getOrElse(d.throttle),
           
-      datastore = c.getString("datastore").getOrElse(d.datastore),
+      RawStore = c.getString("RawStore").getOrElse(d.RawStore),
       validation = c.getListString("validation",d.validation),
 
       blacklistAddr = c.getListString("blacklist.addr",d.blacklistAddr),
@@ -151,17 +151,17 @@ object App extends skel.Server {
 
     Console.err.println(s"Config: ${config}")
     
-    val store = config.datastore.split("://").toList match {
-      case "parq" :: dir :: Nil => new DataStoreLake(dir)
-      case "parq" :: Nil => new DataStoreLake()
-      case "mem" :: Nil | "cache" :: Nil => new DataStoreMem()
+    val store = config.RawStore.split("://").toList match {
+      case "parq" :: dir :: Nil => new RawStoreLake(dir)
+      case "parq" :: Nil => new RawStoreLake()
+      case "mem" :: Nil | "cache" :: Nil => new RawStoreMem()
       case _ => {
-        Console.err.println(s"Uknown datastore: '${config.datastore}'")
+        Console.err.println(s"Uknown RawStore: '${config.RawStore}'")
         sys.exit(1)
       }
     }
 
-    log.info(s"Datastore: ${store}")        
+    log.info(s"Datstore: ${store}")        
 
     config.cmd match {
       case "validator" => {
@@ -182,8 +182,8 @@ object App extends skel.Server {
 
       case "rewards" => {        
         val rewards = new RewardADSB()
-        val datastore = new DataStoreMem()
-        val r = rewards.calculate(Instant.now.toEpochMilli(),Instant.now.toEpochMilli(),datastore)
+        val RawStore = new RawStoreMem()
+        val r = rewards.calculate(Instant.now.toEpochMilli(),Instant.now.toEpochMilli(),RawStore)
         Console.println(s"${r}")
       }
     }

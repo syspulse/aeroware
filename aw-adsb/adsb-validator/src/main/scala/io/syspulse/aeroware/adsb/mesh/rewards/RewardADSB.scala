@@ -24,7 +24,7 @@ import scala.concurrent.ExecutionContext
 
 import io.syspulse.skel.crypto.key.PK
 
-import io.syspulse.aeroware.adsb.mesh.store.DataStore
+import io.syspulse.aeroware.adsb.mesh.store.RawStore
 
 class RewardADSB extends RewardEngine {
 

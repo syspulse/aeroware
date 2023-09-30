@@ -96,13 +96,13 @@ import io.syspulse.aeroware.adsb.mesh.protocol.MinerSig
 import io.syspulse.aeroware.adsb.mesh.transport.MQTTServerFlow
 import io.syspulse.aeroware.adsb.mesh.transport.MQTTConfig
 
-import io.syspulse.aeroware.adsb.mesh.store._
 import io.syspulse.aeroware.adsb.mesh.rewards._
 import io.syspulse.aeroware.adsb.mesh.validator._
 import io.syspulse.aeroware.adsb.mesh._
 
 import akka.NotUsed
 import java.util.concurrent.atomic.AtomicLong
+import io.syspulse.aeroware.adsb.mesh.store.RawStore
 
 class ValidatorStat {
   val total = new AtomicLong()
@@ -123,7 +123,7 @@ case class PublishWithAddr (remoteAddr: InetSocketAddress,
                             packetId: Option[PacketId],
                             payload: ByteString)
 
-class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit config:Config)
+class PipelineValidator(feed:String,output:String,RawStore:RawStore)(implicit config:Config)
   extends Pipeline[MSG_MinerData,MeshData,MeshData](feed,output,config.throttle,config.delimiter,config.buffer) {
   
   implicit protected val log = Logger(s"${this}")
@@ -291,7 +291,7 @@ class PipelineValidator(feed:String,output:String,datastore:DataStore)(implicit 
     // fast validation path to prevent Spam
     val pentaly = validator.validate(m)
 
-    datastore.+(m,pentaly)
+    RawStore.+(m,pentaly)
 
     val err = if(pentaly != 0.0) {      
       log.warn(s"penalty: ${pentaly}: ${m}")      
