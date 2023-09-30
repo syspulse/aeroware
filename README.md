@@ -34,32 +34,7 @@ Simple Topology:
 
 <br>
 
-
-__adsb-miner__
-
-```
-./run-miner.sh -f data/flight-1000.raw --throttle=500
-```
-
-__adsb-validator__
-
-```
-./run-validator.sh -o json:// >>/tmp/adsb
-```
-
-__adsb-radar__
-
-```
-GOD=1 ./run-radar.sh server -f tail:///tmp/adsb
-```
-
-__wscat__
-
-```
-wscat --connect ws://localhost:8080/api/v1/radar/ws
-```
-
-
+See [aw-adsb/README.md]() for details
 
 ----
 

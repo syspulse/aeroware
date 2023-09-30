@@ -38,8 +38,10 @@ case class Config (
   throttle:Long = 0L,
 
   timeoutConnect:Long = 3000L,
-  timeoutIdle:Long = 60000L,
+  timeoutIdle:Long = 1000L * 60 * 60,
   timeoutRetry:Long = 10000L,
+
+  jitter:Long = 0L,          // time jitter to add to current timestamp
 
   cmd:String = "miner",
   params: Seq[String] = Seq(),
@@ -81,6 +83,8 @@ object App extends skel.Server {
         ArgLong('_', "timeout.idle",s"Idle connection timeout in msec (def: ${d.timeoutIdle})"),
         ArgLong('_', "timeout.connect",s"Connection timeout in msec (def: ${d.timeoutConnect})"),
         ArgLong('_', "timeout.retry",s"Retry timeout in msec (def: ${d.timeoutRetry})"),
+
+        ArgLong('_', "jitter",s"Time jitter to add to Timestamp (def: ${d.jitter})"),
                 
         ArgCmd("miner","Miner pipeline"),
         
@@ -113,6 +117,8 @@ object App extends skel.Server {
       timeoutIdle = c.getLong("timeout.idle").getOrElse(d.timeoutIdle),
       timeoutConnect = c.getLong("timeout.connect").getOrElse(d.timeoutConnect),
       timeoutRetry = c.getLong("timeout.retry").getOrElse(d.timeoutRetry),
+
+      jitter = c.getLong("jitter").getOrElse(d.jitter),
           
       cmd = c.getCmd().getOrElse(d.cmd),
       params = c.getParams(),

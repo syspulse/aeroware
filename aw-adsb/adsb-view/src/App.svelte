@@ -3,7 +3,6 @@
 	import { writable } from 'svelte/store'
 	import { WS } from './ws.js'
 
-	
 	import L from 'leaflet';
 	import MapToolbar from './MapToolbar.svelte';
 	import MarkerPopup from './MarkerPopup.svelte';
@@ -22,6 +21,7 @@
 	//var markerLocations = [];
 	var aircraftsList = [];
 	var aircraftsMap = {};
+	//var aircraftsListUpdated = [];
 	
 	function decodeData(data) {
 		let attr = data.split(",");
@@ -43,12 +43,13 @@
 
 	function updateWithData(raw) {
 		const data = decodeDataList(raw);
-        return update(data);
+      return update(data);
 	}
 
 	function update(data) {
-		data.forEach( t => {
-			let telemetry = decodeData(t);
+    data.forEach( t => {
+      console.log("====> ",t)
+      let telemetry = decodeData(t);
 			let icaoId = telemetry[1];
 			var aircraft = {};
 			if(icaoId in aircraftsMap) 
@@ -60,9 +61,11 @@
 					'tel': []
 				};
 			};
-			
-			if(aircraft['tel'] === undefined || aircraft['tel'].length > 0) {
-				aircraft['tel'] = [];
+			      
+
+			if(aircraft['tel'] === undefined || aircraft['tel'].length > 5) {
+				//aircraft['tel'] = [];
+        aircraft['tel'].shift(aircraft['tel'].length - 5);
 			}
 				aircraft['tel'].push( {
 					'lat':telemetry[3],
@@ -84,7 +87,7 @@
 
 		var aircraftsListUpdated = [];
 		for(let key in aircraftsMap)
-   			if(aircraftsMap[key] !== undefined)
+   		if(aircraftsMap[key] !== undefined)
 			   aircraftsListUpdated.push(aircraftsMap[key]);
 
 		//console.log(aircraftsListUpdated);
@@ -96,24 +99,29 @@
 	}
 
 	onMount(async () => {
-        const response = await fetch('http://localhost:5000/data1.csv');
+        const response = await fetch('http://localhost:5000/data.csv');
         const dataRsp = await response.text();
 		
 		const data = decodeDataList(dataRsp);
         aircraftsList = update(data);
     })
 
-	const initialView = [50.340905, 30.870973];//[50.694122314453125,30.47310494087838]//[50.4584,30.3381];//[39.8283, -98.5795];
+	const initialView = 
+	[50.2490977,30.145533,12.79];
+    // [50.3688672,30.1594487,15];
+    //[50.4215603,30.1517414,15];
+    // [50.420905, 30.170973];
+    //[50.694122314453125,30.47310494087838]//[50.4584,30.3381];//[39.8283, -98.5795];
 	
 	function createMap(container) {
-	  let m = L.map(container, {preferCanvas: true }).setView(initialView, 9);
+	  let m = L.map(container, {preferCanvas: true }).setView(initialView, 13);
     L.tileLayer(
 	    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
 	    {
 	      attribution: `&copy;<a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>,
 	        &copy;<a href="https://carto.com/attributions" target="_blank">CARTO</a>`,
-	      subdomains: 'abcd',
-	      maxZoom: 14,
+	      subdomains: 'aeroware',
+        maxZoom: 14,
 	    }
 	  ).addTo(m);
 
@@ -279,15 +287,23 @@
 		for(let aircraft of aircraftsList) {
 			let icao = aircraft['icao'];
 			let telemetry = aircraft['tel'];
+      
 			
 			let markerLocations = telemetry.map(t => {
 				return [t['lat'],t['lon'],t['alt']];
 			});
 
-			for(let loc of markerLocations) {
-				let m = createAircraftMarker(icao,loc);
-				markerLayers.addLayer(m);
-			}
+      // add marker only to last location
+			
+      // for(let loc of markerLocations) {
+			// 	let m = createAircraftMarker(icao,loc);
+			// 	markerLayers.addLayer(m);
+			// }
+      let lastLoc = markerLocations[markerLocations.length-1];
+      
+      let m = createAircraftMarker(icao,lastLoc);
+      createAircraftMarker(icao,)
+			markerLayers.addLayer(m);
 
 			lineLayers = createLines(markerLocations);
 		
@@ -319,8 +335,7 @@
 	$: {
 		let data = $WS;
 		if(data) {
-			let updatedAircraftList = updateWithData(data);
-			//console.log(updatedAircraftList);
+			let updatedAircraftList = updateWithData(data);			
 
 			markerLayers.remove();
 

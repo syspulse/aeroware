@@ -137,13 +137,13 @@ class PipelineValidator(feed:String,output:String,RawStore:RawStore)(implicit co
   val wr = wallet.load()
   
   val validatorAddr = wallet.signers.values.toList.head.addr
-
+  
   val configValidator = ValidatorConfig (
         validateTs = config.validation.contains("ts"),
         validateSig = config.validation.contains("sig"),
         validateData = config.validation.contains("data"),
         validatePayload = config.validation.contains("payload"),
-        toleranceTs = config.validation.find(_ == "ts.tolernace").map(_.toLong).getOrElse(1000L),
+        toleranceTs = config.toleranceTs,
 
         validateAddrBlacklist = config.validation.contains("blacklist") || config.validation.contains("blacklist.addr"),
         validateIpBlacklist = config.validation.contains("blacklist.ip"),
@@ -293,7 +293,7 @@ class PipelineValidator(feed:String,output:String,RawStore:RawStore)(implicit co
 
     RawStore.+(m,pentaly)
 
-    val err = if(pentaly != 0.0) {      
+    val err = if(pentaly < 0.0) {      
       log.warn(s"penalty: ${pentaly}: ${m}")      
       m.payload.size
     } else {
@@ -328,11 +328,14 @@ class PipelineValidator(feed:String,output:String,RawStore:RawStore)(implicit co
       var lastTs = System.currentTimeMillis()
       (mm) => {
         //val currentWindowStart = eventTime - windowDuration.toMillis
-        val uniq = mm.filter(m => ! state.find(_.data == m.data).isDefined)
+        val uniq = mm
+          .filter(m => ! state.find(_.data == m.data).isDefined)
+          .sortBy(_.ts)
+          
         state =  state.prependedAll( uniq )
         val now = System.currentTimeMillis()
         // Two window tolerances for duplication (rest will be skipped on prevalidation)
-        if( (now - lastTs) > config.fanoutWindow * 2 ) {
+        if( (now - lastTs) > config.fanoutDedup) {
           // take only latest messages
           state = state.takeWhile(m => m.ts > lastTs)
           lastTs = now

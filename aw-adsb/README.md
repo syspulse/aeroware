@@ -16,6 +16,53 @@
 
 <br>
 
+## Demo 
+
+### Running with historical telemetry (from the past)
+
+__adsb-radar__
+
+It is import to specify `--past=-1` to simulate events from the past.
+
+Otherwise API will not return __last__ events from the store (indexed by Timestamp of event for historical queries):
+
+```
+GOD=1 ./run-radar.sh server -f tail:///tmp/adsb --past=-1
+```
+
+__wscat__ (to see telemetry broadcast)
+
+```
+wscat --connect ws://localhost:8080/api/v1/radar/ws
+```
+
+__adsb-validator__
+
+By default, validator checks for old data (`--validation` options),
+So tolerance should be changed to large value to allow miner jitter:
+
+```
+./run-validator.sh -o json:// >>/tmp/adsb --tolerance.ts=10000
+```
+
+__adsb-miner-1__ (Miner-1)
+
+It is nice to specify `block.size=1` to have only one update message
+
+```
+./run-miner.sh -f data/adsb/flight-100.raw --throttle=500 --keystore.file=keystore/miner-1.json --block.size=1
+```
+
+__adsb-miner-2__ (Miner-2)
+
+`--jitter` allows to introduce delta to timestamp of the message to simulate lag or future:
+
+```
+./run-miner.sh -f data/adsb/flight-100.raw --throttle=500 --keystore.file=keystore/miner-2.json --block.size=1 --jitter=-150
+```
+
+
+
 ----
 
 ## Resources and Credits

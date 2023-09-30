@@ -29,7 +29,8 @@ case class Config (
   blockWindow: Long = 1000L,
   protocolOptions:Int = MSG_Options.V_1 | MSG_Options.O_EC,
   
-  fanoutWindow: Long = 3000L,
+  fanoutWindow: Long = 1000L,
+  fanoutDedup: Long = 9000L,
 
   entity:String = "adsb",
   format:String = "",
@@ -40,11 +41,12 @@ case class Config (
   buffer:Int = 1024*1024,
   throttle:Long = 0L,
 
-  RawStore:String = "mem://",
+  datastore:String = "mem://",
 
-  validation:Seq[String] = Seq("sig,data,payload,blacklist,blacklist.ip"),
+  validation:Seq[String] = Seq("ts,sig,data,payload,blacklist,blacklist.ip"),
   blacklistAddr:Seq[String] = Seq(),
   blacklistIp:Seq[String] = Seq(),
+  toleranceTs:Long = 750L,
 
   id:String = System.currentTimeMillis().toString,
 
@@ -87,14 +89,16 @@ object App extends skel.Server {
         ArgInt('_', "buffer",s"Frame buffer (Akka Framing) (def: ${d.buffer})"),
         ArgLong('_', "throttle",s"Throttle messages in msec (def: ${d.throttle})"),
         
-        ArgString('d', "RawStore",s"RawStore [mem://,file://, parq://] (def: ${d.RawStore})"),
+        ArgString('d', "datastore",s"datastore [mem://,file://, parq://] (def: ${d.datastore})"),
 
         ArgString('v', "validation",s"What to validated (def: ${d.validation})"),
 
         ArgString('_', "blacklist.addr",s"Address blacklist (def: ${d.blacklistAddr})"),
         ArgString('_', "blacklist.ip",s"IP blacklist (def: ${d.blacklistIp})"),
-
+        ArgLong('_', "tolerance.ts",s"Timestamp validation tolerance in msec (def: ${d.toleranceTs})"),
+        
         ArgLong('_', "fanout.window",s"Window to group output data (msec) (def: ${d.fanoutWindow})"),
+        ArgLong('_', "fanout.dedup",s"Dedup Window to track duplicattes (msec) (def: ${d.fanoutDedup})"),
 
         ArgString('_', "id",s"Validator ID (unique over restarts) (def: ${d.id})"),
 
@@ -120,6 +124,7 @@ object App extends skel.Server {
       protocolOptions = MSG_Options.fromArg(c.getString("proto.options")).getOrElse(d.protocolOptions),
 
       fanoutWindow = c.getLong("fanout.window").getOrElse(d.fanoutWindow),
+      fanoutDedup = c.getLong("fanout.dedup").getOrElse(d.fanoutDedup),
       
       feed = c.getString("feed").getOrElse(d.feed),
       output = c.getString("output").getOrElse(d.output),
@@ -133,11 +138,12 @@ object App extends skel.Server {
       buffer = c.getInt("buffer").getOrElse(d.buffer),
       throttle = c.getLong("throttle").getOrElse(d.throttle),
           
-      RawStore = c.getString("RawStore").getOrElse(d.RawStore),
+      datastore = c.getString("datastore").getOrElse(d.datastore),
+      
       validation = c.getListString("validation",d.validation),
-
       blacklistAddr = c.getListString("blacklist.addr",d.blacklistAddr),
       blacklistIp = c.getListString("blacklist.ip",d.blacklistIp),
+      toleranceTs = c.getLong("tolerance.ts").getOrElse(d.toleranceTs),
 
       id = c.getString("id").getOrElse(d.id),
 
@@ -151,12 +157,12 @@ object App extends skel.Server {
 
     Console.err.println(s"Config: ${config}")
     
-    val store = config.RawStore.split("://").toList match {
+    val store = config.datastore.split("://").toList match {
       case "parq" :: dir :: Nil => new RawStoreLake(dir)
       case "parq" :: Nil => new RawStoreLake()
       case "mem" :: Nil | "cache" :: Nil => new RawStoreMem()
       case _ => {
-        Console.err.println(s"Uknown RawStore: '${config.RawStore}'")
+        Console.err.println(s"Uknown datastore: '${config.datastore}'")
         sys.exit(1)
       }
     }
@@ -182,8 +188,8 @@ object App extends skel.Server {
 
       case "rewards" => {        
         val rewards = new RewardADSB()
-        val RawStore = new RawStoreMem()
-        val r = rewards.calculate(Instant.now.toEpochMilli(),Instant.now.toEpochMilli(),RawStore)
+        val datastore = new RawStoreMem()
+        val r = rewards.calculate(Instant.now.toEpochMilli(),Instant.now.toEpochMilli(),datastore)
         Console.println(s"${r}")
       }
     }

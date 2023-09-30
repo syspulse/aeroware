@@ -20,7 +20,9 @@ import java.util.concurrent.TimeUnit
 import io.syspulse.aeroware.adsb.radar.Expiry
 import scala.concurrent.Await
 
-class RadarWebSocket()(implicit ex:ExecutionContext,mat:ActorMaterializer) extends WebSocket(idleTimeout = 1000L*60*60*24) {
+import io.syspulse.aeroware.adsb.radar.Config
+
+class RadarWebSocket(idleTimeout:Long)(implicit ex:ExecutionContext,mat:ActorMaterializer) extends WebSocket(idleTimeout) {
   override def process(m:Message,a:ActorRef):Message = {
     val txt = m.asTextMessage.getStrictText
     
@@ -30,18 +32,18 @@ class RadarWebSocket()(implicit ex:ExecutionContext,mat:ActorMaterializer) exten
   }
 }
 
-class RadarRoutesWS(store: RadarStore,uri:String)(implicit context: ActorContext[_]) extends WsRoutes(uri)(context) {  
+class RadarRoutesWS(store: RadarStore,uri:String)(implicit context: ActorContext[_],config:Config) extends WsRoutes(uri)(context) {  
   val log = Logger(s"${this}")
   
   import spray.json._
   import RadarProto._
 
-  val rws = new RadarWebSocket()
+  val rws = new RadarWebSocket(config.timeoutIdle)
   override def ws:WebSocket = rws
 
-  val signal = new Expiry(FiniteDuration(1000L,TimeUnit.MILLISECONDS),() => {
+  val signal = new Expiry(FiniteDuration(config.broadcastFreq,TimeUnit.MILLISECONDS),() => {
     val ts1 = System.currentTimeMillis()
-    val f = store.??(ts1 - 1000L, ts1)
+    val f = store.??(ts1 - config.broadcastFreq, ts1)
     //val f = store.all
     Await.result(f,FiniteDuration(3000L,TimeUnit.MILLISECONDS)) match {
       case Success(tt) => 
@@ -50,6 +52,8 @@ class RadarRoutesWS(store: RadarStore,uri:String)(implicit context: ActorContext
           val payload = tt.map(t => 
             s"${t.ts},${t.aid.icaoId},${t.aid.callsign},${t.loc.lat},${t.loc.lon},${t.loc.alt.alt},${t.hSpeed.v},${t.vRate.v},${t.heading}"
           ).mkString("\n")
+          
+          log.info(s"broadcast: (${payload.size})")
           rws.broadcastText(payload)
         }
       case Failure(e) => 

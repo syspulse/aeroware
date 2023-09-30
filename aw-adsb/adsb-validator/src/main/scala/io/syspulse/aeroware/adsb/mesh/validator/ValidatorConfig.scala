@@ -30,7 +30,7 @@ case class ValidatorConfig(
   validateData:Boolean = true,    // data is valid (parsing, heavy operation)
   validatePayload:Boolean = true, // data is present
   
-  toleranceTs:Long = 1000L,
+  toleranceTs:Long = 750L,
 
   validateAddrBlacklist:Boolean = true,   // validate permit on Address Blacklist
   blacklistAddr:Seq[String] = Seq(),

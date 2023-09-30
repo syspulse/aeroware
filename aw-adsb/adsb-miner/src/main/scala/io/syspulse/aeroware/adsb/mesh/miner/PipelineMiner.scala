@@ -224,14 +224,19 @@ abstract class PipelineMiner(feed:String,output:String)(implicit config:Config)
   }
 
   val encoder = Flow[Seq[Minable]].map( aa => { 
+
+    // timestamp of the Event/Message (e.g. ADSB received from hardware, like dump1090)
     val data = aa.map(a => MSG_MinerPayload(
       a.ts,
       getPayloadType(), 
       a.raw)
     ).toArray
     
+    // timestamp of the Miner data with possible jitter
+    val tsData = System.currentTimeMillis + config.jitter
+
     val msg = MSG_MinerData(
-      ts = System.currentTimeMillis(),
+      ts = tsData,
       addr = signerAddrBytes,
       payload = data,
       sig = MinerSig.empty,

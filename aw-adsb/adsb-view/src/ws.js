@@ -7,7 +7,9 @@ import { readable } from 'svelte/store'
 export const WS = readable(0, set => {
   // this function is called once, when the first subscriber to the store arrives
 
-  let socket = new WebSocket("ws://localhost:8080/api/v1/radar/ws");
+  let radarUrl = "ws://localhost:8080/api/v1/radar/ws"
+  console.log("Connecting ->", "ws://localhost:8080/api/v1/radar/ws")
+  let socket = new WebSocket(radarUrl);
   
   socket.onopen = function( event ) {
     console.log("Connected");
@@ -17,6 +19,8 @@ export const WS = readable(0, set => {
   socket.onmessage = function (event) {
     //var data = JSON.parse(event.data);
     let data = event.data;
+
+    console.log(data);
 
     // we're using the `set` function we've been provided to update the value
     // of the store
