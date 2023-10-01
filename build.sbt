@@ -270,7 +270,7 @@ lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
   )
 
 lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
-  .dependsOn(core,aircraft,adsb_core,adsb_ingest,adsb_mesh,notam)
+  .dependsOn(core,aircraft,adsb_core,adsb_ingest,adsb_mesh,notam,metar)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .settings (
@@ -296,7 +296,7 @@ lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
   )
 
 lazy val adsb_validator = (project in file("aw-adsb/adsb-validator"))
-  .dependsOn(core,aircraft,adsb_core,adsb_ingest,adsb_mesh,notam)
+  .dependsOn(core,aircraft,adsb_core,adsb_ingest,adsb_mesh,notam,metar)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .settings (

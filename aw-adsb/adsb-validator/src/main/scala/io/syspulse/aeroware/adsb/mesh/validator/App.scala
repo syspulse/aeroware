@@ -32,7 +32,7 @@ case class Config (
   fanoutWindow: Long = 1000L,
   fanoutDedup: Long = 9000L,
 
-  entity:String = "adsb",
+  entity:String = "any",
   format:String = "",
 
   limit:Long = 0L,

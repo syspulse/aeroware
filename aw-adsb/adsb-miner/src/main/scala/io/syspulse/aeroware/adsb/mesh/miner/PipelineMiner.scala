@@ -293,7 +293,8 @@ abstract class PipelineMiner(feed:String,output:String)(implicit config:Config)
   def preparse(data:String):List[String] = ???
 
   def parse(data:String):Seq[Minable] = {
-    if(data.isEmpty()) return Seq()
+    // skip empty lines 
+    if(data.trim.isEmpty()) return Seq()
     try {      
       val a = preparse(data) match {
         case ts :: a :: Nil => decode(a,ts.toLong)

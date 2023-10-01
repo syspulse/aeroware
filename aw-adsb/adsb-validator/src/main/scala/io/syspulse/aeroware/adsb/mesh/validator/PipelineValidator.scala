@@ -289,12 +289,12 @@ class PipelineValidator(feed:String,output:String,RawStore:RawStore)(implicit co
 
   override def process = Flow[MSG_MinerData].filter( m => {
     // fast validation path to prevent Spam
-    val pentaly = validator.validate(m)
+    val penalty = validator.validate(m)
 
-    RawStore.+(m,pentaly)
+    RawStore.+(m,penalty)
 
-    val err = if(pentaly < 0.0) {      
-      log.warn(s"penalty: ${pentaly}: ${m}")      
+    val err = if(penalty < 0.0) {      
+      log.warn(s"penalty: ${penalty}: ${Util.hex(m.addr)}")
       m.payload.size
     } else {
       0

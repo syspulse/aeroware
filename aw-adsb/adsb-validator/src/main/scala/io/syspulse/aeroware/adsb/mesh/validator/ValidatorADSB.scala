@@ -38,7 +38,9 @@ class ValidatorADSB(ops:ValidatorConfig) extends ValidatorCore(ops) {
         val a = Adsb.decode(d.data,d.ts)
         a match {
           case Success(a) => 0.0
-          case Failure(e) => Rewards.penaltyInvalidData
+          case Failure(e) => 
+            log.warn(s"could not decode: ${d.data}",e)
+            Rewards.penaltyInvalidData
         }        
       }) 
     } else 

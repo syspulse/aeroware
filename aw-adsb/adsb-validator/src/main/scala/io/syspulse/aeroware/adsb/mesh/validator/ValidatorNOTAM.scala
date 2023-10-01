@@ -31,7 +31,9 @@ class ValidatorNOTAM(ops:ValidatorConfig) extends ValidatorCore(ops) {
         val a = Notam.decode(d.data)
         a match {
           case Success(a) => 0.0
-          case Failure(e) => Rewards.penaltyInvalidData
+          case Failure(e) => 
+            log.warn(s"could not decode: ${d.data}",e)
+            Rewards.penaltyInvalidData
         }        
       }) 
     } else 0.0
