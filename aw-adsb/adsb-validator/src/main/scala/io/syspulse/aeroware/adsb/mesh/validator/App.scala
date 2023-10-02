@@ -158,8 +158,12 @@ object App extends skel.Server {
     Console.err.println(s"Config: ${config}")
     
     val store = config.datastore.split("://").toList match {
-      case "parq" :: dir :: Nil => new RawStoreLake(dir)
-      case "parq" :: Nil => new RawStoreLake()
+      case "parq" :: dir :: Nil => new RawStoreParq(dir)
+      case "parq" :: Nil => new RawStoreParq()
+      
+      case "file" :: dir :: Nil => new RawStoreFile(dir)
+      case "file" :: Nil => new RawStoreFile()
+      
       case "mem" :: Nil | "cache" :: Nil => new RawStoreMem()
       case _ => {
         Console.err.println(s"Uknown datastore: '${config.datastore}'")
