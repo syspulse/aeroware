@@ -24,7 +24,7 @@ import scala.concurrent.ExecutionContext
 
 import io.syspulse.skel.crypto.key.PK
 
-import io.syspulse.aeroware.adsb.mesh.store.RawStore
+import io.syspulse.aeroware.adsb.mesh.store.MinedStore
 
 case class RewardMiner(addr:String,messages:Long,reward:Double)
 
@@ -36,7 +36,7 @@ trait RewardEngine {
 
   def calculate(a:MSG_MinerData):Double
 
-  def calculate(ts0:Long,ts1:Long,store:RawStore):RewardResults = {
+  def calculate(ts0:Long,ts1:Long,store:MinedStore):RewardResults = {
     RewardResults(0,0.0,Set()) 
   }
 

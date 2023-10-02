@@ -8,14 +8,14 @@ import io.jvm.uuid._
 
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
 
-trait RawStore {
+trait MinedStore {
   
-  def +(m:MSG_MinerData,penalty:Double):Future[Try[RawStore]]
+  def +(m:MSG_MinerData,penalty:Double):Future[Try[MinedStore]]
   
-  def ?(ts0:Long,ts1:Long):Future[Try[Seq[RawData]]]
-  def ??(addr:String):Future[Try[Seq[RawData]]]
+  def ?(ts0:Long,ts1:Long):Future[Try[Seq[MinedData]]]
+  def ??(addr:String):Future[Try[Seq[MinedData]]]
   
-  def all:Future[Try[Seq[RawData]]]
+  def all:Future[Try[Seq[MinedData]]]
 
   def size:Long
 }

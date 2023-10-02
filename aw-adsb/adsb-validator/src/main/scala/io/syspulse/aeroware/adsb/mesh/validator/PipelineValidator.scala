@@ -103,7 +103,7 @@ import io.syspulse.aeroware.adsb.mesh._
 import akka.NotUsed
 import java.util.concurrent.atomic.AtomicLong
 
-import io.syspulse.aeroware.adsb.mesh.store.RawStore
+import io.syspulse.aeroware.adsb.mesh.store.MinedStore
 
 case class AddrStat(total:AtomicLong = new AtomicLong(),errors:AtomicLong = new AtomicLong()) {
   override def toString = s"${total.get()},${errors.get()}"
@@ -141,7 +141,7 @@ case class PublishWithAddr (remoteAddr: InetSocketAddress,
                             packetId: Option[PacketId],
                             payload: ByteString)
 
-class PipelineValidator(feed:String,output:String,RawStore:RawStore)(implicit config:Config)
+class PipelineValidator(feed:String,output:String,MinedStore:MinedStore)(implicit config:Config)
   extends Pipeline[MSG_MinerData,MeshData,MeshData](feed,output,config.throttle,config.delimiter,config.buffer) {
   
   implicit protected val log = Logger(s"${this}")
@@ -309,7 +309,7 @@ class PipelineValidator(feed:String,output:String,RawStore:RawStore)(implicit co
     // fast validation path to prevent Spam
     val penalty = validator.validate(m)
 
-    RawStore.+(m,penalty)
+    MinedStore.+(m,penalty)
 
     val err = if(penalty < 0.0) {      
       log.warn(s"penalty: ${penalty}: ${Util.hex(m.addr)}")

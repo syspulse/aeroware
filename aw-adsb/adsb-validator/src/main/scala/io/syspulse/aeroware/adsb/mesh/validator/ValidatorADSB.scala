@@ -22,10 +22,10 @@ import io.syspulse.skel.crypto.key.PK
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
 import io.syspulse.aeroware.adsb.mesh.protocol._
-import io.syspulse.aeroware.adsb.mesh.rewards._
 import io.syspulse.aeroware.adsb.mesh.guard.GuardEngine
 import io.syspulse.aeroware.adsb.mesh.guard.GuardBlacklistAddr
 import io.syspulse.aeroware.adsb.mesh.guard.GuardBlacklistIp
+import io.syspulse.aeroware.adsb.mesh.rewards.Rewards
 
 class ValidatorADSB(ops:ValidatorConfig) extends ValidatorCore(ops) {
       

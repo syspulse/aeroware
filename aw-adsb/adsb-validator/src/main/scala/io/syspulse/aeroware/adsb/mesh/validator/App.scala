@@ -158,13 +158,13 @@ object App extends skel.Server {
     Console.err.println(s"Config: ${config}")
     
     val store = config.datastore.split("://").toList match {
-      case "parq" :: dir :: Nil => new RawStoreParq(dir)
-      case "parq" :: Nil => new RawStoreParq()
+      case "parq" :: dir :: Nil => new MinedStoreParq(dir)
+      case "parq" :: Nil => new MinedStoreParq()
       
-      case "file" :: dir :: Nil => new RawStoreFile(dir)
-      case "file" :: Nil => new RawStoreFile()
+      case "file" :: dir :: Nil => new MinedStoreFile(dir)
+      case "file" :: Nil => new MinedStoreFile()
       
-      case "mem" :: Nil | "cache" :: Nil => new RawStoreMem()
+      case "mem" :: Nil | "cache" :: Nil => new MinedStoreMem()
       case _ => {
         Console.err.println(s"Uknown datastore: '${config.datastore}'")
         sys.exit(1)
@@ -192,7 +192,7 @@ object App extends skel.Server {
 
       case "rewards" => {        
         val rewards = new RewardADSB()
-        val datastore = new RawStoreMem()
+        val datastore = new MinedStoreMem()
         val r = rewards.calculate(Instant.now.toEpochMilli(),Instant.now.toEpochMilli(),datastore)
         Console.println(s"${r}")
       }

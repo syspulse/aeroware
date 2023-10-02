@@ -13,26 +13,24 @@ import scala.collection.mutable
 import scala.concurrent.Future
 import io.syspulse.skel.util.Util
 
-import io.syspulse.aeroware.adsb.mesh.store.RawData
-import io.syspulse.aeroware.adsb.mesh.store.RawStore
 
-class RawStoreMem extends RawStore {
+class MinedStoreMem extends MinedStore {
   implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
   
   val log = Logger(s"${this}")
   
-  var storeAddr: mutable.Map[String,mutable.Seq[RawData]] = mutable.HashMap()
-  var storeTs: mutable.TreeMap[Long,mutable.Seq[RawData]] = mutable.TreeMap()
+  var storeAddr: mutable.Map[String,mutable.Seq[MinedData]] = mutable.HashMap()
+  var storeTs: mutable.TreeMap[Long,mutable.Seq[MinedData]] = mutable.TreeMap()
 
-  def all:Future[Try[Seq[RawData]]] = Future{ Success(storeAddr.values.reduce(_ ++ _).toSeq) }
+  def all:Future[Try[Seq[MinedData]]] = Future{ Success(storeAddr.values.reduce(_ ++ _).toSeq) }
 
   def size:Long = storeAddr.values.foldLeft(0)(_ + _.size)
 
-  def +(msg:MSG_MinerData,penalty:Double):Future[Try[RawStore]] = Future { 
+  def +(msg:MSG_MinerData,penalty:Double):Future[Try[MinedStore]] = Future { 
     val addr = Util.hex(msg.addr)
         
     msg.payload.foreach{ d => 
-      val vd = RawData(msg.ts,addr,d.ts,penalty,d.pt,d.data)
+      val vd = MinedData(msg.ts,addr,d.ts,penalty,d.pt,d.data)
       log.info(s"add: ${vd}")
       
       storeAddr.getOrElseUpdate(addr, mutable.Seq()).+:(vd)
@@ -42,11 +40,11 @@ class RawStoreMem extends RawStore {
     Success(this)
   }
 
-  def ?(ts0:Long,ts1:Long):Future[Try[Seq[RawData]]] = Future {
+  def ?(ts0:Long,ts1:Long):Future[Try[Seq[MinedData]]] = Future {
     Success(storeTs.range(ts0,ts1+1).values.flatten.toSeq)
   }
 
-  def ??(addr:String):Future[Try[Seq[RawData]]] = Future { 
+  def ??(addr:String):Future[Try[Seq[MinedData]]] = Future { 
     storeAddr.get(addr) match {
       case Some(dd) => Success(dd.toSeq)
       case None => Failure(new Exception(s"not found: ${addr}"))
