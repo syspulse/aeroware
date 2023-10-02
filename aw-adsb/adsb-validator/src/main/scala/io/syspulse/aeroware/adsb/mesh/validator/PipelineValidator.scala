@@ -102,19 +102,37 @@ import io.syspulse.aeroware.adsb.mesh._
 
 import akka.NotUsed
 import java.util.concurrent.atomic.AtomicLong
+
 import io.syspulse.aeroware.adsb.mesh.store.RawStore
+
+case class AddrStat(total:AtomicLong = new AtomicLong(),errors:AtomicLong = new AtomicLong()) {
+  override def toString = s"${total.get()},${errors.get()}"
+}
 
 class ValidatorStat {
   val total = new AtomicLong()
   val errors = new AtomicLong()
+  var addrs = Map[String,AddrStat]()
   
-  def +(sz:Long,err:Long):Long = {
-    if(err != 0)
-      errors.addAndGet(err)
+  def +(addr:Array[Byte],sz:Long,err:Long):Long = {
+    val a = Util.hex(addr)
+    val as = addrs.getOrElse(a,AddrStat())
 
+    if(err != 0) {
+      errors.addAndGet(err)
+      as.errors.addAndGet(err)
+    }
     total.addAndGet(sz)
+    as.total.addAndGet(sz)
+    addrs = addrs + (a -> as)
+  
+    total.get()
   }
-  override def toString = s"${total},${errors}"
+
+  override def toString = {
+    s"${total},${errors}: "+
+    addrs.take(10).map{ case(addr,as) => s"[${addr}:(${as.toString})"}.mkString(",")
+  }
 }
 
 case class PublishWithAddr (remoteAddr: InetSocketAddress,
@@ -300,7 +318,7 @@ class PipelineValidator(feed:String,output:String,RawStore:RawStore)(implicit co
       0
     }
     
-    validatorStat.+(m.payload.size,err)
+    validatorStat.+(m.addr,m.payload.size,err)
 
     log.info(s"stat=[${m.payload.size},${err},${validatorStat}]")
 

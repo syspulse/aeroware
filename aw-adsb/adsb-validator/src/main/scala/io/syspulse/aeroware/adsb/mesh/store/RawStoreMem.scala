@@ -13,6 +13,9 @@ import scala.collection.mutable
 import scala.concurrent.Future
 import io.syspulse.skel.util.Util
 
+import io.syspulse.aeroware.adsb.mesh.store.RawData
+import io.syspulse.aeroware.adsb.mesh.store.RawStore
+
 class RawStoreMem extends RawStore {
   implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
   
@@ -29,7 +32,7 @@ class RawStoreMem extends RawStore {
     val addr = Util.hex(msg.addr)
         
     msg.payload.foreach{ d => 
-      val vd = RawData(msg.ts,addr,d.ts,d.pt,d.data,penalty)
+      val vd = RawData(msg.ts,addr,d.ts,penalty,d.pt,d.data)
       log.info(s"add: ${vd}")
       
       storeAddr.getOrElseUpdate(addr, mutable.Seq()).+:(vd)

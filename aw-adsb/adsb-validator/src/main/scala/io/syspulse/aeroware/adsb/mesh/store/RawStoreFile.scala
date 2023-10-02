@@ -21,6 +21,9 @@ import io.syspulse.aeroware.adsb.mesh.validator.Config
 import java.io.BufferedWriter
 import java.io.FileWriter
 
+import io.syspulse.aeroware.adsb.mesh.store.RawData
+import io.syspulse.aeroware.adsb.mesh.store.RawStore
+
 class CsvFileRotator(file:String,ts0:Long = Long.MaxValue,flushes:Int = 0) extends AutoCloseable {
   val log = Logger(s"${this}")
 
@@ -40,10 +43,10 @@ class CsvFileRotator(file:String,ts0:Long = Long.MaxValue,flushes:Int = 0) exten
       if(nextTs == 0L)
         nextTs = ts0
 
-      val f = Util.pathToFullPath(Util.toFileWithTime(file,System.currentTimeMillis()))    
-    
+      val f = Util.toFileWithTime(file,System.currentTimeMillis())
+      val dir = Util.getParentUri(f)    
       log.info(s"writing -> ${f}")
-      mkDir(f)    
+      mkDir(dir)
 
       pw = Some(new BufferedWriter(new FileWriter(f)))
       pw
@@ -61,7 +64,7 @@ class CsvFileRotator(file:String,ts0:Long = Long.MaxValue,flushes:Int = 0) exten
   }
   
   def write(s:String) = {
-    pw.map(pw => {
+    pw.map(pw => {      
       pw.write(s)
       numWrites = numWrites + 1
       if(numWrites > flushes) {
@@ -87,6 +90,8 @@ class RawStoreFile(dir:String = "./lake/{addr}/data-{yyyy}-{MM}-{dd}_{HH}:{mm}/d
 
   val log = Logger(s"${this}")
 
+  // detect single file output
+  val singleFile = ! dir.contains("{addr}")
   override def toString = s"RawStoreFile(${dir},${flushes})"
 
   @volatile
@@ -106,31 +111,28 @@ class RawStoreFile(dir:String = "./lake/{addr}/data-{yyyy}-{MM}-{dd}_{HH}:{mm}/d
   def +(msg:MSG_MinerData,penalty:Double):Future[Try[RawStore]] = {
     val addr = Util.hex(msg.addr)
         
-    val vdd = msg.payload.map{ d => 
-      RawData(msg.ts,addr,d.ts,d.pt,d.data,penalty)
-    }    
-
-    val file = dir.replaceAll("\\{addr\\}",addr).replaceAll("\\{id\\}",config.id)
-    
-    Future {
-      // find file
-      try {
-        val fr = files.get(addr) match {
-          case Some(fr) => 
-            if(fr.isRotate()) {
-              fr.rotate()              
-            }
-            fr
-          case None => 
-            val fr:CsvFileRotator = new CsvFileRotator(file,flushes = flushes)          
-            files = files + (addr -> fr)
-            fr
+    val key = if(singleFile) "" else addr
+    val fr = files.get(key) match {
+      case Some(fr) => 
+        if(fr.isRotate()) {
+          fr.rotate()              
         }
-
+        fr
+      case None => 
+        val file = dir.replaceAll("\\{addr\\}",addr).replaceAll("\\{id\\}",config.id)
+        val fr:CsvFileRotator = new CsvFileRotator(file,flushes = flushes)          
+        files = files + (key -> fr)
+        fr
+    }
         
+    Future {
+      val vdd = msg.payload.map{ d => 
+        RawData(msg.ts,addr,d.ts,penalty,d.pt,d.data)
+      }    
+    
+      try {                
         //log.info(s"add: vd(${vdd.size}) -> ${fr}")        
         val csv = vdd.map(Util.toCSV(_)).mkString("\n")+"\n"
-
         fr.write(csv)
         
         Success(this)

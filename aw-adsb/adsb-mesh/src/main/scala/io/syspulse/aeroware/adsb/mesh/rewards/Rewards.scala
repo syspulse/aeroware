@@ -16,4 +16,6 @@ object Rewards {
   val penaltyTimeDiff = -0.0001          // time difference too high
 
   val penaltyNotPermitted = -0.0001     // Not permitted
+
+  val rewardData = 0.0001 // basic reward for data  
 }

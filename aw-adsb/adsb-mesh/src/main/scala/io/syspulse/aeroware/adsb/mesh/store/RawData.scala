@@ -17,9 +17,10 @@ case class RawData(
   ts:Long,        // timestamp of when received to Validator
   addr:String,    // addr of miner
   ts0:Long,       // timestamp of how miner reported it
-  pt:PayloadType,
+  penalty:Double,
+  pt:PayloadType,  
   data:Raw,        // raw data
-  penalty:Double
+  
 ) extends Ingestable {
 }
 
