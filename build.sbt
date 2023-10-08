@@ -419,6 +419,8 @@ lazy val adsb_radar = (project in file("aw-adsb/adsb-radar"))
       appAssemblyConfig("adsb-radar","io.syspulse.aeroware.adsb.radar.App"),
 
       libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ libTest ++ Seq(
+        libSkelAuth,
+        
         libAkkaTestkitType % Test  
       ),
   )
