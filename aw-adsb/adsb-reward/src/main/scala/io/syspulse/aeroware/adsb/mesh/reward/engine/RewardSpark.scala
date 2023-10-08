@@ -49,7 +49,8 @@ class RewardSpark(dir:String = "./lake/")(implicit config:Config) extends Reward
       StructField("ts0",LongType,true),
       StructField("penalty",DoubleType,true),
       StructField("pt",IntegerType,true),
-      StructField("data",StringType,true)
+      StructField("data",StringType,true),
+      StructField("size",LongType,true)
     ))
 
     val df = spark
@@ -60,7 +61,7 @@ class RewardSpark(dir:String = "./lake/")(implicit config:Config) extends Reward
       .option("header", "false")
       .option("inferSchema", "true")
       .load(dir + "*")      
-      .toDF("ts","addr","ts0","penalty","pt","data")
+      .toDF("ts","addr","ts0","penalty","pt","data","size")
     
     import spark.implicits._
 
