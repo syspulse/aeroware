@@ -420,6 +420,8 @@ lazy val adsb_radar = (project in file("aw-adsb/adsb-radar"))
 
       libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ libTest ++ Seq(
         libSkelAuth,
+        libSkelIngest,
+        libSkelIngestFlow,
         
         libAkkaTestkitType % Test  
       ),

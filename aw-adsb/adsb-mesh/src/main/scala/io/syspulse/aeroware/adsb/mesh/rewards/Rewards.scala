@@ -7,6 +7,7 @@ import scala.util.Random
 
 import scala.collection.concurrent
 import scala.jdk.CollectionConverters._
+import io.syspulse.aeroware.adsb.mesh.PayloadTypes
 
 object Rewards {
   val penaltyInvalidSig = -0.5
@@ -17,5 +18,12 @@ object Rewards {
 
   val penaltyNotPermitted = -0.0001     // Not permitted
 
-  val rewardData = 0.0001 // basic reward for data  
+  val rewardData = 0.0001 // basic reward for 1 message 
+
+  // rewards adjustments
+  val rewardDataType = Map(
+    PayloadTypes.ADSB -> 1.0,
+    PayloadTypes.NOTAM -> 1.5,
+    PayloadTypes.METAR -> 1.2,    
+  )
 }

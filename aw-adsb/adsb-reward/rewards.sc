@@ -1,5 +1,4 @@
 
-import org.apache.spark.sql.functions.desc
 import spark.implicits._
 import org.apache.spark.sql.functions._
 
