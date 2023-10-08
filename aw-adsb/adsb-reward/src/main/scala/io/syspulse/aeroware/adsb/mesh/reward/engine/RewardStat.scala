@@ -18,7 +18,9 @@ import java.util.concurrent.Executors
 case class RewardMiner(
   addr:String,  // address of the miner
   reward:Double,
+  rewardNum:Long,
   penalty:Double,
+  penaltyNum:Long,
   payout:Double)
 
 case class RewardStat(
@@ -26,5 +28,5 @@ case class RewardStat(
 )
 
 object RewardMiner {
-  def apply(addr:String) = new RewardMiner(addr,0.0,0.0,0.0) 
+  def apply(addr:String) = new RewardMiner(addr,0.0, 0L, 0.0, 0L, 0.0) 
 }

@@ -30,10 +30,7 @@ trait RewardEngine {
 }
 
 class RewardSpark(dir:String = "./lake/")(implicit config:Config) extends RewardEngine {
-  // implicit val ec: scala.concurrent.ExecutionContext = 
-  //   ExecutionContext.fromExecutor(Executors.newFixedThreadPool(1))
-  //   //scala.concurrent.ExecutionContext.global
-
+  
   val log = Logger(s"${this}")
   
   def calculateRewards(): Try[RewardStat] = {
@@ -75,17 +72,16 @@ class RewardSpark(dir:String = "./lake/")(implicit config:Config) extends Reward
     val rewardData = Rewards.rewardData
 
     val dfPenalty = df.filter("penalty < 0.0")
-    val dfReward = df.filter("penalty >= 0.0")
+    val dfReward = df.filter("penalty == 0.0")
 
-    val dfPenaltyTotal = dfPenalty.groupBy("addr","pt").agg(sum("penalty").alias("penalty"))
+    val dfPenaltyTotal = dfPenalty.groupBy("addr","pt").agg(sum("penalty").alias("penalty"),count("data").alias("num_penalty"))
 
-    val dfRewardTotal = dfReward.groupBy("data","pt").agg(count("penalty").alias("count")).withColumn("reward",lit(rewardData) / col("count")).join(dfReward,Seq("data","pt")).groupBy("addr","pt").agg(sum("reward").alias("reward"))
+    val dfRewardTotal = dfReward.groupBy("data","pt").agg(count("penalty").alias("count"),count("data").alias("num_reward")).withColumn("reward",lit(rewardData) / col("count")).join(dfReward,Seq("data","pt")).groupBy("addr","pt").agg(sum("reward").alias("reward"),sum("num_reward").alias("num_reward"))
 
-    val dfPenaltyReward = dfRewardTotal.join(dfPenaltyTotal,Seq("addr","pt"),"full").na.fill(0.0,Seq("penalty"))
+    val dfPenaltyReward = dfRewardTotal.join(dfPenaltyTotal,Seq("addr","pt"),"full").na.fill(0.0,Seq("penalty")).na.fill(0,Seq("num_penalty"))
 
     // baseline without taking into account PayloadTypes
     val dfTotal = dfPenaltyReward.withColumn("payout",col("reward") + col("penalty"))
-
 
     log.info(s"Calculating payouts...")
 
@@ -103,8 +99,10 @@ class RewardSpark(dir:String = "./lake/")(implicit config:Config) extends Reward
 
           rm.copy(
             reward = r.getDouble(2) * payoutCoeff,
-            penalty = r.getDouble(3) * payoutCoeff,
-            payout = r.getDouble(4) * payoutCoeff
+            rewardNum = r.getLong(3),
+            penalty = r.getDouble(4) * payoutCoeff,
+            penaltyNum = r.getLong(5),
+            payout = r.getDouble(6) * payoutCoeff
           )
         }
       )

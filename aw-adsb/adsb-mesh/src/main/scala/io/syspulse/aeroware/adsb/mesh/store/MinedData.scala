@@ -20,15 +20,16 @@ case class MinedData(
   addr:String,    // addr of miner
   ts0:Long,       // timestamp of how miner reported it
   penalty:Double,
-  pt:PayloadType,  
+  pt:PayloadType,
   data:Hash,      // raw data hash. Raw data is saved separately
+  size:Int,       // raw data size
   
 ) extends Ingestable {
 }
 
 object MinedData {  
   def apply(ts:Long,addr:String,ts0:Long,penalty:Double,pt:PayloadType,data:Raw) =
-    new MinedData(ts,addr,ts0,penalty,pt,toHash(data))
+    new MinedData(ts,addr,ts0,penalty,pt,toHash(data),data.size)
     
   def toHash(data:Raw):Hash = Util.hex(Util.SHA256(data.getBytes()))
 }
