@@ -85,7 +85,7 @@ class ParqFileRotator(file:String,ts0:Long = Long.MaxValue,flushes:Int = 1000) e
 
 
 // Parquet does not support flush
-class MinedStoreParq(dir:String = "./lake/{addr}/{yyyy}/{MM}/{dd}/data-{HH}-{mm}.parq",flushes:Int = 1000)(implicit config:Config) extends MinedStore {
+class MinedStoreParq(dir:String = "./lake/{yyyy}/{MM}/{dd}/{addr}/data-{HH}-{mm}.parq",flushes:Int = 1000)(implicit config:Config) extends MinedStore {
   implicit val ec: scala.concurrent.ExecutionContext = 
     ExecutionContext.fromExecutor(Executors.newFixedThreadPool(1))
     //scala.concurrent.ExecutionContext.global
