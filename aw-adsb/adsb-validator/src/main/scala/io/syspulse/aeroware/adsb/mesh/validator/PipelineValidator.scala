@@ -24,6 +24,10 @@ import java.util.concurrent.TimeUnit
 import java.net.InetSocketAddress
 import akka.stream.scaladsl.RestartSource
 import akka.stream.OverflowStrategy
+import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.Keep
+import akka.stream.scaladsl.RestartSink
+import akka.Done
 
 import scala.concurrent.Future
 import scala.util.Random
@@ -55,17 +59,6 @@ import akka.stream.alpakka.mqtt.streaming.PacketId
 import akka.stream.alpakka.mqtt.streaming.ControlPacket
 import akka.stream.alpakka.mqtt.streaming.ControlPacketType
 
-import akka.stream.alpakka.mqtt.MqttMessage
-import akka.Done
-import akka.stream.alpakka.mqtt.scaladsl.MqttSink
-import akka.stream.alpakka.mqtt.MqttQoS
-import akka.stream.scaladsl.Sink
-import akka.stream.scaladsl.Keep
-import akka.stream.scaladsl.RestartSink
-import akka.stream.alpakka.mqtt.MqttConnectionSettings
-
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
-
 import io.swagger.v3.oas.models.security.SecurityScheme.In
 
 
@@ -93,7 +86,6 @@ import io.syspulse.skel.crypto.wallet.{WalletVaultKeyfiles,WalletVaultKeyfile}
 
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerPayload
 import io.syspulse.aeroware.adsb.mesh.protocol.MinerSig
-import io.syspulse.aeroware.adsb.mesh.transport.MQTTServerFlow
 import io.syspulse.aeroware.adsb.mesh.transport.MQTTConfig
 
 import io.syspulse.aeroware.adsb.mesh.rewards._

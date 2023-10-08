@@ -1,4 +1,4 @@
-#!/bin/bash                                                                                                                                                                                            
+#!/bin/bash
 #CWD=`echo $(dirname $(readlink -f $0))`
 #cd $CWD
 
@@ -20,9 +20,16 @@ ARGS=$@
 
 APP_HOME=${APP_HOME:-`pwd`}
 
-JAR=`ls ${APP_HOME}/target/scala-2.13/*assembly*.jar`
+# fat jar
+JAR_FAT=`ls ${APP_HOME}/target/scala-2.13/*assembly*.jar`
+# classes
+CLASSES=${APP_HOME}/target/scala-2.13/classes
+# additional libs
 JAR_UNFAT=`ls ${APP_HOME}/lib/*.jar`
-CP="${APP_HOME}/conf/:$JAR:$JAR_UNFAT"
+# list of jar. Generated with command:
+# sbt -error ";project module; export dependencyClasspath" >CLASSPATH
+JAR_FILES=`cat CLASSPATH`
+CP="${APP_HOME}/conf/:$JAR_FAT:$JAR_UNFAT:$JAR_FILES:$CLASSES"
 
 CONFIG="application${SITE}.conf"
 
@@ -30,7 +37,7 @@ MEM=${MEM:-1G}
 STACK=${STACK:-512M}
 
 >&2 echo "=== Class Path ======================================="
->&2 echo "$CP"| sed "s/\:/\n/g"
+echo $CP | sed "s/\:/\n/g" >&2
 >&2 echo "======================================================"
 >&2 echo "APP: $APP"
 >&2 echo "APP_HOME: $APP_HOME"
@@ -44,7 +51,7 @@ STACK=${STACK:-512M}
 >&2 echo "MEM: ${MEM}"
 >&2 echo "STACK: ${STACK}"
 
->&2 echo $CP
+#>&2 echo $CP
 >&2 pwd
 
 # command:

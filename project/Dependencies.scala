@@ -11,11 +11,14 @@ object Dependencies {
     lazy val kafkaAvroSerVersion = "5.4.1"
     lazy val quillVersion = "3.6.0"
     lazy val influxDBVersion = "3.2.0"
-    lazy val slickVersion = "3.3.3"
-    lazy val sparkVersion = "3.2.0"
-    lazy val hadoopAWSVersion = "3.2.2"
+    lazy val slickVersion = "3.3.3"    
     lazy val janinoVersion = "3.0.16" //"3.1.6" //"3.0.16"
     lazy val elastic4sVersion = "7.17.3"
+
+    lazy val sparkVersion = "3.3.1"
+    lazy val hadoopAWSVersion = "3.2.2"
+    lazy val hadoopVersion = "3.2.2"
+    lazy val parq4sVersion = "2.10.0"
 
     lazy val dispatchVersion = "1.2.0" //"1.1.3"
     
@@ -95,6 +98,15 @@ object Dependencies {
 
     val libKebsSpray =      "pl.iterators"                  %% "kebs-spray-json"            % "1.9.3"
 
+    val libParq =             "com.github.mjakubowski84"      %% "parquet4s-core"                 % parq4sVersion
+    val libParqAkka =         "com.github.mjakubowski84"      %% "parquet4s-akka"                 % parq4sVersion
+    val libHadoop =           "org.apache.hadoop"             % "hadoop-client"                   % hadoopVersion
+    val libHadoopLZO =        "hadoop-lzo"                    % "hadoop-lzo"                      % "0.4.15"
+    val libSparkCore =        "org.apache.spark"              %% "spark-core"         % sparkVersion
+    val libSparkSQL =         "org.apache.spark"              %% "spark-sql"          % sparkVersion
+
+    val libSpark =          Seq(libSparkCore,libSparkSQL)
+
     val libSkelCore =       "io.syspulse"                 %% "skel-core"            % skelVersion
     val libSkelAuth =       "io.syspulse"                 %% "skel-auth-core"       % skelVersion
     val libSkelIngest =     "io.syspulse"                 %% "skel-ingest"          % skelVersion
@@ -108,7 +120,8 @@ object Dependencies {
 
     val libPrometheus = Seq(libPrometheusClient)
     
-    val libSkel = Seq(libSkelCore,libSkelCrypto,libSkelAuth)
+    // val libSkel = Seq(libSkelCore,libSkelCrypto,libSkelAuth)
+    val libSkel = Seq(libSkelCore)
     
     val libAkka = Seq(libAkkaActor,libAkkaActorTyped,libAkkaStream,libAkkaStreamTyped)
 
