@@ -26,6 +26,7 @@ import io.syspulse.aeroware.adsb.mesh.guard.GuardEngine
 import io.syspulse.aeroware.adsb.mesh.guard.GuardBlacklistAddr
 import io.syspulse.aeroware.adsb.mesh.guard.GuardBlacklistIp
 import io.syspulse.aeroware.adsb.mesh.rewards.Rewards
+import io.syspulse.aeroware.adsb.mesh.guard.Guard
 
 abstract class ValidatorCore(ops:ValidatorConfig) extends ValidatorPenalty[MSG_MinerData] {
     
@@ -33,6 +34,18 @@ abstract class ValidatorCore(ops:ValidatorConfig) extends ValidatorPenalty[MSG_M
     ++ { if(ops.validateAddrBlacklist) Seq(GuardBlacklistAddr(ops.blacklistAddr)) else Seq() }
     ++ { if(ops.validateIpBlacklist) Seq(GuardBlacklistIp(ops.blacklistIp)) else Seq() }
   )
+
+  def add(g:Guard):ValidatorCore = {
+    guard.+(g)
+    this
+  }
+
+  def allow(socket:String):Double = {
+    if(guard.allow(socket)) 
+      0.0
+    else 
+      -1.0
+  }
 
   // ATTENTION: penalties are not accumulative 
   def validate(m:MSG_MinerData):Double = {

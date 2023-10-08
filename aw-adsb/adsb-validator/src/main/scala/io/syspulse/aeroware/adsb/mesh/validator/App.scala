@@ -41,12 +41,13 @@ case class Config (
   buffer:Int = 1024*1024,
   throttle:Long = 0L,
 
-  datastore:String = "mem://",
+  datastore:String = "file://",
 
   validation:Seq[String] = Seq("ts,sig,data,payload,blacklist,blacklist.ip"),
   blacklistAddr:Seq[String] = Seq(),
   blacklistIp:Seq[String] = Seq(),
   toleranceTs:Long = 750L,
+  spamExpire:Long = 10000L,
 
   id:String = System.currentTimeMillis().toString,
 
@@ -96,6 +97,7 @@ object App extends skel.Server {
         ArgString('_', "blacklist.addr",s"Address blacklist (def: ${d.blacklistAddr})"),
         ArgString('_', "blacklist.ip",s"IP blacklist (def: ${d.blacklistIp})"),
         ArgLong('_', "tolerance.ts",s"Timestamp validation tolerance in msec (def: ${d.toleranceTs})"),
+        ArgLong('_', "spam.expire",s"Duration to block spam or errors in msec (def: ${d.spamExpire})"),
         
         ArgLong('_', "fanout.window",s"Window to group output data (msec) (def: ${d.fanoutWindow})"),
         ArgLong('_', "fanout.dedup",s"Dedup Window to track duplicattes (msec) (def: ${d.fanoutDedup})"),
@@ -144,6 +146,7 @@ object App extends skel.Server {
       blacklistAddr = c.getListString("blacklist.addr",d.blacklistAddr),
       blacklistIp = c.getListString("blacklist.ip",d.blacklistIp),
       toleranceTs = c.getLong("tolerance.ts").getOrElse(d.toleranceTs),
+      spamExpire = c.getLong("spam.expire").getOrElse(d.spamExpire),
 
       id = c.getString("id").getOrElse(d.id),
 

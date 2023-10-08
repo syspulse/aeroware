@@ -57,7 +57,7 @@ class CsvFileRotator(file:String,ts0:Long = Long.MaxValue,flushes:Int = 0) exten
   }
 
   def mkDir(path:String) = {
-    val baseDir = os.Path(path,os.pwd).baseName
+    val baseDir = os.Path(path,os.pwd)
     os.makeDir.all(os.Path(baseDir,os.pwd))
   }
   
@@ -81,7 +81,7 @@ class CsvFileRotator(file:String,ts0:Long = Long.MaxValue,flushes:Int = 0) exten
   }
 }
 
-class MinedStoreFile(dir:String = "./lake/{addr}/data-{yyyy}-{MM}-{dd}_{HH}:{mm}/data-{id}.csv",flushes:Int = 1)(implicit config:Config) extends MinedStore {
+class MinedStoreFile(dir:String = "./lake/{addr}/{yyyy}/{MM}/{dd}/data-{HH}-{mm}.csv",flushes:Int = 1)(implicit config:Config) extends MinedStore {
   implicit val ec: scala.concurrent.ExecutionContext = 
     ExecutionContext.fromExecutor(Executors.newFixedThreadPool(1))
     //scala.concurrent.ExecutionContext.global

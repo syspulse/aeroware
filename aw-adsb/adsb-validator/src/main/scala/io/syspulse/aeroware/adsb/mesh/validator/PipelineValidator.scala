@@ -96,6 +96,7 @@ import akka.NotUsed
 import java.util.concurrent.atomic.AtomicLong
 
 import io.syspulse.aeroware.adsb.mesh.store.MinedStore
+import io.syspulse.aeroware.adsb.mesh.guard.GuardSpam
 
 case class AddrStat(total:AtomicLong = new AtomicLong(),errors:AtomicLong = new AtomicLong()) {
   override def toString = s"${total.get()},${errors.get()}"
@@ -164,14 +165,16 @@ class PipelineValidator(feed:String,output:String,MinedStore:MinedStore)(implici
   // --- Stream Validators --------------------------------------------------
   // Additional validation is performed in batch mode to detect complex frauds
   // and correctly distribute rewards for the same data
-  val validator = config.entity match {
+  val guardSpam = GuardSpam(expire = config.spamExpire)
+
+  val validator = (config.entity match {
     case "adsb" => new ValidatorADSB(configValidator)
     case "notam" => new ValidatorNOTAM(configValidator)
     case "any" | "aeroware" | "" => new ValidatorAny(configValidator)
     case _ => 
       log.error(s"unknown entity: ${config.entity}")
       sys.exit(2)
-  }
+  }).add(guardSpam)
    
   // MQTT Server (Broker)
   val connectTimeout = config.timeoutConnect
@@ -373,6 +376,12 @@ class PipelineValidator(feed:String,output:String,MinedStore:MinedStore)(implici
     }
         
     log.debug(s"${remoteAddr}: ${payload}")
+
+    // protection before parsing and working with data
+    if(validator.allow(remoteAddr) < 0.0 ) {
+      log.warn(s"block: ${remoteAddr}")
+      return Seq()
+    }
     
     val wireData = ByteString(Util.fromHexString(payload))
     // log.debug(s"encoded: ${Util.hex(wireData.toArray)}")
@@ -388,7 +397,9 @@ class PipelineValidator(feed:String,output:String,MinedStore:MinedStore)(implici
       )
     } catch {
       case e:Exception => 
-        log.warn(s"failed to parse: ${Util.hex(encodedData)}: ${e.getMessage()}")
+        log.warn(s"failed to parse from ${remoteAddr}: ${Util.hex(encodedData)}: ${e.getMessage()}")
+        // prevent Spam by collecting InetAddress db automatic throttling
+        guardSpam.add(remoteAddr)
         Seq()
     }
     

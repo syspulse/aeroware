@@ -32,9 +32,9 @@ __ATTENTION__: special delimiting is required for multiple NOTAM per file:
 Debug options:
 
 ```
-./run-miner.sh -f data/flight-1000.raw -o stdout://
-./run-miner.sh -f data/flight-1000.raw -o json://
-./run-miner.sh -f data/flight-1000.raw -o hex://
+./run-miner.sh -f data/adsb/flight-1000.raw -o stdout://
+./run-miner.sh -f data/adsb/flight-1000.raw -o json://
+./run-miner.sh -f data/adsb/flight-1000.raw -o hex://
 
 ```
 

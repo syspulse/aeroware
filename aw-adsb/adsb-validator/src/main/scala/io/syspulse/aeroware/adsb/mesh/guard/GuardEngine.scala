@@ -15,6 +15,7 @@ import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
 
 trait Guard {  
   def permit(m:MSG_MinerData):Boolean
+  def allow(socket:String):Boolean = true
 }
 
 class GuardEngine(guards0:List[Guard] = List()) {
@@ -24,6 +25,13 @@ class GuardEngine(guards0:List[Guard] = List()) {
   def permit(m:MSG_MinerData):Boolean = {
     // quickly find first non permit
     val failed = guards.find{ g => !g.permit(m)}
+    // return only if not found
+    ! failed.isDefined
+  }
+
+  def allow(socket:String):Boolean = {
+    // quickly find first non allow
+    val failed = guards.find{ g => !g.allow(socket)}
     // return only if not found
     ! failed.isDefined
   }
