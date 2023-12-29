@@ -18,15 +18,15 @@ object Dependencies {
     lazy val janinoVersion = "3.0.16" //"3.1.6" //"3.0.16"
     lazy val elastic4sVersion = "7.17.3"
 
-    lazy val sparkVersion = "3.3.1"
+    lazy val sparkVersion = "3.2.2" //"3.2.0"
     lazy val hadoopAWSVersion = "3.2.2"
     lazy val hadoopVersion = "3.2.2"
     lazy val parq4sVersion = "2.10.0"
 
     lazy val dispatchVersion = "1.2.0" //"1.1.3"
     
-    lazy val skelVersion = "0.0.6"
-    lazy val awVersion = "0.0.2"
+    lazy val skelVersion = "0.0.7"
+    lazy val awVersion = "0.0.3"
     lazy val jarPrefix = "server-"
     
     lazy val appDockerRoot = "/app"
@@ -41,6 +41,8 @@ object Dependencies {
     lazy val appBootClassAdsbValidator      = "io.syspulse.aeroware.adsb.validator.App"
 
     //lazy val mainAppClassAdsbIngest = "com.syspulse.avia.adsb.Ingest"}
+
+    //val scalaJava8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.2"
 
     // Akka Libraries
     val libAkkaActor =      "com.typesafe.akka"           %% "akka-actor"           % akkaVersion
@@ -81,6 +83,10 @@ object Dependencies {
     val libAkkaTestkitType ="com.typesafe.akka"           %% "akka-actor-testkit-typed" % akkaVersion// % Test
     //val libSpecs2core =     "org.specs2"                  %% "specs2-core"          % "2.4.17"
     val libTypesafeConfig = "com.typesafe"                %  "config"               % "1.4.1"
+
+    val libAkkaHttpCors =   "ch.megard"                       %% "akka-http-cors"       % "1.1.3"
+    val libWsRsJakarta =    "jakarta.ws.rs"                   % "jakarta.ws.rs-api"     % "3.1.0" //"3.0.0"
+    val libSwaggerAkkaHttp ="com.github.swagger-akka-http"    %% "swagger-akka-http"    % "2.7.0" //"2.10.0"
  
     val libScopt =          "com.github.scopt"            %% "scopt"                % "4.0.0"
     val libUUID =           "io.jvm.uuid"                 %% "scala-uuid"           % "0.3.1"
@@ -99,9 +105,7 @@ object Dependencies {
 
     val libScodec =         "org.scodec"                  %% "scodec-core"          % "1.11.7"
 
-    val libEnumeratum =     "com.beachape"                %% "enumeratum"          % "1.6.1"
-
-    
+    val libEnumeratum =     "com.beachape"                %% "enumeratum"          % "1.6.1"    
     val libDispatch =       "org.dispatchhttp"              %% "dispatch-core"              % dispatchVersion exclude("org.scala-lang.modules","scala-xml")
     val libJaxbApi =        "javax.xml.bind"                % "jaxb-api"                    % "2.3.0"
     val libScalaXml =       "org.scala-lang.modules"        %% "scala-xml"                  % "2.0.1" //"1.3.0"
@@ -128,12 +132,14 @@ object Dependencies {
     
     // Projects
     val libCommon = Seq(libScalaLogging, libSlf4jApi, libLogback, libJanino, libTypesafeConfig )
+    //val libPrometheus = Seq(libPrometheusClient,libPrometheusHttp,libPrometheusHotspot)
+    val libHttp = Seq(libAkkaHttp,libAkkaHttpSpray,libAkkaHttpCors,libWsRsJakarta,libSwaggerAkkaHttp)
     val libTest = Seq(libScalaTest, libOsLib)
 
     val libPrometheus = Seq(libPrometheusClient)
     
     // val libSkel = Seq(libSkelCore,libSkelCrypto,libSkelAuth)
-    val libSkel = Seq(libSkelCore)
+    val libSkel = Seq(libSkelCore,libSwaggerAkkaHttp)
 
     val libDB = Seq(libQuill,libQuillAsyncPostgres, libQuillAsyncMySQL, libMySQL, libPostgres)
     

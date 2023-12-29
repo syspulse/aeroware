@@ -99,6 +99,10 @@ val sharedConfig = Seq(
       "consensys repo"     at "https://artifacts.consensys.net/public/maven/maven/",
       "consensys teku"     at "https://artifacts.consensys.net/public/teku/maven/"
     ),
+
+    // needed to fix error with quill-jasync
+    // org.scala-lang.modules:scala-java8-compat_2.13:1.0.2 (early-semver) is selected over {1.0.0, 0.9.1}
+    libraryDependencySchemes += "org.scala-lang.modules" %% "scala-java8-compat" % VersionScheme.Always
   )
 
 
@@ -361,7 +365,7 @@ lazy val adsb_validator = (project in file("aw-adsb/adsb-validator"))
 
     appDockerConfig(appNameAdsbValidator,appBootClassAdsbValidator),
 
-    libraryDependencies ++= libAkka ++ libSkel ++ libPrometheus ++ libDB ++ Seq(
+    libraryDependencies ++= libAkka ++ libSkel ++ libHttp ++ libPrometheus ++ libDB ++ Seq(
       libSkelCrypto,
       libSkelIngest,
       libSkelIngestFlow,
@@ -418,7 +422,7 @@ lazy val adsb_radar = (project in file("aw-adsb/adsb-radar"))
       
       appAssemblyConfig("adsb-radar","io.syspulse.aeroware.adsb.radar.App"),
 
-      libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ libTest ++ Seq(
+      libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ libHttp ++ libPrometheus ++ libTest ++ Seq(
         libSkelAuth,
         libSkelIngest,
         libSkelIngestFlow,
