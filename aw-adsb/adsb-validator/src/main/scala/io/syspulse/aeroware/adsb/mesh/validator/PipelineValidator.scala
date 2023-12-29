@@ -134,7 +134,7 @@ case class PublishWithAddr (remoteAddr: InetSocketAddress,
                             packetId: Option[PacketId],
                             payload: ByteString)
 
-class PipelineValidator(feed:String,output:String,MinedStore:MinedStore)(implicit config:Config)
+class PipelineValidator(feed:String,output:String,storeMined:MinedStore)(implicit config:Config)
   extends Pipeline[MSG_MinerData,MeshData,MeshData](feed,output,config.throttle,config.delimiter,config.buffer) {
   
   implicit protected val log = Logger(s"${this}")
@@ -304,7 +304,8 @@ class PipelineValidator(feed:String,output:String,MinedStore:MinedStore)(implici
     // fast validation path to prevent Spam
     val penalty = validator.validate(m)
 
-    MinedStore.+(m,penalty)
+    // non-blocking
+    storeMined.+(m,penalty)
 
     val err = if(penalty < 0.0) {      
       log.warn(s"penalty: ${penalty}: ${Util.hex(m.addr)}")

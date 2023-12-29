@@ -209,7 +209,7 @@ lazy val root = (project in file("."))
     adsb_ingest, 
     adsb_tools, 
     adsb_radar, 
-    gpx_core, 
+    // gpx_core, 
     adsb_mesh, 
     adsb_miner, 
     adsb_validator,   
@@ -226,7 +226,7 @@ lazy val root = (project in file("."))
     adsb_ingest, 
     adsb_tools, 
     adsb_radar, 
-    gpx_core, 
+    // gpx_core, 
     adsb_mesh,
     adsb_miner, 
     adsb_validator,
@@ -361,7 +361,7 @@ lazy val adsb_validator = (project in file("aw-adsb/adsb-validator"))
 
     appDockerConfig(appNameAdsbValidator,appBootClassAdsbValidator),
 
-    libraryDependencies ++= libAkka ++ libSkel ++ libPrometheus ++ Seq(
+    libraryDependencies ++= libAkka ++ libSkel ++ libPrometheus ++ libDB ++ Seq(
       libSkelCrypto,
       libSkelIngest,
       libSkelIngestFlow,

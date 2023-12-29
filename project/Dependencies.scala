@@ -9,7 +9,10 @@ object Dependencies {
     lazy val akkaHttpVersion = "10.2.9" //"10.2.4"
     lazy val akkaKafkaVersion = "2.0.3"
     lazy val kafkaAvroSerVersion = "5.4.1"
-    lazy val quillVersion = "3.6.0"
+
+    // 3.12.0 - Postgres JAsync does not support Postgres 14 
+    lazy val quillVersion = "3.19.0" //"4.8.0" //"3.12.0" //"3.5.2" //"3.6.0"
+
     lazy val influxDBVersion = "3.2.0"
     lazy val slickVersion = "3.3.3"    
     lazy val janinoVersion = "3.0.16" //"3.1.6" //"3.0.16"
@@ -63,6 +66,15 @@ object Dependencies {
     // Needed for teku
     val libLog4j2Api =      "org.apache.logging.log4j"        % "log4j-api" % "2.17.2"
     val libLog4j2Core =     "org.apache.logging.log4j"        % "log4j-core" % "2.17.2"
+
+    val libQuill =          "io.getquill"                     %% "quill-jdbc"             % quillVersion
+    // val libQuillAsyncPostgres =  "io.getquill"                %% "quill-async-postgres"   % quillVersion
+    // val libQuillAsyncMySQL =     "io.getquill"                %% "quill-async-mysql"      % quillVersion
+    val libQuillAsyncPostgres =  "io.getquill"                %% "quill-jasync-postgres"   % quillVersion
+    val libQuillAsyncMySQL =     "io.getquill"                %% "quill-jasync-mysql"      % quillVersion
+
+    val libMySQL =          "mysql"                           % "mysql-connector-java"    % "8.0.22"
+    val libPostgres =       "org.postgresql"                  % "postgresql"              % "42.3.5"
 
     val libScalaTest =      "org.scalatest"               %% "scalatest"            % "3.1.2" % Test
     val libAkkaTestkit =    "com.typesafe.akka"           %% "akka-http-testkit"    % akkaHttpVersion// % Test
@@ -122,6 +134,8 @@ object Dependencies {
     
     // val libSkel = Seq(libSkelCore,libSkelCrypto,libSkelAuth)
     val libSkel = Seq(libSkelCore)
+
+    val libDB = Seq(libQuill,libQuillAsyncPostgres, libQuillAsyncMySQL, libMySQL, libPostgres)
     
     val libAkka = Seq(libAkkaActor,libAkkaActorTyped,libAkkaStream,libAkkaStreamTyped)
 

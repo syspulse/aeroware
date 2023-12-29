@@ -72,7 +72,7 @@ object App extends skel.Server {
       new ConfigurationArgs(args,"adsb-validator","",
         
         ArgString('_', "keystore.file",s"Keystore file (def: ${d.keystore})"),
-        ArgString('_', "keystore.pass",s"Keystore password"),        
+        ArgString('_', "keystore.pass",s"Keystore password"),
         
         // ArgInt('_', "block.size",s"ADSB Block max size (def: ${d.blockSize})"),
         // ArgLong('_', "block.window",s"ADSB Block time window (msec) (def: ${d.blockWindow})"),
