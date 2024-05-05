@@ -5,8 +5,7 @@ import scala.concurrent.Future
 import scala.collection.immutable
 
 import io.jvm.uuid._
-import io.syspulse.aeroware.adsb.radar.Craft
-import io.syspulse.aeroware.adsb.radar.Aircraft
+import io.syspulse.aeroware.adsb.radar.Trackable
 import io.syspulse.aeroware.adsb.core.AircraftAddress
 
 import io.syspulse.aeroware.adsb.mesh.MeshData

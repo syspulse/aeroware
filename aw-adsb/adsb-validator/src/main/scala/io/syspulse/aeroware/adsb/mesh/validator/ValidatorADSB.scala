@@ -22,10 +22,10 @@ import io.syspulse.skel.crypto.key.PK
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
 import io.syspulse.aeroware.adsb.mesh.protocol._
-import io.syspulse.aeroware.adsb.mesh.rewards._
 import io.syspulse.aeroware.adsb.mesh.guard.GuardEngine
 import io.syspulse.aeroware.adsb.mesh.guard.GuardBlacklistAddr
 import io.syspulse.aeroware.adsb.mesh.guard.GuardBlacklistIp
+import io.syspulse.aeroware.adsb.mesh.rewards.Rewards
 
 class ValidatorADSB(ops:ValidatorConfig) extends ValidatorCore(ops) {
       
@@ -38,7 +38,9 @@ class ValidatorADSB(ops:ValidatorConfig) extends ValidatorCore(ops) {
         val a = Adsb.decode(d.data,d.ts)
         a match {
           case Success(a) => 0.0
-          case Failure(e) => Rewards.penaltyInvalidData
+          case Failure(e) => 
+            log.warn(s"could not decode: ${d.data}",e)
+            Rewards.penaltyInvalidData
         }        
       }) 
     } else 

@@ -41,6 +41,7 @@ case class MSG_MinerData(
 }
 
 object MSG_MinerData {
+  
   implicit val rw: RW[MSG_MinerData] = macroRW
 
   implicit val jf_ms = jsonFormat2(MinerSig.apply _)

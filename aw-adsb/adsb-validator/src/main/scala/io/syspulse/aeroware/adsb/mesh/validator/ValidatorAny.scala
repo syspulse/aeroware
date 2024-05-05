@@ -22,12 +22,13 @@ import io.syspulse.skel.crypto.key.PK
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
 import io.syspulse.aeroware.adsb.mesh.protocol._
-import io.syspulse.aeroware.adsb.mesh.rewards._
 import io.syspulse.aeroware.adsb.mesh.guard.GuardEngine
 import io.syspulse.aeroware.adsb.mesh.guard.GuardBlacklistAddr
 import io.syspulse.aeroware.adsb.mesh.guard.GuardBlacklistIp
 import io.syspulse.aeroware.adsb.mesh.PayloadTypes
 import io.syspulse.aeroware.notam.Notam
+import io.syspulse.aeroware.metar.Metar
+import io.syspulse.aeroware.adsb.mesh.rewards.Rewards
 
 // can validate anything based on PayloadType
 class ValidatorAny(ops:ValidatorConfig) extends ValidatorCore(ops) {
@@ -41,17 +42,20 @@ class ValidatorAny(ops:ValidatorConfig) extends ValidatorCore(ops) {
         val a = d.pt match {
           case PayloadTypes.ADSB => Adsb.decode(d.data,d.ts)
           case PayloadTypes.NOTAM => Notam.decode(d.data)
+          case PayloadTypes.METAR => Metar.decode(d.data)
           case _ =>
         }
         
         a match {
           case Success(a) => 0.0
-          case Failure(e) => Rewards.penaltyInvalidData
+          case Failure(e) => 
+            log.warn(s"could not decode: ${d.data}",e)
+            Rewards.penaltyInvalidData
         }   
       }) 
     } else 0.0
     
     // no penalties
-    return 0.0
+    return p0 + p1
   }
 }

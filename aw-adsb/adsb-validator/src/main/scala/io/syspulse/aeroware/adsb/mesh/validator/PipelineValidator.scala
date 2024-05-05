@@ -24,6 +24,10 @@ import java.util.concurrent.TimeUnit
 import java.net.InetSocketAddress
 import akka.stream.scaladsl.RestartSource
 import akka.stream.OverflowStrategy
+import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.Keep
+import akka.stream.scaladsl.RestartSink
+import akka.Done
 
 import scala.concurrent.Future
 import scala.util.Random
@@ -55,17 +59,6 @@ import akka.stream.alpakka.mqtt.streaming.PacketId
 import akka.stream.alpakka.mqtt.streaming.ControlPacket
 import akka.stream.alpakka.mqtt.streaming.ControlPacketType
 
-import akka.stream.alpakka.mqtt.MqttMessage
-import akka.Done
-import akka.stream.alpakka.mqtt.scaladsl.MqttSink
-import akka.stream.alpakka.mqtt.MqttQoS
-import akka.stream.scaladsl.Sink
-import akka.stream.scaladsl.Keep
-import akka.stream.scaladsl.RestartSink
-import akka.stream.alpakka.mqtt.MqttConnectionSettings
-
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
-
 import io.swagger.v3.oas.models.security.SecurityScheme.In
 
 
@@ -93,7 +86,6 @@ import io.syspulse.skel.crypto.wallet.{WalletVaultKeyfiles,WalletVaultKeyfile}
 
 import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerPayload
 import io.syspulse.aeroware.adsb.mesh.protocol.MinerSig
-import io.syspulse.aeroware.adsb.mesh.transport.MQTTServerFlow
 import io.syspulse.aeroware.adsb.mesh.transport.MQTTConfig
 
 import io.syspulse.aeroware.adsb.mesh.rewards._
@@ -102,19 +94,38 @@ import io.syspulse.aeroware.adsb.mesh._
 
 import akka.NotUsed
 import java.util.concurrent.atomic.AtomicLong
-import io.syspulse.aeroware.adsb.mesh.store.RawStore
+
+import io.syspulse.aeroware.adsb.mesh.store.MinedStore
+import io.syspulse.aeroware.adsb.mesh.guard.GuardSpam
+
+case class AddrStat(total:AtomicLong = new AtomicLong(),errors:AtomicLong = new AtomicLong()) {
+  override def toString = s"${total.get()},${errors.get()}"
+}
 
 class ValidatorStat {
   val total = new AtomicLong()
   val errors = new AtomicLong()
+  var addrs = Map[String,AddrStat]()
   
-  def +(sz:Long,err:Long):Long = {
-    if(err != 0)
-      errors.addAndGet(err)
+  def +(addr:Array[Byte],sz:Long,err:Long):Long = {
+    val a = Util.hex(addr)
+    val as = addrs.getOrElse(a,AddrStat())
 
+    if(err != 0) {
+      errors.addAndGet(err)
+      as.errors.addAndGet(err)
+    }
     total.addAndGet(sz)
+    as.total.addAndGet(sz)
+    addrs = addrs + (a -> as)
+  
+    total.get()
   }
-  override def toString = s"${total},${errors}"
+
+  override def toString = {
+    s"${total},${errors}: "+
+    addrs.take(10).map{ case(addr,as) => s"[${addr}:(${as.toString})"}.mkString(",")
+  }
 }
 
 case class PublishWithAddr (remoteAddr: InetSocketAddress,
@@ -123,7 +134,7 @@ case class PublishWithAddr (remoteAddr: InetSocketAddress,
                             packetId: Option[PacketId],
                             payload: ByteString)
 
-class PipelineValidator(feed:String,output:String,RawStore:RawStore)(implicit config:Config)
+class PipelineValidator(feed:String,output:String,storeMined:MinedStore)(implicit config:Config)
   extends Pipeline[MSG_MinerData,MeshData,MeshData](feed,output,config.throttle,config.delimiter,config.buffer) {
   
   implicit protected val log = Logger(s"${this}")
@@ -154,14 +165,16 @@ class PipelineValidator(feed:String,output:String,RawStore:RawStore)(implicit co
   // --- Stream Validators --------------------------------------------------
   // Additional validation is performed in batch mode to detect complex frauds
   // and correctly distribute rewards for the same data
-  val validator = config.entity match {
+  val guardSpam = GuardSpam(expire = config.spamExpire)
+
+  val validator = (config.entity match {
     case "adsb" => new ValidatorADSB(configValidator)
     case "notam" => new ValidatorNOTAM(configValidator)
     case "any" | "aeroware" | "" => new ValidatorAny(configValidator)
     case _ => 
       log.error(s"unknown entity: ${config.entity}")
       sys.exit(2)
-  }
+  }).add(guardSpam)
    
   // MQTT Server (Broker)
   val connectTimeout = config.timeoutConnect
@@ -289,18 +302,19 @@ class PipelineValidator(feed:String,output:String,RawStore:RawStore)(implicit co
 
   override def process = Flow[MSG_MinerData].filter( m => {
     // fast validation path to prevent Spam
-    val pentaly = validator.validate(m)
+    val penalty = validator.validate(m)
 
-    RawStore.+(m,pentaly)
+    // non-blocking
+    storeMined.+(m,penalty)
 
-    val err = if(pentaly < 0.0) {      
-      log.warn(s"penalty: ${pentaly}: ${m}")      
+    val err = if(penalty < 0.0) {      
+      log.warn(s"penalty: ${penalty}: ${Util.hex(m.addr)}")
       m.payload.size
     } else {
       0
     }
     
-    validatorStat.+(m.payload.size,err)
+    validatorStat.+(m.addr,m.payload.size,err)
 
     log.info(s"stat=[${m.payload.size},${err},${validatorStat}]")
 
@@ -363,6 +377,12 @@ class PipelineValidator(feed:String,output:String,RawStore:RawStore)(implicit co
     }
         
     log.debug(s"${remoteAddr}: ${payload}")
+
+    // protection before parsing and working with data
+    if(validator.allow(remoteAddr) < 0.0 ) {
+      log.warn(s"block: ${remoteAddr}")
+      return Seq()
+    }
     
     val wireData = ByteString(Util.fromHexString(payload))
     // log.debug(s"encoded: ${Util.hex(wireData.toArray)}")
@@ -378,7 +398,9 @@ class PipelineValidator(feed:String,output:String,RawStore:RawStore)(implicit co
       )
     } catch {
       case e:Exception => 
-        log.warn(s"failed to parse: ${Util.hex(encodedData)}: ${e.getMessage()}")
+        log.warn(s"failed to parse from ${remoteAddr}: ${Util.hex(encodedData)}: ${e.getMessage()}")
+        // prevent Spam by collecting InetAddress db automatic throttling
+        guardSpam.add(remoteAddr)
         Seq()
     }
     

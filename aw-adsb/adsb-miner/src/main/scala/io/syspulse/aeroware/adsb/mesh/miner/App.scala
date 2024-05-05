@@ -129,11 +129,13 @@ object App extends skel.Server {
     config.cmd match {
       case "miner" => {
                 
-        val pp = config.entity match {
+        val pp = config.entity.toLowerCase match {
           case "adsb" =>
             new PipelineMinerADSB(config.feed,config.output)
           case "notam" =>
             new PipelineMinerNOTAM(config.feed,config.output)
+          case "metar" =>
+            new PipelineMinerMETAR(config.feed,config.output)
         }        
 
         val r = pp.run()

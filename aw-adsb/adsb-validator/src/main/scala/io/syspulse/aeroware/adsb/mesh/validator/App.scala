@@ -32,7 +32,7 @@ case class Config (
   fanoutWindow: Long = 1000L,
   fanoutDedup: Long = 9000L,
 
-  entity:String = "adsb",
+  entity:String = "any",
   format:String = "",
 
   limit:Long = 0L,
@@ -41,12 +41,13 @@ case class Config (
   buffer:Int = 1024*1024,
   throttle:Long = 0L,
 
-  datastore:String = "mem://",
+  datastore:String = "file://",
 
   validation:Seq[String] = Seq("ts,sig,data,payload,blacklist,blacklist.ip"),
   blacklistAddr:Seq[String] = Seq(),
   blacklistIp:Seq[String] = Seq(),
   toleranceTs:Long = 750L,
+  spamExpire:Long = 10000L,
 
   id:String = System.currentTimeMillis().toString,
 
@@ -71,7 +72,7 @@ object App extends skel.Server {
       new ConfigurationArgs(args,"adsb-validator","",
         
         ArgString('_', "keystore.file",s"Keystore file (def: ${d.keystore})"),
-        ArgString('_', "keystore.pass",s"Keystore password"),        
+        ArgString('_', "keystore.pass",s"Keystore password"),
         
         // ArgInt('_', "block.size",s"ADSB Block max size (def: ${d.blockSize})"),
         // ArgLong('_', "block.window",s"ADSB Block time window (msec) (def: ${d.blockWindow})"),
@@ -96,6 +97,7 @@ object App extends skel.Server {
         ArgString('_', "blacklist.addr",s"Address blacklist (def: ${d.blacklistAddr})"),
         ArgString('_', "blacklist.ip",s"IP blacklist (def: ${d.blacklistIp})"),
         ArgLong('_', "tolerance.ts",s"Timestamp validation tolerance in msec (def: ${d.toleranceTs})"),
+        ArgLong('_', "spam.expire",s"Duration to block spam or errors in msec (def: ${d.spamExpire})"),
         
         ArgLong('_', "fanout.window",s"Window to group output data (msec) (def: ${d.fanoutWindow})"),
         ArgLong('_', "fanout.dedup",s"Dedup Window to track duplicattes (msec) (def: ${d.fanoutDedup})"),
@@ -144,6 +146,7 @@ object App extends skel.Server {
       blacklistAddr = c.getListString("blacklist.addr",d.blacklistAddr),
       blacklistIp = c.getListString("blacklist.ip",d.blacklistIp),
       toleranceTs = c.getLong("tolerance.ts").getOrElse(d.toleranceTs),
+      spamExpire = c.getLong("spam.expire").getOrElse(d.spamExpire),
 
       id = c.getString("id").getOrElse(d.id),
 
@@ -158,9 +161,13 @@ object App extends skel.Server {
     Console.err.println(s"Config: ${config}")
     
     val store = config.datastore.split("://").toList match {
-      case "parq" :: dir :: Nil => new RawStoreLake(dir)
-      case "parq" :: Nil => new RawStoreLake()
-      case "mem" :: Nil | "cache" :: Nil => new RawStoreMem()
+      case "parq" :: dir :: Nil => new MinedStoreParq(dir)
+      case "parq" :: Nil => new MinedStoreParq()
+      
+      case "file" :: dir :: Nil => new MinedStoreFile(dir)
+      case "file" :: Nil => new MinedStoreFile()
+      
+      case "mem" :: Nil | "cache" :: Nil => new MinedStoreMem()
       case _ => {
         Console.err.println(s"Uknown datastore: '${config.datastore}'")
         sys.exit(1)
@@ -188,7 +195,7 @@ object App extends skel.Server {
 
       case "rewards" => {        
         val rewards = new RewardADSB()
-        val datastore = new RawStoreMem()
+        val datastore = new MinedStoreMem()
         val r = rewards.calculate(Instant.now.toEpochMilli(),Instant.now.toEpochMilli(),datastore)
         Console.println(s"${r}")
       }

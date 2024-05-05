@@ -69,7 +69,7 @@ __adsb-miner-2__ (Miner-2)
 
 * ADS-B: [https://en.wikipedia.org/wiki/Automatic_Dependent_Surveillance%E2%80%93Broadcast](https://en.wikipedia.org/wiki/Automatic_Dependent_Surveillance%E2%80%93Broadcast)
 * High Precision ToA: [https://github.com/openskynetwork/dump1090-hptoa](https://github.com/openskynetwork/dump1090-hptoa)
-
-
-
-
+* [https://airplanes.live/opensource-intelligence]
+* [https://github.com/wiedehopf/adsb-wiki/wiki/Raspbian-Lite:-ADS-B-receiver]
+* [https://github.com/wiedehopf/tar1090]
+* [https://github.com/wiedehopf/mlat-server]

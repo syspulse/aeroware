@@ -80,7 +80,7 @@ val sharedConfigDocker = Seq(
 val sharedConfig = Seq(
     //retrieveManaged := true,  
     organization    := "io.syspulse",
-    scalaVersion    := "2.13.9",
+    scalaVersion    := "2.13.13",
     name            := "aeroware",
     version         := awVersion,
 
@@ -99,6 +99,10 @@ val sharedConfig = Seq(
       "consensys repo"     at "https://artifacts.consensys.net/public/maven/maven/",
       "consensys teku"     at "https://artifacts.consensys.net/public/teku/maven/"
     ),
+
+    // needed to fix error with quill-jasync
+    // org.scala-lang.modules:scala-java8-compat_2.13:1.0.2 (early-semver) is selected over {1.0.0, 0.9.1}
+    libraryDependencySchemes += "org.scala-lang.modules" %% "scala-java8-compat" % VersionScheme.Always
   )
 
 
@@ -130,6 +134,48 @@ val sharedConfigAssembly = Seq(
   assembly / test := {}
 )
 
+val sharedConfigAssemblySpark = Seq(
+  assembly / assemblyMergeStrategy := {
+      case x if x.contains("module-info.class") => MergeStrategy.discard
+      case x if x.contains("io.netty.versions.properties") => MergeStrategy.first
+      case x if x.contains("slf4j/impl/StaticMarkerBinder.class") => MergeStrategy.first
+      case x if x.contains("slf4j/impl/StaticMDCBinder.class") => MergeStrategy.first
+      case x if x.contains("slf4j/impl/StaticLoggerBinder.class") => MergeStrategy.first
+      case x if x.contains("google/protobuf") => MergeStrategy.first
+      case x if x.contains("org/apache/spark/unused/UnusedStubClass.class") => MergeStrategy.first
+      case x if x.contains("git.properties") => MergeStrategy.discard
+      case x if x.contains("mozilla/public-suffix-list.txt") => MergeStrategy.first
+      case x if x.contains("org/apache/logging/log4j/core/config/plugins/Log4j2Plugins.dat") => MergeStrategy.first
+      case x => {
+        val oldStrategy = (assembly / assemblyMergeStrategy).value
+        oldStrategy(x)
+      }
+  },
+  assembly / assemblyExcludedJars := {
+    val cp = (assembly / fullClasspath).value
+    cp filter { f =>
+      f.data.getName.contains("snakeyaml-1.27-android.jar") || 
+      f.data.getName.contains("jakarta.activation-api-1.2.1") ||
+      f.data.getName.contains("jakarta.activation-api-1.1.1") ||
+      f.data.getName.contains("jakarta.activation-2.0.1.jar") ||
+      f.data.getName.contains("jakarta.annotation-api-1.3.5.jar") ||
+      f.data.getName.contains("jakarta.ws.rs-api-2.1.6.jar") ||
+      // f.data.getName.contains("commons-logging-1.1.3.jar") ||
+      f.data.getName.contains("aws-java-sdk-bundle-1.11.563.jar") ||
+      f.data.getName.contains("jcl-over-slf4j-1.7.30.jar") ||
+      f.data.getName.contains("jcl-over-slf4j-1.7.32.jar") ||
+      //(f.data.getName.contains("netty") && (f.data.getName.contains("4.1.50.Final.jar") || (f.data.getName.contains("netty-all-4.1.68.Final.jar"))))
+      f.data.getName.contains("netty") && f.data.getName.contains("4.1.50.Final.jar")
+
+      //|| f.data.getName == "spark-core_2.11-2.0.1.jar"
+    }
+  },
+  
+  assembly / test := {}
+)
+
+//===================================================================================================================================================
+
 def appDockerConfig(appName:String,appMainClass:String) = 
   Seq(
     name := appName,
@@ -158,7 +204,7 @@ def appAssemblyConfig(appName:String,appMainClass:String) =
 lazy val root = (project in file("."))
   .aggregate(
     core,
-    aircraft,
+    aw_aircraft,
     gamet, 
     metar,
     notam,
@@ -167,14 +213,15 @@ lazy val root = (project in file("."))
     adsb_ingest, 
     adsb_tools, 
     adsb_radar, 
-    gpx_core, 
+    // gpx_core, 
     adsb_mesh, 
     adsb_miner, 
-    adsb_validator,    
+    adsb_validator,   
+    adsb_reward, 
   )
   .dependsOn(
     core, 
-    aircraft,
+    aw_aircraft,
     gamet,
     metar, 
     notam,
@@ -183,10 +230,11 @@ lazy val root = (project in file("."))
     adsb_ingest, 
     adsb_tools, 
     adsb_radar, 
-    gpx_core, 
+    // gpx_core, 
     adsb_mesh,
     adsb_miner, 
-    adsb_validator
+    adsb_validator,
+    adsb_reward
   )
   .disablePlugins(sbtassembly.AssemblyPlugin) // this is needed to prevent generating useless assembly and merge error
   .settings(
@@ -200,22 +248,27 @@ lazy val core = (project in file("aw-core"))
   .settings (
       sharedConfig,
       name := "aw-core",
-      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(
+      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ Seq(
+        libSkelCore,
+
         libEnumeratum,
         libKebsSpray
       ),
 )
 
-lazy val aircraft = (project in file("aw-aircraft"))
+lazy val aw_aircraft = (project in file("aw-aircraft"))
+  .dependsOn(core)
   .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,
       name := "aw-aircraft",
-      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(),
+      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(
+        libElastic4s
+      ),
 )
 
 lazy val adsb_core = (project in file("aw-adsb/adsb-core"))
-  .dependsOn(core,aircraft)
+  .dependsOn(core)
   .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,
@@ -228,23 +281,30 @@ lazy val adsb_core = (project in file("aw-adsb/adsb-core"))
 )
 
 lazy val adsb_mesh = (project in file("aw-adsb/adsb-mesh"))
-  .dependsOn(core,adsb_core,adsb_ingest)
+  .dependsOn(core,adsb_core)
   .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,
       name := "adsb-mesh",
-      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(
-        
-        libAlpakkaFile,
-        libUjsonLib,
-        libUpickle,
+      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(                
+        libUpickle  
+      ),
+)
+
+lazy val mesh_mqtt = (project in file("aw-adsb/adsb-mesh/mesh-mqtt"))
+  .dependsOn(core)
+  .disablePlugins(sbtassembly.AssemblyPlugin)
+  .settings (
+      sharedConfig,
+      name := "mesh-mqtt",
+      libraryDependencies ++= libCommon ++ libTest ++ Seq(                
         libAlpakkaMQTT,
-        libAlpakkaPaho
+        libAlpakkaPaho,        
       ),
 )
 
 lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
-  .dependsOn(core,aircraft,adsb_core)
+  .dependsOn(core,adsb_core)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .settings (    
@@ -270,7 +330,7 @@ lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
   )
 
 lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
-  .dependsOn(core,aircraft,adsb_core,adsb_ingest,adsb_mesh,notam)
+  .dependsOn(core,adsb_core,adsb_ingest,adsb_mesh,notam,metar)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .settings (
@@ -283,20 +343,22 @@ lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
     appDockerConfig(appNameAdsbMiner,appBootClassAdsbMiner),
 
     libraryDependencies ++= libAkka ++ libSkel ++ libPrometheus ++ Seq(
+      libSkelCrypto,
+
       libSkelIngest,
       libSkelIngestFlow,
       
       libAlpakkaFile,
       libUjsonLib,
       libUpickle,
-      //libAlpakkaMQTT,
+      // libAlpakkaMQTT,
       libAlpakkaPaho
     ),
     assembly / packageOptions += sbt.Package.ManifestAttributes("Multi-Release" -> "true")    
   )
 
 lazy val adsb_validator = (project in file("aw-adsb/adsb-validator"))
-  .dependsOn(core,aircraft,adsb_core,adsb_ingest,adsb_mesh,notam)
+  .dependsOn(core,adsb_core,adsb_ingest,adsb_mesh,notam,metar)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .settings (
@@ -308,22 +370,42 @@ lazy val adsb_validator = (project in file("aw-adsb/adsb-validator"))
 
     appDockerConfig(appNameAdsbValidator,appBootClassAdsbValidator),
 
-    libraryDependencies ++= libAkka ++ libSkel ++ libPrometheus ++ Seq(
+    libraryDependencies ++= libAkka ++ libSkel ++ libHttp ++ libPrometheus ++ libDB ++ Seq(
+      libSkelCrypto,
       libSkelIngest,
       libSkelIngestFlow,
 
       libAlpakkaFile,
       libUjsonLib,
       libUpickle,
-      //libAlpakkaMQTT,
-      libAlpakkaPaho
+      libAlpakkaMQTT,
+      //libAlpakkaPaho
+    ),
+    assembly / packageOptions += sbt.Package.ManifestAttributes("Multi-Release" -> "true")
+  )
+
+lazy val adsb_reward = (project in file("aw-adsb/adsb-reward"))
+  .dependsOn(core,adsb_core,adsb_mesh)
+  .enablePlugins(JavaAppPackaging)
+  .enablePlugins(DockerPlugin)
+  .settings (
+
+    sharedConfig,
+    sharedConfigAssemblySpark,
+    sharedConfigDocker,
+    dockerBuildxSettings,
+
+    appDockerConfig("adsb-reward","io.syspulse.aeroware.adsb.mesh.reward.App"),
+
+    libraryDependencies ++= libSkel ++ libSpark ++ Seq(
+
     ),
     assembly / packageOptions += sbt.Package.ManifestAttributes("Multi-Release" -> "true")
   )
 
 
 lazy val adsb_tools = (project in file("aw-adsb/adsb-tools"))
-  .dependsOn(core, aircraft,adsb_core)
+  .dependsOn(core, adsb_core)
   .enablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,
@@ -337,7 +419,7 @@ lazy val adsb_tools = (project in file("aw-adsb/adsb-tools"))
   )
 
 lazy val adsb_radar = (project in file("aw-adsb/adsb-radar"))
-  .dependsOn(core, aircraft, adsb_core, adsb_mesh)
+  .dependsOn(core, adsb_core, adsb_mesh)
   .enablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,
@@ -345,7 +427,11 @@ lazy val adsb_radar = (project in file("aw-adsb/adsb-radar"))
       
       appAssemblyConfig("adsb-radar","io.syspulse.aeroware.adsb.radar.App"),
 
-      libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ libTest ++ Seq(
+      libraryDependencies ++= libCommon ++ libAeroware ++ libSkel ++ libHttp ++ libPrometheus ++ libTest ++ Seq(
+        libSkelAuth,
+        libSkelIngest,
+        libSkelIngestFlow,
+        
         libAkkaTestkitType % Test  
       ),
   )

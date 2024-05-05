@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext
 import java.util.concurrent.Executors
 
 import io.syspulse.skel.util.Util
-import io.syspulse.aeroware.adsb.radar.Craft
+import io.syspulse.aeroware.adsb.radar.Trackable
 import io.syspulse.aeroware.adsb.core.AircraftAddress
 import io.syspulse.aeroware.adsb.mesh.MeshData
 import io.syspulse.aeroware.adsb.core.ADSB

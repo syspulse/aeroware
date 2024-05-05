@@ -50,7 +50,7 @@ case class Config (
 object App extends skel.Server {
   def main(args: Array[String]):Unit = {
 
-        Console.err.println(s"args: '${args.mkString(",")}'")
+    Console.err.println(s"args: '${args.mkString(",")}'")
 
     val d = Config()
     val c = Configuration.withPriority(Seq(
