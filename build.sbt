@@ -80,7 +80,7 @@ val sharedConfigDocker = Seq(
 val sharedConfig = Seq(
     //retrieveManaged := true,  
     organization    := "io.syspulse",
-    scalaVersion    := "2.13.9",
+    scalaVersion    := "2.13.13",
     name            := "aeroware",
     version         := awVersion,
 
@@ -204,7 +204,7 @@ def appAssemblyConfig(appName:String,appMainClass:String) =
 lazy val root = (project in file("."))
   .aggregate(
     core,
-    aircraft,
+    aw_aircraft,
     gamet, 
     metar,
     notam,
@@ -221,7 +221,7 @@ lazy val root = (project in file("."))
   )
   .dependsOn(
     core, 
-    aircraft,
+    aw_aircraft,
     gamet,
     metar, 
     notam,
@@ -248,22 +248,27 @@ lazy val core = (project in file("aw-core"))
   .settings (
       sharedConfig,
       name := "aw-core",
-      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(
+      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ Seq(
+        libSkelCore,
+
         libEnumeratum,
         libKebsSpray
       ),
 )
 
-lazy val aircraft = (project in file("aw-aircraft"))
+lazy val aw_aircraft = (project in file("aw-aircraft"))
+  .dependsOn(core)
   .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,
       name := "aw-aircraft",
-      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(),
+      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(
+        libElastic4s
+      ),
 )
 
 lazy val adsb_core = (project in file("aw-adsb/adsb-core"))
-  .dependsOn(core,aircraft)
+  .dependsOn(core)
   .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,
@@ -299,7 +304,7 @@ lazy val mesh_mqtt = (project in file("aw-adsb/adsb-mesh/mesh-mqtt"))
 )
 
 lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
-  .dependsOn(core,aircraft,adsb_core)
+  .dependsOn(core,adsb_core)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .settings (    
@@ -325,7 +330,7 @@ lazy val adsb_ingest = (project in file("aw-adsb/adsb-ingest"))
   )
 
 lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
-  .dependsOn(core,aircraft,adsb_core,adsb_ingest,adsb_mesh,notam,metar)
+  .dependsOn(core,adsb_core,adsb_ingest,adsb_mesh,notam,metar)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .settings (
@@ -353,7 +358,7 @@ lazy val adsb_miner = (project in file("aw-adsb/adsb-miner"))
   )
 
 lazy val adsb_validator = (project in file("aw-adsb/adsb-validator"))
-  .dependsOn(core,aircraft,adsb_core,adsb_ingest,adsb_mesh,notam,metar)
+  .dependsOn(core,adsb_core,adsb_ingest,adsb_mesh,notam,metar)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .settings (
@@ -400,7 +405,7 @@ lazy val adsb_reward = (project in file("aw-adsb/adsb-reward"))
 
 
 lazy val adsb_tools = (project in file("aw-adsb/adsb-tools"))
-  .dependsOn(core, aircraft,adsb_core)
+  .dependsOn(core, adsb_core)
   .enablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,
@@ -414,7 +419,7 @@ lazy val adsb_tools = (project in file("aw-adsb/adsb-tools"))
   )
 
 lazy val adsb_radar = (project in file("aw-adsb/adsb-radar"))
-  .dependsOn(core, aircraft, adsb_core, adsb_mesh)
+  .dependsOn(core, adsb_core, adsb_mesh)
   .enablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,

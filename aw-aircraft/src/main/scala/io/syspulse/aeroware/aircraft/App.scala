@@ -1,27 +1,26 @@
-package io.syspulse.aeroware.adsb.radar
+package io.syspulse.aeroware.aircraft
 
 import scala.util.{Try,Success,Failure}
-import java.net.URI
-
 import com.typesafe.scalalogging.Logger
-import akka.actor.typed.ActorSystem
 
-import scopt.OParser
+import java.time.Instant
+import scala.concurrent.Awaitable
+import scala.concurrent.Await
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.Duration
+import java.util.concurrent.TimeUnit
 
 import io.syspulse.skel
 import io.syspulse.skel.config._
 import io.syspulse.skel.util.Util
 
-import io.syspulse.aeroware.adsb.radar.store._
-import io.syspulse.aeroware.adsb.radar.server.RadarRoutes
-import akka.actor.typed.scaladsl.Behaviors
-import io.syspulse.aeroware.adsb.radar.server.RadarRoutesWS
-import io.syspulse.aeroware.aircraft.icao.AircraftICAORegistry
+import io.syspulse.aeroware.aircraft.store._
+import io.syspulse.aeroware.aircraft.server._
 
 case class Config (
   host:String="0.0.0.0",
   port:Int=8080,
-  uri:String = "/api/v1/radar",
+  uri:String = "/api/v1/aircraft",
 
   feed:String = "stdin://",
   output:String = "",
@@ -36,11 +35,7 @@ case class Config (
   entity:String = "",
 
   datastore:String = "mem://",
-  
-  timeoutIdle:Long = 1000L * 60 * 60 * 1,
-  past:Long = -1L,  // timetravel timestamps to current time time . -1 means map into present
-  broadcastFreq:Long = 1000L,   // frequency to broadcast new data
-
+    
   cmd:String = "server",
 
   params: Seq[String] = Seq(),
@@ -73,11 +68,7 @@ object App extends skel.Server {
         ArgLong('_', "throttle",s"Throttle messages in msec (def: ${d.throttle})"),
         
         ArgString('d', "datastore",s"datastore [mem://,file://, parq://] (def: ${d.datastore})"),
-        
-        ArgLong('_', "timeout.idle",s"Idle connection timeout in msec (def: ${d.timeoutIdle})"),
-        ArgLong('_', "past",s"Time travel into the past in msec (0: no past, -1: map to current time (def: ${d.past})"),
-        ArgLong('_', "broadcast.freq",s"Data broadcast frequency in msec (def: ${d.broadcastFreq})"),
-        
+                
         ArgCmd("simulator","Simulator"),
         ArgCmd("server","Sever "),
         
@@ -103,10 +94,6 @@ object App extends skel.Server {
           
       entity = c.getString("entity").getOrElse(d.entity),
       datastore = c.getString("datastore").getOrElse(d.datastore),
-
-      past = c.getLong("past").getOrElse(d.past),
-      timeoutIdle = c.getLong("timeout.idle").getOrElse(d.timeoutIdle),
-      broadcastFreq = c.getLong("broadcast.freq").getOrElse(d.broadcastFreq),
       
       cmd = c.getCmd().getOrElse(d.cmd),
       params = c.getParams(),
@@ -115,7 +102,7 @@ object App extends skel.Server {
     Console.err.println(s"Config: ${config}")
 
     val store = config.datastore.split("://").toList match {
-      case "mem" :: Nil | "cache" :: Nil => new RadarStoreMem()
+      case "mem" :: Nil | "cache" :: Nil => new AircraftStoreMem()
       case _ => {
         Console.err.println(s"Unknown datastore: '${config.datastore}'")
         sys.exit(1)
@@ -123,26 +110,15 @@ object App extends skel.Server {
     }
     
     val r = config.cmd match {
-      case "simulator" => 
-        val supervisor = actor.AirspaceSupervisor()
-        val root = ActorSystem[String](supervisor, "Airspace-System")
-
-        // inject Aircrafts
-        root ! "start"
-        root ! "random"
         
       case "server" =>
-        val registry = RadarRegistry(store)
+        val registry = AircraftRegistry(store)
         val r = run( config.host, config.port, config.uri, c, 
           Seq(
-            (Behaviors.ignore,"",(registryActor,as) => new RadarRoutesWS(store,"ws")(as,config) ),
-            (registry,"RadarRegistry-REST",(registryActor,as) => new RadarRoutes(registryActor)(as) ),
+            (registry,"AircraftRegistry",(registryActor,as) => new AircraftRoutes(registryActor)(as) ),
           )
         )
-
-        val pipe = new PipelineRadar(config.feed,config.output,store)
-        pipe.run()
-
+        
       case _ => 
         Console.err.println(s"Unknown command: ${config.cmd}")
         sys.exit(-1)

@@ -19,7 +19,7 @@ class Radar(
   expiryTime:Duration = FiniteDuration(1000 * 60,TimeUnit.MILLISECONDS),
   expiryCheck:Duration = FiniteDuration(1000 * 60,TimeUnit.MILLISECONDS)) extends Closeable { 
   
-  val aircrafts:mutable.Map[AircraftID,Craft] = mutable.HashMap()
+  val aircrafts:mutable.Map[AircraftID,Trackable] = mutable.HashMap()
   val expirations:mutable.TreeMap[String,AircraftID] = mutable.TreeMap()
   val expiry = new Expiry(expiryCheck, expire)
   def expKey(a:AircraftID,ts:Long = now):String = s"${ts}:${a}"
@@ -27,11 +27,11 @@ class Radar(
 
   val aid0 = AircraftID()
 
-  def +(a:Craft):Craft = { aircrafts.put(a.getId(),a); a}
-  def find(addr:AircraftAddress):Option[Craft] = aircrafts.get(addr.toId())
+  def +(a:Trackable):Trackable = { aircrafts.put(a.getId(),a); a}
+  def find(addr:AircraftAddress):Option[Trackable] = aircrafts.get(addr.toId())
 
   def size = aircrafts.size
-  def all:Iterable[Craft] = aircrafts.values
+  def all:Iterable[Trackable] = aircrafts.values
 
   def expire():Unit = {
     val expired = expirations.range( expKey(aid0,now - expiryTime.toMillis), expKey(aid0,now) ) 
@@ -53,7 +53,7 @@ class Radar(
       }
       case None => {
         // not found, add new one
-        val aircraft = Craft(aid)
+        val aircraft = Trackable(aid)
         val t = aircraft.event(adsb)
         aircrafts.put(aid,aircraft)
         expirations.addOne(expKey(aid) -> aid)

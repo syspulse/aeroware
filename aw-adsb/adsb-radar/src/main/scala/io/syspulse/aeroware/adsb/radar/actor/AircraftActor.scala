@@ -14,7 +14,7 @@ import akka.actor.typed.scaladsl.LoggerOps
 
 object AircraftActor {
   
-  def apply(groupId: String, aircaft: Aircraft): Behavior[Command] =
+  def apply(groupId: String, aircaft: Trackable.Aircraft): Behavior[Command] =
       Behaviors.setup(context => new AircraftActor(context, groupId, aircaft))
 
     sealed trait Command
@@ -25,7 +25,7 @@ object AircraftActor {
     case object Passivate extends Command
   }
 
-  class AircraftActor(context: ActorContext[AircraftActor.Command], groupId: String, aircaft: Aircraft) extends AbstractBehavior[AircraftActor.Command](context) {
+  class AircraftActor(context: ActorContext[AircraftActor.Command], groupId: String, aircaft: Trackable.Aircraft) extends AbstractBehavior[AircraftActor.Command](context) {
     import AircraftActor._
 
     context.log.info2("AircraftActor {}-{} started", groupId, aircaft)

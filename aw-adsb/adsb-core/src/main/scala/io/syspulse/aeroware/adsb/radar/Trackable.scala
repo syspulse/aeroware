@@ -90,4 +90,22 @@ abstract class Trackable(aid:AircraftID, cacheSize:Int = 100) {
   
 }
 
+abstract class CraftTrackable(aid:AircraftID) extends Trackable(aid) {
+}
+
+object Trackable {
+  case class Aircraft(aid:AircraftID) extends CraftTrackable(aid)
+  case class Helicopter(aid:AircraftID) extends CraftTrackable(aid)
+  case class Firetruck(aid:AircraftID) extends CraftTrackable(aid)
+  case class Glider(aid:AircraftID) extends CraftTrackable(aid)
+  case class Drone(aid:AircraftID) extends CraftTrackable(aid)
+  case class Vehicle(aid:AircraftID) extends CraftTrackable(aid)
+
+  def apply(aid:AircraftID):Trackable = {
+    new Aircraft(aid) 
+  }
+}
+
+
+
 

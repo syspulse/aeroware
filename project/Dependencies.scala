@@ -78,6 +78,8 @@ object Dependencies {
     val libMySQL =          "mysql"                           % "mysql-connector-java"    % "8.0.22"
     val libPostgres =       "org.postgresql"                  % "postgresql"              % "42.3.5"
 
+    val libElastic4s =        "com.sksamuel.elastic4s" %% "elastic4s-client-esjava" % elastic4sVersion
+
     val libScalaTest =      "org.scalatest"               %% "scalatest"            % "3.1.2" % Test
     val libAkkaTestkit =    "com.typesafe.akka"           %% "akka-http-testkit"    % akkaHttpVersion// % Test
     val libAkkaTestkitType ="com.typesafe.akka"           %% "akka-actor-testkit-typed" % akkaVersion// % Test
@@ -139,7 +141,7 @@ object Dependencies {
     val libPrometheus = Seq(libPrometheusClient)
     
     // val libSkel = Seq(libSkelCore,libSkelCrypto,libSkelAuth)
-    val libSkel = Seq(libSkelCore,libSwaggerAkkaHttp)
+    val libSkel = Seq(libSkelCore,libSkelAuth,libSwaggerAkkaHttp)
 
     val libDB = Seq(libQuill,libQuillAsyncPostgres, libQuillAsyncMySQL, libMySQL, libPostgres)
     
