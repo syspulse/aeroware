@@ -16,11 +16,13 @@ trait AircraftStore extends Store[Aircraft,ID] {
   def del(id:ID):Try[ID]
   def ?(id:ID):Try[Aircraft]
   def all:Seq[Aircraft]
+
+  def all(from:Long,size:Long):Seq[Aircraft] = all.drop(from.toInt).take(size.toInt)
+
   def size:Long
 
-  def ??(txt:String):Seq[Aircraft]
+  def search(txt:String):Seq[Aircraft] = search(txt,0,Long.MaxValue)
+  def search(txt:String,from:Long,size:Long):Seq[Aircraft]
+  def typing(txt:String,size:Int):Seq[Aircraft]
 
-  def scan(txt:String):Seq[Aircraft]
-  def search(txt:String):Seq[Aircraft]
-  def grep(txt:String):Seq[Aircraft]
 }

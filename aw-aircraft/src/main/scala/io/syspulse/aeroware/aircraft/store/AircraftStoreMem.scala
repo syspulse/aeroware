@@ -53,19 +53,25 @@ class AircraftStoreMem extends AircraftStore {
     case None => Failure(new Exception(s"not found: ${id}"))
   }
 
-  def ??(txt:String):Seq[Aircraft] = {
+  def ??(txt:String,from:Long,size:Long):Seq[Aircraft] = {
     val pattern = s"(?i)${txt}"
 
-    aircrafts.values.filter(a => 
+    val rr = aircrafts.values.filter(a => 
       a.id.matches(pattern) || 
       a.rid.matches(pattern) ||       
       a.model.matches(pattern) ||
       a.call.map(_.matches(pattern)).getOrElse(false)
     ).toSeq
+
+    if(from == 0L && size == Long.MaxValue)
+      rr
+    else
+      rr.drop(from.toInt).take(size.toInt)
   }
+  
+  def search(txt:String,from:Long,size:Long):Seq[Aircraft] = ??(txt,from,size)
 
-  def scan(txt:String):Seq[Aircraft] = ??(txt)
-  def search(txt:String):Seq[Aircraft] = ??(txt)
-  def grep(txt:String):Seq[Aircraft] = ??(txt)
-
+  def grep(txt:String):Seq[Aircraft] = search(txt)
+  
+  def typing(txt:String,size:Int):Seq[Aircraft] = ??(txt + ".*",0,size)
 }

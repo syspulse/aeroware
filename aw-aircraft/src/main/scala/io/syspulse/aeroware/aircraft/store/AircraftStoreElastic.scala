@@ -59,8 +59,22 @@ class AircraftStoreElastic(elasticUri:String) extends AircraftStore {
     }.await
 
     log.info(s"r=${r}")
-    r.result.to[Aircraft].toList
+    r.result.to[Aircraft]
   }
+
+  override def all(from:Long,size:Long):Seq[Aircraft] = {    
+    val r = client.execute {
+      ElasticDsl
+      .search(uri.index)
+      .from(from.toInt)
+      .limit(size.toInt)
+      .matchAllQuery()
+    }.await
+
+    log.info(s"r=${r}")
+    r.result.to[Aircraft]
+  }
+    
 
   // slow and memory hungry !
   def size:Long = {
@@ -70,26 +84,71 @@ class AircraftStoreElastic(elasticUri:String) extends AircraftStore {
     r.result.count
   }
 
-  def +(Aircraft:Aircraft):Try[Aircraft] = { 
-    Failure(new UnsupportedOperationException(s"not implemented: ${Aircraft}"))
+  def +(a:Aircraft):Try[Aircraft] = { 
+    val r = { client.execute { 
+      indexInto(uri.index).fields(
+        "id" -> a.id,
+        "rid" -> a.rid,
+        "model" -> a.model,
+        "typ" -> a.typ,
+        "call" -> a.call.getOrElse("")
+      )
+      .refresh(RefreshPolicy.IMMEDIATE)        
+    }}
+    .await
+    
+    if(r.isSuccess)
+      Success(a)
+    else
+      Failure(r.error.asException)
   }
 
   def del(id:ID):Try[ID] = { 
-    Failure(new UnsupportedOperationException(s"not implemented: ${id}"))
+    val r = { client.execute { 
+      deleteByQuery(uri.index,
+        termQuery("id",id)        
+      )      
+    }}
+    .await
+    
+    if(r.isSuccess)
+      Success(id)
+    else
+      Failure(r.error.asException)
   }
 
+  // def ?(id:ID):Try[Aircraft] = {
+  //   search(id.toString).take(1).headOption match {
+  //     case Some(y) => Success(y)
+  //     case None => Failure(new Exception(s"not found: ${id}"))
+  //   }
+  // }
   def ?(id:ID):Try[Aircraft] = {
-    search(id.toString).take(1).headOption match {
-      case Some(y) => Success(y)
-      case None => Failure(new Exception(s"not found: ${id}"))
-    }
+    val r = { client.execute { 
+      ElasticDsl
+        .search(uri.index)
+        .termQuery(("id",id))
+    }}.await
+
+    val rr = r.result.to[Aircraft]
+    if(rr.size > 0) 
+      Success(rr(0))
+    else
+      Failure(new Exception(s"not found: ${id}"))        
   }
 
-  def ??(txt:String):List[Aircraft] = {
-    search(txt)
-  }
+  override def ??(id:Seq[ID]):Seq[Aircraft] = {
+    val r = { client.execute { 
+      ElasticDsl
+        .search(uri.index)
+        .query(termsQuery("id",id))        
+    }}.await
 
-  def scan(txt:String):List[Aircraft] = {
+    val rr = r.result.to[Aircraft]
+    rr
+  }
+  
+  def scan(txt:String):Seq[Aircraft] = {
     val r = client.execute {
       ElasticDsl
         .search(uri.index)
@@ -97,50 +156,55 @@ class AircraftStoreElastic(elasticUri:String) extends AircraftStore {
     { 
       "query_string": {
         "query": "${txt}",
-        "fields": ["area", "msg"]
+        "fields": ["id", "rid","call","model"]
       }
     }
     """)        
     }.await
 
     log.info(s"r=${r}")
-    r.result.to[Aircraft].toList
+    r.result.to[Aircraft]
   }
 
-  def search(txt:String):List[Aircraft] = {   
+  def search(txt:String,from:Long,size:Long):Seq[Aircraft] = {   
     val r = client.execute {
-      com.sksamuel.elastic4s.ElasticDsl
+      ElasticDsl
         .search(uri.index)
+        .from(from.toInt)
+        .size(size.toInt)
         .query(txt)
     }.await
 
     log.info(s"r=${r}")
-    r.result.to[Aircraft].toList
+    r.result.to[Aircraft]
   }
 
-  def grep(txt:String):List[Aircraft] = {
+  def grep(txt:String,from:Long,size:Long):Seq[Aircraft] = {
     val r = client.execute {
       ElasticDsl
         .search(uri.index)
+        .from(from.toInt)
+        .size(size.toInt)
         .query {
-          ElasticDsl.wildcardQuery("msg",txt)
-        }
+          ElasticDsl.wildcardQuery("id",txt)
+        }        
     }.await
 
     log.info(s"r=${r}")
-    r.result.to[Aircraft].toList
+    r.result.to[Aircraft]
   }
 
-  def typing(txt:String):List[Aircraft] = {  
+  def typing(txt:String,size:Int):Seq[Aircraft] = {
     val r = client.execute {
       ElasticDsl
         .search(uri.index)
         .rawQuery(s"""
-    { "multi_match": { "query": "${txt}", "type": "bool_prefix", "fields": [ "msg._3gram" ] }}
-    """)        
+    { "multi_match": { "query": "${txt}", "type": "bool_prefix", "fields": [ "id._3gram","rid._3gram","call._3gram","model._3gram" ] }}
+    """)
+        .size(size)
     }.await
     
     log.info(s"r=${r}")
-    r.result.to[Aircraft].toList
+    r.result.to[Aircraft]
   }
 }

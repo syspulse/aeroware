@@ -44,7 +44,7 @@ object AircraftRegistry {
         Behaviors.same
 
       case SearchAircraft(txt, replyTo) =>
-        val ss = store.??(txt)
+        val ss = store.search(txt)
         replyTo ! Aircrafts(ss,Some(ss.size))
         Behaviors.same
 
