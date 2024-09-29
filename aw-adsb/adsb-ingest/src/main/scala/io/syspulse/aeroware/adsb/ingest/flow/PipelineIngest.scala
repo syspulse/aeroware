@@ -45,6 +45,8 @@ import akka.stream.scaladsl.RestartSource
 import akka.stream.OverflowStrategy
 import akka.stream.RestartSettings
 
+import io.syspulse.skel.Ingestable
+
 object PipelineIngestParq {
   implicit val (parqCodecs,parqTypes) = ParqCodecTypedSerializable.forClass[ADSB]
 }
@@ -55,25 +57,27 @@ import io.syspulse.skel.serde.Parq._
 abstract class PipelineIngest[T](feed:String,output:String)(implicit config:Config)
   extends Pipeline[T,ADSB,ADSB_Ingested](feed,output,config.throttle,config.delimiter,config.buffer,format=config.format) {
 
-  protected val log = Logger(s"${this}")
+  //protected val log = Logger(s"${this}")
 
-  val connectTimeout = config.timeoutConnect//1000L
-  val idleTimeout = config.timeoutIdle //1000L
+  val connectTimeout = config.timeoutConnect
+  val idleTimeout = config.timeoutIdle
   
   def filter:Seq[String] = config.filter
 
-  val defaultRetrySetting = RestartSettings(
-    minBackoff = FiniteDuration(3000,TimeUnit.MILLISECONDS),
-    maxBackoff = FiniteDuration(10000,TimeUnit.MILLISECONDS),
-    randomFactor = 0.2
-  )
-  //.withMaxRestarts(10, FiniteDuration(5,TimeUnit.MINUTES))
+  override def formatter[O <: Ingestable](o:O,format:String,nl:String="")(implicit fmt:JsonFormat[O]):ByteString = {
+    val adsb = o.asInstanceOf[ADSB_Ingested].adsb
+    format match {
+      case "adsb" => 
+        ByteString(s"${adsb.ts} ${adsb.raw}${nl}")
+      case _ => super.formatter(o,format,nl)
+    }
+  }
     
   override def source() = {
     feed.split("://").toList match {
       case "dump1090" :: _ => {
         val uri = Dump1090URI(feed)
-        Flows.fromTcpClient(uri.host,uri.port.toInt)
+        fromTcpClient(uri.host,uri.port.toInt)
       }
       case _ => super.source()
     }
