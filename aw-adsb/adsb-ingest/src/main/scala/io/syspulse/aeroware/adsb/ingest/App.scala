@@ -20,16 +20,18 @@ case class Config(
   uri:String = "/api/v1/adsb",
 
   feed:String = "dump1090://rp-1:30002",
-  output:String = "log://",
+  output:String = "",
   
   limit:Long = -1,
   delimiter:String = "\n",
   buffer:Int = 1024*1024,
   throttle:Long = 0L,
+  format:String = "json",
   
   entity:String = "dump1090",
-  filter:Seq[String] = Seq(),  
-  format:String = "adsb", // decode to ADSB
+  entityOut:String = "adsb", 
+  
+  filter:Seq[String] = Seq(),    
   denoise:Seq[String] = Seq("00000000000000"),
 
   timeoutConnect:Long = 3000L,
@@ -59,19 +61,18 @@ object App {
         ArgString('f', "feed",s"Input Feed (dump1090://host:port, file://, kafka://) (def=${d.feed})"),
         ArgString('o', "output",s"Output file (pattern is supported: data-{yyyy-MM-dd-HH-mm}.log) (def=${d.output})"),
             
-        ArgString('_', "format",s"Output format (json,csv,raw) (def: ${d.format})"),
-
+        ArgString('_', "format",s"Output format (json,csv,raw,jsonp) (def: ${d.format})"),
         ArgString('_', "delimiter",s"""Delimiter characteds (def: '${d.delimiter}'). Usage example: --delimiter=`echo -e $"\r\n"`"""),
         ArgInt('_', "buffer",s"Frame buffer (Akka Framing) (def: ${d.buffer})"),
         ArgLong('n', s"limit",s"File Limit (def: ${d.limit})"),
 
-        // ArgLong('s', s"size",s"File Size Limit (def: ${d.size})"),
-        // ArgLong('_', "freq","Frequency"),
-        // ArgString('_', "delimiter","""Delimiter characteds (def: ''). Usage example: --delimiter=`echo -e $"\r"` """),
-        // ArgInt('_', "buffer","Frame buffer (Akka Framing) (def: 1M)"),
-        // ArgLong('_', "throttle","Throttle messages in msec (def: 0)"),
+        ArgLong('_', "freq","Frequency"),
+        ArgString('_', "delimiter","""Delimiter characteds (def: ''). Usage example: --delimiter=`echo -e $"\r"` """),
+        ArgInt('_', "buffer","Frame buffer (Akka Framing) (def: 1M)"),
+        ArgLong('_', "throttle","Throttle messages in msec (def: 0)"),
 
-        ArgString('e', "entity",s"Ingest entity: (adsb,dump1090) (def: ${d.entity})"),               
+        ArgString('e', "entity",s"Ingest entity: (adsb,dump1090) (def: ${d.entity})"),
+        ArgString('_', "entity.out",s"Output entity: (adsb,dump1090) (def: ${d.entityOut})"),
         ArgString('a', "aircraft",s"Filter (ex: 'AN-225') (def=${d.filter})"),
         ArgString('_', "denoise",s"Filter out noise (def=${d.denoise})"),
 
@@ -80,11 +81,12 @@ object App {
         
         ArgString('d', "datastore",s"datastore [elastic,stdout,file] (def: ${d.datastore})"),
         
-        ArgCmd("ingest","Ingest pipeline"),
-        
-        ArgParam("<params>","")
+        ArgCmd("ingest","Ingest pipeline"),        
+        ArgParam("<params>",""),
+        ArgLogging(),
+        ArgConfig(),
       ).withExit(1)
-    ))
+    )).withLogging()
 
     val config = Config(
       
@@ -98,13 +100,13 @@ object App {
 
       limit = c.getLong("limit").getOrElse(d.limit),
       // size = c.getLong("size").getOrElse(d.size),
-      
+      format = c.getString("format").getOrElse(d.format),
       delimiter = c.getString("delimiter").getOrElse(d.delimiter),
       buffer = c.getInt("buffer").getOrElse(d.buffer),
       throttle = c.getLong("throttle").getOrElse(d.throttle),
       
       entity = c.getString("entity").getOrElse(d.entity),
-      format = c.getString("format").getOrElse(d.format),
+      entityOut = c.getString("entity.out").getOrElse(d.entityOut),
       filter = c.getListString("aircraft",d.filter),
       denoise = c.getListString("denoise",d.denoise),
 
@@ -144,7 +146,7 @@ object App {
         }
 
         Console.err.println(s"Events: ${pp.countObj.get()}")
-        sys.exit(0)
+        //sys.exit(0)
       }
 
     }

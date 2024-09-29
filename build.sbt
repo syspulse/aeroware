@@ -286,13 +286,14 @@ lazy val adsb_mesh = (project in file("aw-adsb/adsb-mesh"))
   .settings (
       sharedConfig,
       name := "adsb-mesh",
-      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(                
+      libraryDependencies ++= libCommon ++ libAeroware ++ libTest ++ libSkel ++ Seq(
+        libSkelCrypto,
         libUpickle  
       ),
 )
 
 lazy val mesh_mqtt = (project in file("aw-adsb/adsb-mesh/mesh-mqtt"))
-  .dependsOn(core)
+  .dependsOn(core,adsb_mesh)
   .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings (
       sharedConfig,

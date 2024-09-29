@@ -75,7 +75,5 @@ class PipelineADSB(feed:String,output:String)(implicit config:Config) extends Pi
   }
 
   override def process:Flow[ADSB,ADSB,_] = Flow[ADSB].map(v => v)
-  // def transform(a: ADSB): Seq[ADSB_Ingested] = {
-  //   Seq(ADSB_Ingested(a,config.format))
-  // }
+  
 }

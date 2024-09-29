@@ -86,7 +86,5 @@ class PipelineDump1090(feed:String,output:String)(implicit config:Config) extend
   }
 
   override def process:Flow[ADSB,ADSB,_] = Flow[ADSB].map(v => v)  
-  // def transform(a: ADSB): Seq[ADSB_Ingested] = {
-  //   Seq(ADSB_Ingested(a,config.format))
-  // }
+  
 }

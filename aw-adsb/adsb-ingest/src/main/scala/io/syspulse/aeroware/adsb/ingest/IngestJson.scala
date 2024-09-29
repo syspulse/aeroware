@@ -38,7 +38,9 @@ object AdsbIngestedJsonProtocol extends DefaultJsonProtocol with AdsbJsonProtoco
 
         case adsb:ADSB_Unknown => adsb.toJson
 
-        case _ => JsString(a.adsb.toString)
+        case _ => 
+          
+          JsString(a.adsb.toString)
       }      
     }
 

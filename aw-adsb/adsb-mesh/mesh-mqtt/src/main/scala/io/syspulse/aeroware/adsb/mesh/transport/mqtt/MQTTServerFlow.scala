@@ -1,9 +1,8 @@
-package io.syspulse.aeroware.adsb.mesh.transport
+package io.syspulse.aeroware.adsb.mesh.transport.mqtt
 
 import scala.util.{Try,Failure,Success}
 import akka.stream._
 import akka.stream.scaladsl._
-import akka.stream.alpakka.file.scaladsl.LogRotatorSink
 import akka.util.ByteString
 import akka.NotUsed
 import akka.actor.ActorSystem
@@ -20,14 +19,14 @@ import java.time.Instant
 import java.time.format._
 import scala.util.Random
 import scala.concurrent.Future
+import scala.concurrent.Promise
+import akka.Done
+import scala.concurrent.ExecutionContext
 
 import upickle._
 import upickle.default.{ReadWriter => RW, macroRW}
 
-import io.syspulse.skel.ingest.IngestClient
 import io.syspulse.skel.util.Util
-import io.syspulse.skel.crypto.Eth
-import io.syspulse.skel.crypto.wallet.WalletVaultKeyfiles
 
 import java.net.InetSocketAddress
 import akka.stream.alpakka.mqtt.streaming.{MqttSessionSettings}
@@ -55,15 +54,8 @@ import akka.stream.alpakka.mqtt.streaming.ControlPacketType
 import io.syspulse.aeroware.core.Raw
 import io.syspulse.aeroware.adsb._
 import io.syspulse.aeroware.adsb.core._
-
-import io.syspulse.aeroware.adsb.mesh.protocol.MSG_MinerData
-import scala.concurrent.Promise
-import akka.Done
-import scala.concurrent.ExecutionContext
-
-import io.syspulse.aeroware.adsb.mesh.protocol.MSG_Options
-
-
+import io.syspulse.aeroware.adsb.mesh.transport.MQTTConfig
+import io.syspulse.aeroware.adsb.mesh.protocol._
 
 case class PublishWithAddr (addr: InetSocketAddress,
                             flags: ControlPacketFlags,

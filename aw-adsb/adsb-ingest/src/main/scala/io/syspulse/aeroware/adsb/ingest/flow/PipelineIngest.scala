@@ -45,9 +45,6 @@ import akka.stream.scaladsl.RestartSource
 import akka.stream.OverflowStrategy
 import akka.stream.RestartSettings
 
-// abstract class PipelineIngest[T](feed:String,output:String)(implicit config:Config,fmt:JsonFormat[ADSB_Ingested],parqEncoders:ParquetRecordEncoder[T],parsResolver:ParquetSchemaResolver[T])
-//   extends Pipeline[T,T,ADSB_Ingested](feed,output,config.throttle,config.delimiter,config.buffer) {
-
 object PipelineIngestParq {
   implicit val (parqCodecs,parqTypes) = ParqCodecTypedSerializable.forClass[ADSB]
 }
@@ -56,7 +53,7 @@ import PipelineIngestParq._
 import io.syspulse.skel.serde.Parq._
 
 abstract class PipelineIngest[T](feed:String,output:String)(implicit config:Config)
-  extends Pipeline[T,ADSB,ADSB_Ingested](feed,output,config.throttle,config.delimiter,config.buffer) {
+  extends Pipeline[T,ADSB,ADSB_Ingested](feed,output,config.throttle,config.delimiter,config.buffer,format=config.format) {
 
   protected val log = Logger(s"${this}")
 
@@ -84,7 +81,7 @@ abstract class PipelineIngest[T](feed:String,output:String)(implicit config:Conf
 
   //override def process:Flow[T,T,_] = Flow[T].map(v => v)
   
-  def transform(a: ADSB): Seq[ADSB_Ingested] = {
-    Seq(ADSB_Ingested(a,config.format))
+  def transform(a: ADSB): Seq[ADSB_Ingested] = {    
+    Seq(ADSB_Ingested(a))
   }
 }

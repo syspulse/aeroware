@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash                                                                                                                                                                                            
 #CWD=`echo $(dirname $(readlink -f $0))`
 #cd $CWD
 
@@ -18,7 +18,13 @@ shift
 #ARGS="$@"
 ARGS=$@
 
-APP_HOME=${APP_HOME:-`pwd`}
+if [ "$CWD" != "" ]; then
+   APP_HOME=$CWD
+else
+   APP_HOME=${APP_HOME:-`pwd`}
+fi
+
+PLUGINS=${PLUGSIN-`pwd`/plugins}
 
 # fat jar
 JAR_FAT=`ls ${APP_HOME}/target/scala-2.13/*assembly*.jar`
@@ -29,7 +35,8 @@ JAR_UNFAT=`ls ${APP_HOME}/lib/*.jar`
 # list of jar. Generated with command:
 # sbt -error ";project module; export dependencyClasspath" >CLASSPATH
 JAR_FILES=`cat CLASSPATH`
-CP="${APP_HOME}/conf/:$JAR_FAT:$JAR_UNFAT:$JAR_FILES:$CLASSES"
+PLUGIN_JARS="${PLUGINS}/*"
+CP="${APP_HOME}/conf/:$JAR_FAT:$JAR_UNFAT:$JAR_FILES:$CLASSES:$PLUGIN_JARS"
 
 CONFIG="application${SITE}.conf"
 
